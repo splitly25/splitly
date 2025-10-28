@@ -1,16 +1,57 @@
-# React + Vite
+# Frontend - Bill Sharing App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React application built with Vite and Material-UI.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React** 19.1.1
+- **Vite** 7.1.7 (with SWC)
+- **Material-UI** 7.3.4
+- **Emotion** (CSS-in-JS)
+- **Lodash** 4.17.21
 
-## React Compiler
+## Getting Started
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+### Install Dependencies
 
-## Expanding the ESLint configuration
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+The app will run at http://localhost:5173
+
+### Other Scripts
+
+```bash
+npm run build       # Build for production
+npm run preview     # Preview production build
+npm run lint        # Run ESLint
+npm run host        # Host on network
+```
+
+## Project Structure
+
+```
+src/
+├── components/     # Reusable UI components (AppBar, ModeSelect)
+├── pages/          # Page components (Boards, Auth, Users)
+├── context/        # React Context API
+├── redux/          # Redux store
+├── apis/           # API integration
+├── utils/          # Utility functions and constants
+├── guards/         # Route guards
+└── hooks/          # Custom React hooks
+```
+
+## Features
+
+- Material-UI component library
+- Dark/Light theme support
+- Responsive navigation bar
+- Board management UI

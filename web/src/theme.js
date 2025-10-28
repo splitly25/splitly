@@ -9,7 +9,7 @@ const COLUMN_FOOTER_HEIGHT = '56px'
 const theme = extendTheme({
   colorSchemeSelector: 'class',
   defaultColorScheme: 'light',
-  trello: {
+  app: {
     appBarHeight: APP_BAR_HEIGHT,
     boardBarHeight: BOARD_BAR_HEIGHT,
     boardContentHeight: BOARD_CONTENT_HEIGHT,
