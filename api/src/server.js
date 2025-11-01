@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import exitHook from 'async-exit-hook' 
 import express from 'express'
+import cors from 'cors'
 import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
 import { env } from '~/config/environment.js'
 import { APIs_V1 } from '~/routes/v1'
@@ -11,11 +12,11 @@ const START_SERVER = () => {
   const hostname = env.APP_HOST || 'localhost'
   const PORT = env.APP_PORT || 3000
 
-  // Middleware to parse JSON request bodies, enable request json body data
+  // Middleware to enable CORS
+  // TODO: Configure CORS options as needed
+  app.use(cors())
   app.use(express.json())
   app.use('/v1', APIs_V1)
-
-  // Middleware for handling errors globally
   app.use(errorHandlingMiddleware)
 
 
@@ -23,7 +24,6 @@ const START_SERVER = () => {
     console.log(`3.Server is running on http://${hostname}:${PORT}`)
   })
 
-  // Cleanup tasks before exit application
   exitHook(() => {
     console.log('\n4.Exiting application, closing MongoDB connection...')
     CLOSE_DB()
