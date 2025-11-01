@@ -71,18 +71,21 @@ function AppBar() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           InputProps={{
-            startAdornment: (<InputAdornment position='start'>
-              <SearchIcon sx={{ color: 'white ' }} />
-            </InputAdornment>),
+            startAdornment: (
+              <InputAdornment position='start'>
+                <SearchIcon sx={{ color: 'white ' }} />
+              </InputAdornment>),
             endAdornment: (
-              <CloseIcon
-                sx={{
-                  color: `${searchText ? 'white' : 'transparent'}`,
-                  fontSize: 'small',
-                  cursor: 'pointer'
-                }}
-                onClick={() => setSearchText('')}
-              />
+              <InputAdornment position='end'>
+                <CloseIcon
+                  sx={{
+                    color: `${searchText ? 'white' : 'transparent'}`,
+                    fontSize: 'small',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setSearchText('')}
+                />
+              </InputAdornment>
             )
           }}
           sx={{
