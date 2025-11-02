@@ -6,6 +6,7 @@ import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
 import { env } from '~/config/environment.js'
 import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
+import { initializeDatabase } from '~/config/initDB'
 
 const START_SERVER = () => {
   const app = express()
@@ -21,13 +22,13 @@ const START_SERVER = () => {
 
 
   app.listen(PORT, hostname, () => {
-    console.log(`3.Server is running on http://${hostname}:${PORT}`)
+    console.log(`5.Server is running on http://${hostname}:${PORT}`)
   })
 
   exitHook(() => {
-    console.log('\n4.Exiting application, closing MongoDB connection...')
+    console.log('\n6.Exiting application, closing MongoDB connection...')
     CLOSE_DB()
-    console.log('5.MongoDB connection closed.')
+    console.log('7.MongoDB connection closed.')
   })
 }
 
@@ -36,6 +37,11 @@ const START_SERVER = () => {
     console.log('1.Connecting to MongoDB...')
     await CONNECT_DB()
     console.log('2.Connected to MongoDB successfully!')
+    
+    console.log('3.Initializing database indexes...')
+    await initializeDatabase()
+    console.log('4.Database indexes initialized!')
+    
     START_SERVER()
   } catch (error) {
     console.error('Error connecting to MongoDB:', error)
