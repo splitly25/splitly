@@ -3,8 +3,8 @@
  * Creates indexes and initial setup for MongoDB collections
  */
 
-import { GET_DB } from './config/mongodb.js'
-import { userModel, billModel, groupModel } from './models/index.js'
+import { GET_DB } from './mongodb.js'
+import { userModel, billModel, groupModel } from '~/models/index.js'
 
 export const initializeDatabase = async () => {
   try {    
