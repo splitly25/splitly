@@ -105,6 +105,33 @@ const deleteOneById = async (userId) => {
   }
 }
 
+/**
+ * Find user by email, or create if not exists
+ * If email not found, creates a new user with name extracted from email (before '@')
+ * @param {string} email - User email address
+ * @returns {Promise<Object>} User object
+ */
+const findOrCreateUserByEmail = async (email) => {
+  try {
+    const normalizedEmail = email.toLowerCase().trim()
+    let user = await findOneByEmail(normalizedEmail)
+    
+    if (!user) {
+      // Extract name from email (everything before '@')
+      const name = normalizedEmail.split('@')[0]
+      const result = await createNew({
+        email: normalizedEmail,
+        name: name
+      })
+      user = await findOneById(result.insertedId)
+    }
+    
+    return user
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 export const userModel = {
   USER_COLLECTION_NAME,
   USER_COLLECTION_SCHEMA,
@@ -113,5 +140,6 @@ export const userModel = {
   findOneByEmail,
   getAll,
   update,
-  deleteOneById
+  deleteOneById,
+  findOrCreateUserByEmail
 }

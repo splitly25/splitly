@@ -22,12 +22,12 @@ export const initializeDatabase = async () => {
 
     // ===== BILL COLLECTION INDEXES =====
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
-      { creatorEmail: 1 }, 
-      { name: 'creator_email_index' }
+      { creatorId: 1 }, 
+      { name: 'creator_id_index' }
     )
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
-      { payerEmail: 1 }, 
-      { name: 'payer_email_index' }
+      { payerId: 1 }, 
+      { name: 'payer_id_index' }
     )
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
       { participants: 1 }, 
@@ -48,8 +48,8 @@ export const initializeDatabase = async () => {
 
     // ===== GROUP COLLECTION INDEXES =====
     await db.collection(groupModel.GROUP_COLLECTION_NAME).createIndex(
-      { creatorEmail: 1 }, 
-      { name: 'creator_email_index' }
+      { creatorId: 1 }, 
+      { name: 'creator_id_index' }
     )
     await db.collection(groupModel.GROUP_COLLECTION_NAME).createIndex(
       { members: 1 }, 

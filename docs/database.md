@@ -51,29 +51,29 @@
   _id: ObjectId,
   billName: String (required, 1-200 characters),
   description: String (optional, max 500 characters),
-  creatorEmail: String (required, email),
-  payerEmail: String (required, email - person who paid upfront),
+  creatorId: String (required, user ObjectId),
+  payerId: String (required, user ObjectId - person who paid upfront),
   totalAmount: Number (required, >= 0),
   paymentDate: Timestamp,
   splittingMethod: String (enum: 'equal' | 'item-based'),
-  participants: [String] (array of emails),
+  participants: [String] (array of user ObjectIds),
   items: [
     {
       name: String (required),
       amount: Number (required),
-      allocatedTo: [String] (array of emails)
+      allocatedTo: [String] (array of user ObjectIds)
     }
   ],
   paymentStatus: [
     {
-      userEmail: String (email),
+      userId: String (user ObjectId),
       amountOwed: Number,
       isPaid: Boolean,
       paidDate: Timestamp
     }
   ],
   isSettled: Boolean (all participants paid),
-  optedOutUsers: [String] (array of emails),
+  optedOutUsers: [String] (array of user ObjectIds),
   createdAt: Timestamp,
   updatedAt: Timestamp,
   _destroy: Boolean
@@ -81,12 +81,14 @@
 ```
 
 **Indexes:**
-- `creatorEmail`: Index for bills created by user
-- `payerEmail`: Index for bills paid by user
+- `creatorId`: Index for bills created by user
+- `payerId`: Index for bills paid by user
 - `participants`: Index for bills user is part of
 - `isSettled`: Index for filtering settled/unsettled bills
 - `createdAt`: Descending index for sorting
 - `paymentDate`: Descending index for sorting
+
+**Note:** When creating bills with emails, the system will automatically find or create users by email. If a user doesn't exist, it will be created with the name extracted from the email (characters before '@').
 
 **Example (Equal Split):**
 ```javascript
@@ -94,39 +96,39 @@
   "_id": ObjectId("507f1f77bcf86cd799439012"),
   "billName": "Cơm hến Ô Mân",
   "description": "Ăn trưa với nhóm",
-  "creatorEmail": "gthanh@example.com",
-  "payerEmail": "gthanh@example.com",
+  "creatorId": "507f1f77bcf86cd799439011",
+  "payerId": "507f1f77bcf86cd799439011",
   "totalAmount": 350000,
   "paymentDate": 1699000000000,
   "splittingMethod": "equal",
   "participants": [
-    "gthanh@example.com",
-    "hatra@example.com",
-    "klc@example.com",
-    "giakhang@example.com"
+    "507f1f77bcf86cd799439011",
+    "507f1f77bcf86cd799439015",
+    "507f1f77bcf86cd799439016",
+    "507f1f77bcf86cd799439017"
   ],
   "items": [],
   "paymentStatus": [
     {
-      "userEmail": "gthanh@example.com",
+      "userId": "507f1f77bcf86cd799439011",
       "amountOwed": 87500,
       "isPaid": true,
       "paidDate": 1699000000000
     },
     {
-      "userEmail": "hatra@example.com",
+      "userId": "507f1f77bcf86cd799439015",
       "amountOwed": 87500,
       "isPaid": false,
       "paidDate": null
     },
     {
-      "userEmail": "klc@example.com",
+      "userId": "507f1f77bcf86cd799439016",
       "amountOwed": 87500,
       "isPaid": false,
       "paidDate": null
     },
     {
-      "userEmail": "giakhang@example.com",
+      "userId": "507f1f77bcf86cd799439017",
       "amountOwed": 87500,
       "isPaid": false,
       "paidDate": null
@@ -146,26 +148,26 @@
   "_id": ObjectId("507f1f77bcf86cd799439013"),
   "billName": "Mua đồ chung",
   "description": "Có giảm giá 10% và thuế VAT",
-  "creatorEmail": "gthanh@example.com",
-  "payerEmail": "gthanh@example.com",
+  "creatorId": "507f1f77bcf86cd799439011",
+  "payerId": "507f1f77bcf86cd799439011",
   "totalAmount": 198000, // Actual bill total (after 10% discount + 10% VAT)
   "paymentDate": 1699000000000,
   "splittingMethod": "item-based",
   "participants": [
-    "gthanh@example.com",
-    "hatra@example.com",
-    "klc@example.com"
+    "507f1f77bcf86cd799439011",
+    "507f1f77bcf86cd799439015",
+    "507f1f77bcf86cd799439016"
   ],
   "items": [
     {
       "name": "Bánh mì",
       "amount": 50000, // Original price before discount/tax
-      "allocatedTo": ["gthanh@example.com", "hatra@example.com"]
+      "allocatedTo": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439015"]
     },
     {
       "name": "Cà phê",
       "amount": 150000, // Original price before discount/tax
-      "allocatedTo": ["gthanh@example.com", "hatra@example.com", "klc@example.com"]
+      "allocatedTo": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439015", "507f1f77bcf86cd799439016"]
     }
   ],
   // Calculation:
@@ -176,19 +178,19 @@
   // Cà phê adjusted: 150000 × 0.99 = 148500
   "paymentStatus": [
     {
-      "userEmail": "gthanh@example.com",
+      "userId": "507f1f77bcf86cd799439011",
       "amountOwed": 74250, // (49500/2) + (148500/3) = 24750 + 49500
       "isPaid": true,
       "paidDate": 1699000000000
     },
     {
-      "userEmail": "hatra@example.com",
+      "userId": "507f1f77bcf86cd799439015",
       "amountOwed": 74250, // (49500/2) + (148500/3) = 24750 + 49500
       "isPaid": false,
       "paidDate": null
     },
     {
-      "userEmail": "klc@example.com",
+      "userId": "507f1f77bcf86cd799439016",
       "amountOwed": 49500, // (148500/3) = 49500 (cà phê only)
       "isPaid": false,
       "paidDate": null
@@ -216,8 +218,8 @@
   _id: ObjectId,
   groupName: String (required, 1-100 characters),
   description: String (optional, max 500 characters),
-  creatorEmail: String (required, email),
-  members: [String] (array of emails, min 1),
+  creatorId: String (required, user ObjectId),
+  members: [String] (array of user ObjectIds, min 1),
   bills: [String] (array of bill ObjectIds),
   avatar: String (URL, optional),
   createdAt: Timestamp,
@@ -227,9 +229,11 @@
 ```
 
 **Indexes:**
-- `creatorEmail`: Index for groups created by user
+- `creatorId`: Index for groups created by user
 - `members`: Index for groups user belongs to
 - `createdAt`: Descending index for sorting
+
+**Note:** When creating groups with emails, the system will automatically find or create users by email. If a user doesn't exist, it will be created with the name extracted from the email (characters before '@').
 
 **Example:**
 ```javascript
@@ -237,12 +241,12 @@
   "_id": ObjectId("507f1f77bcf86cd799439014"),
   "groupName": "BỆT",
   "description": "Bully everyone together",
-  "creatorEmail": "hatra@example.com",
+  "creatorId": "507f1f77bcf86cd799439015",
   "members": [
-    "gthanh@example.com",
-    "hatra@example.com",
-    "klc@example.com",
-    "giakhang@example.com"
+    "507f1f77bcf86cd799439011",
+    "507f1f77bcf86cd799439015",
+    "507f1f77bcf86cd799439016",
+    "507f1f77bcf86cd799439017"
   ],
   "bills": [
     "507f1f77bcf86cd799439012",
@@ -267,17 +271,18 @@
 - `getAll()` - Get all users
 - `update(userId, updateData)` - Update user information
 - `deleteOneById(userId)` - Delete user
+- `findOrCreateUserByEmail(email)` - Find user by email, or create if not exists (with name extracted from email)
 
 ### Bill Model (`billModel.js`)
 
 - `createNew(data)` - Create a new bill (auto-calculates payment status)
 - `findOneById(billId)` - Find bill by ID
 - `getAll()` - Get all bills
-- `getBillsByUser(userEmail)` - Get all bills for a user
-- `getBillsByCreator(creatorEmail)` - Get bills created by user
+- `getBillsByUser(userId)` - Get all bills for a user (by user ID)
+- `getBillsByCreator(creatorId)` - Get bills created by user (by user ID)
 - `update(billId, updateData)` - Update bill information
-- `markAsPaid(billId, userEmail)` - Mark a user's payment as paid
-- `optOutUser(billId, userEmail)` - Remove user from bill
+- `markAsPaid(billId, userId)` - Mark a user's payment as paid (by user ID)
+- `optOutUser(billId, userId)` - Remove user from bill (by user ID)
 - `deleteOneById(billId)` - Delete bill
 
 ### Group Model (`groupModel.js`)
@@ -285,9 +290,9 @@
 - `createNew(data)` - Create a new group
 - `findOneById(groupId)` - Find group by ID
 - `getAll()` - Get all groups
-- `getGroupsByUser(userEmail)` - Get groups user belongs to
+- `getGroupsByUser(userId)` - Get groups user belongs to (by user ID)
 - `update(groupId, updateData)` - Update group information
-- `addMember(groupId, memberEmail)` - Add member to group
-- `removeMember(groupId, memberEmail)` - Remove member from group
+- `addMember(groupId, memberId)` - Add member to group (by user ID)
+- `removeMember(groupId, memberId)` - Remove member from group (by user ID)
 - `addBill(groupId, billId)` - Add bill to group
 - `deleteOneById(groupId)` - Delete group

@@ -8,12 +8,12 @@ const BILL_COLLECTION_NAME = 'bills'
 const BILL_ITEM_SCHEMA = Joi.object({
   name: Joi.string().required().trim().min(1).max(200),
   amount: Joi.number().required().min(0),
-  allocatedTo: Joi.array().items(Joi.string().email()).min(1).required()
+  allocatedTo: Joi.array().items(Joi.string()).min(1).required() // Changed to ObjectId string
 })
 
 // Payment status schema for each participant (in bill schema)
 const PAYMENT_STATUS_SCHEMA = Joi.object({
-  userEmail: Joi.string().email().required(),
+  userId: Joi.string().required(), // Changed from userEmail to userId
   amountOwed: Joi.number().required().min(0),
   isPaid: Joi.boolean().default(false),
   paidDate: Joi.date().timestamp('javascript').default(null)
@@ -23,15 +23,15 @@ const PAYMENT_STATUS_SCHEMA = Joi.object({
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().required().trim().min(1).max(200),
   description: Joi.string().trim().max(500).default(''),
-  creatorEmail: Joi.string().email().required(),
-  payerEmail: Joi.string().email().required(), // Person who paid upfront
+  creatorId: Joi.string().required(), // Changed from creatorEmail to creatorId
+  payerId: Joi.string().required(), // Changed from payerEmail to payerId
   totalAmount: Joi.number().required().min(0),
   paymentDate: Joi.date().timestamp('javascript').default(Date.now),
   
   splittingMethod: Joi.string().valid('equal', 'item-based').required(),
   
-  // All participant emails
-  participants: Joi.array().items(Joi.string().email()).min(1).required(),
+  // All participant user IDs
+  participants: Joi.array().items(Joi.string()).min(1).required(), // Changed to ObjectId strings
   
   // Items (only for item-based splitting)
   items: Joi.array().items(BILL_ITEM_SCHEMA).default([]),
@@ -41,14 +41,14 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
   isSettled: Joi.boolean().default(false),
   
   // User can opt out from a bill
-  optedOutUsers: Joi.array().items(Joi.string().email()).default([]),
+  optedOutUsers: Joi.array().items(Joi.string()).default([]), // Changed to ObjectId strings
   
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(Date.now),
   _destroy: Joi.boolean().default(false)
 })
 
-const INVALID_UPDATE_FIELDS = ['_id', 'creatorEmail', 'createdAt']
+const INVALID_UPDATE_FIELDS = ['_id', 'creatorId', 'createdAt']
 
 const validateBeforeCreate = async (data) => {
   return await BILL_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
@@ -63,11 +63,11 @@ const createNew = async (data) => {
     if (validData.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
       const amountPerPerson = validData.totalAmount / validData.participants.length
-      paymentStatus = validData.participants.map(email => ({
-        userEmail: email,
+      paymentStatus = validData.participants.map(userId => ({
+        userId: userId,
         amountOwed: amountPerPerson,
-        isPaid: email === validData.payerEmail, // Payer already paid
-        paidDate: email === validData.payerEmail ? Date.now() : null
+        isPaid: userId === validData.payerId, // Payer already paid
+        paidDate: userId === validData.payerId ? Date.now() : null
       }))
     } else if (validData.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
@@ -82,17 +82,17 @@ const createNew = async (data) => {
         const adjustedItemAmount = item.amount * adjustmentRatio
         const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
         
-        item.allocatedTo.forEach(email => {
-          userAmounts[email] = (userAmounts[email] || 0) + amountPerPerson
+        item.allocatedTo.forEach(userId => {
+          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson
         })
       })
       
       // Create payment status array
-      paymentStatus = Object.entries(userAmounts).map(([email, amount]) => ({
-        userEmail: email,
+      paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
+        userId: userId,
         amountOwed: Math.round(amount),
-        isPaid: email === validData.payerEmail,
-        paidDate: email === validData.payerEmail ? Date.now() : null
+        isPaid: userId === validData.payerId,
+        paidDate: userId === validData.payerId ? Date.now() : null
       }))
     }
     
@@ -133,12 +133,12 @@ const getAll = async () => {
   }
 }
 
-const getBillsByUser = async (userEmail) => {
+const getBillsByUser = async (userId) => {
   try {
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        participants: userEmail.toLowerCase().trim(),
+        participants: userId,
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -149,12 +149,12 @@ const getBillsByUser = async (userEmail) => {
   }
 }
 
-const getBillsByCreator = async (creatorEmail) => {
+const getBillsByCreator = async (creatorId) => {
   try {
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        creatorEmail: creatorEmail.toLowerCase().trim(),
+        creatorId: creatorId,
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -184,12 +184,12 @@ const update = async (billId, updateData) => {
   }
 }
 
-const markAsPaid = async (billId, userEmail) => {
+const markAsPaid = async (billId, userId) => {
   try {
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).updateOne(
       { 
         _id: new ObjectId(billId),
-        'paymentStatus.userEmail': userEmail.toLowerCase().trim()
+        'paymentStatus.userId': userId
       },
       { 
         $set: { 
@@ -214,18 +214,16 @@ const markAsPaid = async (billId, userEmail) => {
   }
 }
 
-const optOutUser = async (billId, userEmail) => {
+const optOutUser = async (billId, userId) => {
   try {
-    const email = userEmail.toLowerCase().trim()
-    
     // Add user to opted out list and remove from participants
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).findOneAndUpdate(
       { _id: new ObjectId(billId) },
       { 
-        $addToSet: { optedOutUsers: email },
+        $addToSet: { optedOutUsers: userId },
         $pull: { 
-          participants: email,
-          'paymentStatus': { userEmail: email }
+          participants: userId,
+          'paymentStatus': { userId: userId }
         },
         $set: { updatedAt: Date.now() }
       },

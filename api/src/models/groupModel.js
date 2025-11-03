@@ -7,10 +7,10 @@ const GROUP_COLLECTION_NAME = 'groups'
 const GROUP_COLLECTION_SCHEMA = Joi.object({
   groupName: Joi.string().required().trim().min(1).max(100),
   description: Joi.string().trim().max(500).default(''),
-  creatorEmail: Joi.string().email().required(),
+  creatorId: Joi.string().required(), // Changed from creatorEmail to creatorId
   
-  // All member emails
-  members: Joi.array().items(Joi.string().email()).min(1).required(),
+  // All member user IDs
+  members: Joi.array().items(Joi.string()).min(1).required(), // Changed to ObjectId strings
 
   // All bill IDs associated with this group
   bills: Joi.array().items(Joi.string()).default([]),
@@ -22,7 +22,7 @@ const GROUP_COLLECTION_SCHEMA = Joi.object({
   _destroy: Joi.boolean().default(false)
 })
 
-const INVALID_UPDATE_FIELDS = ['_id', 'creatorEmail', 'createdAt']
+const INVALID_UPDATE_FIELDS = ['_id', 'creatorId', 'createdAt']
 
 const validateBeforeCreate = async (data) => {
   return await GROUP_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
@@ -33,8 +33,8 @@ const createNew = async (data) => {
     const validData = await validateBeforeCreate(data)
     
     // Ensure creator is in members list
-    if (!validData.members.includes(validData.creatorEmail)) {
-      validData.members.push(validData.creatorEmail)
+    if (!validData.members.includes(validData.creatorId)) {
+      validData.members.push(validData.creatorId)
     }
     
     const newGroupToAdd = {
@@ -73,12 +73,12 @@ const getAll = async () => {
   }
 }
 
-const getGroupsByUser = async (userEmail) => {
+const getGroupsByUser = async (userId) => {
   try {
     const result = await GET_DB()
       .collection(GROUP_COLLECTION_NAME)
       .find({
-        members: userEmail.toLowerCase().trim(),
+        members: userId,
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -108,12 +108,12 @@ const update = async (groupId, updateData) => {
   }
 }
 
-const addMember = async (groupId, memberEmail) => {
+const addMember = async (groupId, memberId) => {
   try {
     const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
       { _id: new ObjectId(groupId) },
       { 
-        $addToSet: { members: memberEmail.toLowerCase().trim() },
+        $addToSet: { members: memberId },
         $set: { updatedAt: Date.now() }
       },
       { returnDocument: 'after' }
@@ -124,12 +124,12 @@ const addMember = async (groupId, memberEmail) => {
   }
 }
 
-const removeMember = async (groupId, memberEmail) => {
+const removeMember = async (groupId, memberId) => {
   try {
     const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
       { _id: new ObjectId(groupId) },
       { 
-        $pull: { members: memberEmail.toLowerCase().trim() },
+        $pull: { members: memberId },
         $set: { updatedAt: Date.now() }
       },
       { returnDocument: 'after' }
