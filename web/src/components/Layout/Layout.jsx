@@ -1,17 +1,22 @@
-import { Box, Drawer, IconButton, Avatar, Tooltip } from '@mui/material'
+import { Box, Drawer, IconButton, Avatar, Tooltip, AppBar, Toolbar, useMediaQuery, useTheme } from '@mui/material'
 import HomeIcon from '@mui/icons-material/Home'
 import GroupsIcon from '@mui/icons-material/Groups'
 import HistoryIcon from '@mui/icons-material/History'
 import DescriptionIcon from '@mui/icons-material/Description'
 import AddIcon from '@mui/icons-material/Add'
+import MenuIcon from '@mui/icons-material/Menu'
 import { useNavigate, useLocation } from 'react-router-dom'
 import colors from 'tailwindcss/colors'
+import { useState } from 'react'
 
 const SIDEBAR_WIDTH = 80
 
 const Layout = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const menuItems = [
     { icon: <AddIcon />, path: '/create', label: 'Create', color: colors.purple[200] },
@@ -25,85 +30,161 @@ const Layout = ({ children }) => {
     return location.pathname === path
   }
 
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen)
+  }
+
+  const handleNavigate = (path) => {
+    navigate(path)
+    if (isMobile) {
+      setMobileOpen(false)
+    }
+  }
+
+  const drawerContent = (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        py: 3,
+        px: 1.5,
+        backgroundColor: colors.red[50],
+      }}
+    >
+      {/* Logo */}
+      <Box sx={{ mb: 4, mt: 1 }}>
+        <img
+          src="/Splitly.svg"
+          alt="Splitly"
+          style={{ width: '50px', height: '50px', cursor: 'pointer' }}
+          onClick={() => handleNavigate('/dashboard')}
+        />
+      </Box>
+
+      {/* Menu Items */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+        {menuItems.map((item, index) => {
+          const isActive = isActivePath(item.path)
+          return (
+            <Tooltip key={index} title={item.label} placement="right">
+              <IconButton
+                onClick={() => handleNavigate(item.path)}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  backgroundColor: item.color || (isActive ? colors.purple[800] : 'transparent'),
+                  color: item.color ? colors.purple[800] : (isActive ? 'white' : colors.purple[800]),
+                  '&:hover': {
+                    backgroundColor: item.color || (isActive ? colors.purple[700] : colors.purple[100]),
+                    color: item.color ? colors.purple[800] : (isActive ? 'white' : colors.purple[800]),
+                  },
+                  borderRadius: item.color ? '45px' : '12px',
+                  boxShadow: item.color ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
+                }}
+              >
+                {item.icon}
+              </IconButton>
+            </Tooltip>
+          )
+        })}
+      </Box>
+
+      {/* User Profile */}
+      <Box sx={{ mt: 'auto' }}>
+        <Tooltip title="Profile" placement="right">
+          <Avatar
+            sx={{
+              width: 48,
+              height: 48,
+              bgcolor: '#B0B0B0',
+              cursor: 'pointer',
+              '&:hover': {
+                opacity: 0.8,
+              },
+            }}
+          >
+            PH
+          </Avatar>
+        </Tooltip>
+      </Box>
+    </Box>
+  )
+
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
-      {/* Sidebar */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: SIDEBAR_WIDTH,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: SIDEBAR_WIDTH,
-            boxSizing: 'border-box',
-            backgroundColor: colors.red[50],
-            border: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            py: 3,
-            px: 1.5,
-          },
-        }}
-      >
-        {/* Logo */}
-        <Box sx={{ mb: 4, mt: 1 }}>
-          <img
-            src="/Splitly.svg"
-            alt="Splitly"
-            style={{ width: '50px', height: '50px', cursor: 'pointer' }}
-            onClick={() => navigate('/dashboard')}
-          />
-        </Box>
-
-        {/* Menu Items */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-          {menuItems.map((item, index) => {
-            const isActive = isActivePath(item.path)
-            return (
-              <Tooltip key={index} title={item.label} placement="right">
-                <IconButton
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    backgroundColor: item.color || (isActive ? colors.purple[800] : 'transparent'),
-                    color: item.color ? colors.purple[800] : (isActive ? 'white' : colors.purple[800]),
-                    '&:hover': {
-                      backgroundColor: item.color || (isActive ? colors.purple[700] : colors.purple[100]),
-                      color: item.color ? colors.purple[800] : (isActive ? 'white' : colors.purple[800]),
-                    },
-                    borderRadius: item.color ? '45px' : '12px',
-                    boxShadow: item.color ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
-                  }}
-                >
-                  {item.icon}
-                </IconButton>
-              </Tooltip>
-            )
-          })}
-        </Box>
-
-        {/* User Profile */}
-        <Box sx={{ mt: 'auto' }}>
-          <Tooltip title="Profile" placement="right">
-            <Avatar
-              sx={{
-                width: 48,
-                height: 48,
-                bgcolor: '#B0B0B0',
-                cursor: 'pointer',
+      {/* Mobile App Bar */}
+      {isMobile && (
+        <AppBar
+          position="fixed"
+          sx={{
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            borderBottom: 'none',
+          }}
+        >
+          <Toolbar sx={{ minHeight: '56px !important', padding: '0 !important' }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ 
+                color: colors.purple[800],
+                backgroundColor: colors.red[50],
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                ml: 2,
+                mt: 2,
                 '&:hover': {
-                  opacity: 0.8,
-                },
+                  backgroundColor: colors.red[50],
+                }
               }}
             >
-              {/* Shortname of user */}
-              GT
-            </Avatar>
-          </Tooltip>
-        </Box>
-      </Drawer>
+              <MenuIcon />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+      )}
+
+      {/* Sidebar - Desktop */}
+      {!isMobile && (
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: SIDEBAR_WIDTH,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: SIDEBAR_WIDTH,
+              boxSizing: 'border-box',
+              border: 'none',
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+
+      {/* Sidebar - Mobile */}
+      {isMobile && (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile.
+          }}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: SIDEBAR_WIDTH,
+              boxSizing: 'border-box',
+              border: 'none',
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      )}
 
       {/* Main Content */}
       <Box
@@ -112,6 +193,7 @@ const Layout = ({ children }) => {
           flexGrow: 1,
           backgroundColor: '#FFFFFF',
           overflow: 'auto',
+          marginTop: isMobile ? '56px' : 0, // Add top margin on mobile for AppBar
         }}
       >
         {children}
