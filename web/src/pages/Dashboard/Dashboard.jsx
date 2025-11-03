@@ -67,14 +67,14 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="p-6 md:p-8 min-h-screen bg-white">
+      <div className="p-8 md:p-10 min-h-screen bg-white">
         {/* Greeting */}
-        <h3 className="text-2xl md:text-3xl text-[#574D98] mb-6">
+        <h3 className="text-2xl md:text-3xl text-[#574D98] mb-8">
           {greeting}, <span className="text-[#574D98] font-bold">{userName}</span>
         </h3>
 
         {/* Top Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-10">
           {/* Số tiền bạn còn nợ */}
           <div className="lg:col-span-2 bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm">
             <div className="text-center mb-6">
