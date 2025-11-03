@@ -34,8 +34,7 @@ const Dashboard = () => {
     { id: 1, name: 'Bệt', members: [1, 2, 3, 4] },
     { id: 2, name: 'Bệt', members: [1, 2, 3, 4] },
     { id: 3, name: 'Bệt', members: [1, 2, 3, 4] },
-    { id: 4, name: 'Bệt', members: [1, 2, 3, 4] },
-    { id: 5, name: 'Bệt', members: [1, 2, 3, 4] }
+    { id: 4, name: 'Bệt', members: [1, 2, 3, 4] }
   ]
 
   const activities = [
@@ -137,7 +136,7 @@ const Dashboard = () => {
         </div>
 
         {/* Bottom Section - Activities and Groups */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-15">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
           {/* Nhóm của tôi - Left on desktop, Second on mobile */}
           <div className="order-2 lg:order-1">
             <h4 className="text-2xl font-semibold text-[#574D98] mb-4">Nhóm của tôi</h4>
@@ -177,7 +176,7 @@ const Dashboard = () => {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className={`${getActivityBgColor(activity.type)} rounded-xl p-4 text-[#574D98] text-sm leading-relaxed shadow-md`}
+                  className={`${getActivityBgColor(activity.type)} rounded-xl p-4 font-semibold text-base leading-relaxed shadow-md`}
                 >
                   {activity.message}
                 </div>
