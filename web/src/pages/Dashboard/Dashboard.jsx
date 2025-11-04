@@ -11,7 +11,7 @@ const Dashboard = () => {
   const navigate = useNavigate()
 
   // For now, using a hardcoded user ID - this should come from authentication context
-  const currentUserId = '69096a86accaadc3a4066228' // This should be from auth context
+  const currentUserId = '69097a08cfc3fcbcfb0f5b72' // This should be from auth context
 
   useEffect(() => {
     const getGreeting = () => {
