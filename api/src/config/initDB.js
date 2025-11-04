@@ -4,7 +4,7 @@
  */
 
 import { GET_DB } from './mongodb.js'
-import { userModel, billModel, groupModel } from '~/models/index.js'
+import { userModel, billModel, groupModel, activityModel } from '~/models/index.js'
 
 export const initializeDatabase = async () => {
   try {    
@@ -22,12 +22,12 @@ export const initializeDatabase = async () => {
 
     // ===== BILL COLLECTION INDEXES =====
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
-      { creatorEmail: 1 }, 
-      { name: 'creator_email_index' }
+      { creatorId: 1 }, 
+      { name: 'creator_id_index' }
     )
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
-      { payerEmail: 1 }, 
-      { name: 'payer_email_index' }
+      { payerId: 1 }, 
+      { name: 'payer_id_index' }
     )
     await db.collection(billModel.BILL_COLLECTION_NAME).createIndex(
       { participants: 1 }, 
@@ -48,8 +48,8 @@ export const initializeDatabase = async () => {
 
     // ===== GROUP COLLECTION INDEXES =====
     await db.collection(groupModel.GROUP_COLLECTION_NAME).createIndex(
-      { creatorEmail: 1 }, 
-      { name: 'creator_email_index' }
+      { creatorId: 1 }, 
+      { name: 'creator_id_index' }
     )
     await db.collection(groupModel.GROUP_COLLECTION_NAME).createIndex(
       { members: 1 }, 
@@ -58,6 +58,28 @@ export const initializeDatabase = async () => {
     await db.collection(groupModel.GROUP_COLLECTION_NAME).createIndex(
       { createdAt: -1 }, 
       { name: 'created_at_index' }
+    )
+
+    // ===== ACTIVITY COLLECTION INDEXES =====
+    await db.collection(activityModel.ACTIVITY_COLLECTION_NAME).createIndex(
+      { userId: 1 }, 
+      { name: 'user_id_index' }
+    )
+    await db.collection(activityModel.ACTIVITY_COLLECTION_NAME).createIndex(
+      { resourceType: 1, resourceId: 1 }, 
+      { name: 'resource_index' }
+    )
+    await db.collection(activityModel.ACTIVITY_COLLECTION_NAME).createIndex(
+      { activityType: 1 }, 
+      { name: 'activity_type_index' }
+    )
+    await db.collection(activityModel.ACTIVITY_COLLECTION_NAME).createIndex(
+      { createdAt: -1 }, 
+      { name: 'created_at_index' }
+    )
+    await db.collection(activityModel.ACTIVITY_COLLECTION_NAME).createIndex(
+      { userId: 1, createdAt: -1 }, 
+      { name: 'user_activity_timeline_index' }
     )
     
     console.log('Database initialization: Success')
