@@ -4,6 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
 import { env } from '~/config/environment.js'
+import { corsOptions } from '~/config/cors.js'
 import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import { initializeDatabase } from '~/config/initDB'
@@ -13,9 +14,8 @@ const START_SERVER = () => {
   const hostname = env.APP_HOST || 'localhost'
   const PORT = env.APP_PORT || 3000
 
-  // Middleware to enable CORS
-  // TODO: Configure CORS options as needed
-  app.use(cors())
+  // Middleware to enable CORS with proper configuration
+  app.use(cors(corsOptions))
   app.use(express.json())
   app.use('/v1', APIs_V1)
   app.use(errorHandlingMiddleware)
