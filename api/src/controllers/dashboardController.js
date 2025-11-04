@@ -46,11 +46,16 @@ const getDashboardData = async (req, res, next) => {
       })
     )
     
-    // Get recent activities for user
-    const recentActivities = await activityModel.getActivitiesByUser(userId, 10)
+    // Get recent activities for user (excluding login activities)
+    const recentActivities = await activityModel.getActivitiesByUser(userId, 20) // Get more to filter
+    
+    // Filter out login/logout activities
+    const filteredActivities = recentActivities.filter(activity => 
+      !['user_login', 'user_logout'].includes(activity.activityType)
+    ).slice(0, 10) // Take only 10 after filtering
     
     // Format activities for display
-    const formattedActivities = await formatActivitiesForDisplay(recentActivities)
+    const formattedActivities = await formatActivitiesForDisplay(filteredActivities)
     
     const dashboardData = {
       user: {
