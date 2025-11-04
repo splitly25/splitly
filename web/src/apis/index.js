@@ -5,3 +5,8 @@ export const fetchABCDetailsAPI= async(id) => {
   const response= await authorizedAxiosInstance.get(`${API_ROOT}/v1/abc/${id}`)
   return response.data
 }
+
+export const fetchDashboardDataAPI = async(userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboard/${userId}`)
+  return response.data
+}
