@@ -4,16 +4,26 @@ import { ObjectId } from 'mongodb'
 
 const BILL_COLLECTION_NAME = 'bills'
 
+// Import activity model for logging (avoid circular dependency by lazy loading)
+let activityModel = null
+const getActivityModel = async () => {
+  if (!activityModel) {
+    const { activityModel: am } = await import('./activityModel.js')
+    activityModel = am
+  }
+  return activityModel
+}
+
 // Item schema for bills (for item-based splitting)
 const BILL_ITEM_SCHEMA = Joi.object({
   name: Joi.string().required().trim().min(1).max(200),
   amount: Joi.number().required().min(0),
-  allocatedTo: Joi.array().items(Joi.string().email()).min(1).required()
+  allocatedTo: Joi.array().items(Joi.string()).min(1).required() // Changed to ObjectId string
 })
 
 // Payment status schema for each participant (in bill schema)
 const PAYMENT_STATUS_SCHEMA = Joi.object({
-  userEmail: Joi.string().email().required(),
+  userId: Joi.string().required(), // Changed from userEmail to userId
   amountOwed: Joi.number().required().min(0),
   isPaid: Joi.boolean().default(false),
   paidDate: Joi.date().timestamp('javascript').default(null)
@@ -23,15 +33,15 @@ const PAYMENT_STATUS_SCHEMA = Joi.object({
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().required().trim().min(1).max(200),
   description: Joi.string().trim().max(500).default(''),
-  creatorEmail: Joi.string().email().required(),
-  payerEmail: Joi.string().email().required(), // Person who paid upfront
+  creatorId: Joi.string().required(), // Changed from creatorEmail to creatorId
+  payerId: Joi.string().required(), // Changed from payerEmail to payerId
   totalAmount: Joi.number().required().min(0),
   paymentDate: Joi.date().timestamp('javascript').default(Date.now),
   
   splittingMethod: Joi.string().valid('equal', 'item-based').required(),
   
-  // All participant emails
-  participants: Joi.array().items(Joi.string().email()).min(1).required(),
+  // All participant user IDs
+  participants: Joi.array().items(Joi.string()).min(1).required(), // Changed to ObjectId strings
   
   // Items (only for item-based splitting)
   items: Joi.array().items(BILL_ITEM_SCHEMA).default([]),
@@ -41,20 +51,20 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
   isSettled: Joi.boolean().default(false),
   
   // User can opt out from a bill
-  optedOutUsers: Joi.array().items(Joi.string().email()).default([]),
+  optedOutUsers: Joi.array().items(Joi.string()).default([]), // Changed to ObjectId strings
   
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(Date.now),
   _destroy: Joi.boolean().default(false)
 })
 
-const INVALID_UPDATE_FIELDS = ['_id', 'creatorEmail', 'createdAt']
+const INVALID_UPDATE_FIELDS = ['_id', 'creatorId', 'createdAt']
 
 const validateBeforeCreate = async (data) => {
   return await BILL_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
-const createNew = async (data) => {
+const createNew = async (data, options = {}) => {
   try {
     const validData = await validateBeforeCreate(data)
     
@@ -63,11 +73,11 @@ const createNew = async (data) => {
     if (validData.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
       const amountPerPerson = validData.totalAmount / validData.participants.length
-      paymentStatus = validData.participants.map(email => ({
-        userEmail: email,
+      paymentStatus = validData.participants.map(userId => ({
+        userId: userId,
         amountOwed: amountPerPerson,
-        isPaid: email === validData.payerEmail, // Payer already paid
-        paidDate: email === validData.payerEmail ? Date.now() : null
+        isPaid: userId === validData.payerId, // Payer already paid
+        paidDate: userId === validData.payerId ? Date.now() : null
       }))
     } else if (validData.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
@@ -82,17 +92,17 @@ const createNew = async (data) => {
         const adjustedItemAmount = item.amount * adjustmentRatio
         const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
         
-        item.allocatedTo.forEach(email => {
-          userAmounts[email] = (userAmounts[email] || 0) + amountPerPerson
+        item.allocatedTo.forEach(userId => {
+          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson
         })
       })
       
       // Create payment status array
-      paymentStatus = Object.entries(userAmounts).map(([email, amount]) => ({
-        userEmail: email,
+      paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
+        userId: userId,
         amountOwed: Math.round(amount),
-        isPaid: email === validData.payerEmail,
-        paidDate: email === validData.payerEmail ? Date.now() : null
+        isPaid: userId === validData.payerId,
+        paidDate: userId === validData.payerId ? Date.now() : null
       }))
     }
     
@@ -103,6 +113,26 @@ const createNew = async (data) => {
     }
     
     const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(newBillToAdd)
+    
+    // Log activity if enabled and creatorId is provided
+    if (options.logActivity !== false && validData.creatorId) {
+      try {
+        const am = await getActivityModel()
+        await am.logBillActivity(
+          am.ACTIVITY_TYPES.BILL_CREATED,
+          validData.creatorId,
+          createdBill.insertedId.toString(),
+          {
+            billName: validData.billName,
+            amount: validData.totalAmount,
+            description: `Created new bill: ${validData.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill creation activity:', activityError.message)
+      }
+    }
+    
     return createdBill
   } catch (error) {
     throw new Error(error)
@@ -133,12 +163,12 @@ const getAll = async () => {
   }
 }
 
-const getBillsByUser = async (userEmail) => {
+const getBillsByUser = async (userId) => {
   try {
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        participants: userEmail.toLowerCase().trim(),
+        participants: userId,
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -149,12 +179,12 @@ const getBillsByUser = async (userEmail) => {
   }
 }
 
-const getBillsByCreator = async (creatorEmail) => {
+const getBillsByCreator = async (creatorId) => {
   try {
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        creatorEmail: creatorEmail.toLowerCase().trim(),
+        creatorId: creatorId,
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -165,7 +195,7 @@ const getBillsByCreator = async (creatorEmail) => {
   }
 }
 
-const update = async (billId, updateData) => {
+const update = async (billId, updateData, options = {}) => {
   try {
     Object.keys(updateData).forEach(fieldName => {
       if (INVALID_UPDATE_FIELDS.includes(fieldName)) {
@@ -173,23 +203,56 @@ const update = async (billId, updateData) => {
       }
     })
 
+    // Get original bill data for activity logging
+    let originalBill = null
+    if (options.logActivity !== false && options.updatedBy) {
+      originalBill = await findOneById(billId)
+    }
+
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).findOneAndUpdate(
       { _id: new ObjectId(billId) },
       { $set: { ...updateData, updatedAt: Date.now() } },
       { returnDocument: 'after' }
     )
+
+    // Log activity if enabled
+    if (options.logActivity !== false && options.updatedBy && originalBill) {
+      try {
+        const am = await getActivityModel()
+        await am.logBillActivity(
+          am.ACTIVITY_TYPES.BILL_UPDATED,
+          options.updatedBy,
+          billId,
+          {
+            billName: originalBill.billName,
+            previousValue: {
+              billName: originalBill.billName,
+              totalAmount: originalBill.totalAmount,
+              description: originalBill.description
+            },
+            newValue: updateData,
+            description: `Updated bill: ${originalBill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill update activity:', activityError.message)
+      }
+    }
+
     return result
   } catch (error) {
     throw new Error(error)
   }
 }
 
-const markAsPaid = async (billId, userEmail) => {
+const markAsPaid = async (billId, userId, options = {}) => {
   try {
+    const bill = await findOneById(billId)
+    
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).updateOne(
       { 
         _id: new ObjectId(billId),
-        'paymentStatus.userEmail': userEmail.toLowerCase().trim()
+        'paymentStatus.userId': userId
       },
       { 
         $set: { 
@@ -200,12 +263,49 @@ const markAsPaid = async (billId, userEmail) => {
       }
     )
     
+    // Log payment activity
+    if (options.logActivity !== false && options.paidBy) {
+      try {
+        const am = await getActivityModel()
+        await am.logBillActivity(
+          am.ACTIVITY_TYPES.BILL_PAID,
+          options.paidBy,
+          billId,
+          {
+            billName: bill.billName,
+            paymentStatus: 'paid',
+            description: `Marked payment as completed for bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill payment activity:', activityError.message)
+      }
+    }
+    
     // Check if all participants have paid
-    const bill = await findOneById(billId)
-    const allPaid = bill.paymentStatus.every(status => status.isPaid)
+    const updatedBill = await findOneById(billId)
+    const allPaid = updatedBill.paymentStatus.every(status => status.isPaid)
     
     if (allPaid) {
-      await update(billId, { isSettled: true })
+      await update(billId, { isSettled: true }, { logActivity: false })
+      
+      // Log bill settlement activity
+      if (options.logActivity !== false && options.paidBy) {
+        try {
+          const am = await getActivityModel()
+          await am.logBillActivity(
+            am.ACTIVITY_TYPES.BILL_SETTLED,
+            options.paidBy,
+            billId,
+            {
+              billName: bill.billName,
+              description: `Bill fully settled: ${bill.billName}`
+            }
+          )
+        } catch (activityError) {
+          console.warn('Failed to log bill settlement activity:', activityError.message)
+        }
+      }
     }
     
     return result
@@ -214,23 +314,41 @@ const markAsPaid = async (billId, userEmail) => {
   }
 }
 
-const optOutUser = async (billId, userEmail) => {
+const optOutUser = async (billId, userId, options = {}) => {
   try {
-    const email = userEmail.toLowerCase().trim()
+    const bill = await findOneById(billId)
     
     // Add user to opted out list and remove from participants
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).findOneAndUpdate(
       { _id: new ObjectId(billId) },
       { 
-        $addToSet: { optedOutUsers: email },
+        $addToSet: { optedOutUsers: userId },
         $pull: { 
-          participants: email,
-          'paymentStatus': { userEmail: email }
+          participants: userId,
+          'paymentStatus': { userId: userId }
         },
         $set: { updatedAt: Date.now() }
       },
       { returnDocument: 'after' }
     )
+    
+    // Log opt-out activity
+    if (options.logActivity !== false && options.optedOutBy) {
+      try {
+        const am = await getActivityModel()
+        await am.logBillActivity(
+          am.ACTIVITY_TYPES.BILL_USER_OPTED_OUT,
+          options.optedOutBy,
+          billId,
+          {
+            billName: bill.billName,
+            description: `User opted out from bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill opt-out activity:', activityError.message)
+      }
+    }
     
     return result
   } catch (error) {
@@ -238,12 +356,72 @@ const optOutUser = async (billId, userEmail) => {
   }
 }
 
-const deleteOneById = async (billId) => {
+const deleteOneById = async (billId, options = {}) => {
   try {
+    let bill = null
+    if (options.logActivity !== false && options.deletedBy) {
+      bill = await findOneById(billId)
+    }
+    
     const result = await GET_DB().collection(BILL_COLLECTION_NAME).deleteOne({
       _id: new ObjectId(billId)
     })
+    
+    // Log deletion activity
+    if (options.logActivity !== false && options.deletedBy && bill) {
+      try {
+        const am = await getActivityModel()
+        await am.logBillActivity(
+          am.ACTIVITY_TYPES.BILL_DELETED,
+          options.deletedBy,
+          billId,
+          {
+            billName: bill.billName,
+            amount: bill.totalAmount,
+            description: `Deleted bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill deletion activity:', activityError.message)
+      }
+    }
+    
     return result
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
+/**
+ * Send bill reminder with activity logging
+ * @param {string} billId - Bill ID
+ * @param {string} reminderType - Type of reminder ('email', 'sms', 'notification')
+ * @param {string} recipientUserId - User ID who receives the reminder
+ * @param {string} sentByUserId - User ID who sends the reminder
+ * @returns {Promise<Object>} Reminder result
+ */
+const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId) => {
+  try {
+    const bill = await findOneById(billId)
+    
+    // Here you would implement your actual reminder logic
+    // For example: await emailService.sendReminder(...)
+    
+    // Log reminder activity
+    const am = await getActivityModel()
+    await am.logBillActivity(
+      am.ACTIVITY_TYPES.BILL_REMINDER_SENT,
+      sentByUserId,
+      billId,
+      {
+        billName: bill.billName,
+        reminderType: reminderType,
+        recipientId: recipientUserId,
+        description: `Sent ${reminderType} reminder for bill: ${bill.billName}`
+      }
+    )
+    
+    return { success: true, message: 'Reminder sent successfully' }
   } catch (error) {
     throw new Error(error)
   }
@@ -260,5 +438,6 @@ export const billModel = {
   update,
   markAsPaid,
   optOutUser,
-  deleteOneById
+  deleteOneById,
+  sendReminder
 }
