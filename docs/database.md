@@ -361,6 +361,16 @@
 - `getAll()` - Get all bills
 - `getBillsByUser(userId)` - Get all bills for a user (by user ID)
 - `getBillsByCreator(creatorId)` - Get bills created by user (by user ID)
+- `getBillsByUserWithPagination(userId, page, limit)` - Get bills for a user with pagination support
+  - `userId` (String): User ID to get bills for
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { currentPage, totalPages, totalBills, limit, hasNextPage, hasPrevPage } }`
+  - Example: Page 1 with limit 10 returns bills 0-9, Page 2 returns bills 10-19
+- `getAllWithPagination(page, limit)` - Get all bills with pagination support
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { currentPage, totalPages, totalBills, limit, hasNextPage, hasPrevPage } }`
 - `update(billId, updateData, options)` - Update bill information (with optional activity logging)
 - `markAsPaid(billId, userId, options)` - Mark a user's payment as paid (with activity logging)
 - `optOutUser(billId, userId, options)` - Remove user from bill (with activity logging)
