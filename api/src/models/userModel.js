@@ -254,11 +254,36 @@ const logLogout = async (userId, logoutDetails = {}) => {
   }
 }
 
+/**
+ * Find multiple users by an array of IDs
+ * @param {Array<string>} userIds - Array of user ID strings
+ * @returns {Promise<Array>} - Array of user documents
+ */
+const findManyByIds = async (userIds) => {
+  try {
+    // Chuyển mảng string IDs thành mảng ObjectId
+    const objectIds = userIds.map(id => new ObjectId(id))
+    
+    // Tìm tất cả user có _id nằm trong mảng objectIds
+    const users = await GET_DB()
+      .collection(USER_COLLECTION_NAME) // <-- Đảm bảo tên collection này là đúng
+      .find({
+        _id: { $in: objectIds }
+      })
+      .toArray()
+      
+    return users
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 export const userModel = {
   USER_COLLECTION_NAME,
   USER_COLLECTION_SCHEMA,
   createNew,
   findOneById,
+  findManyByIds,
   findOneByEmail,
   getAll,
   update,
