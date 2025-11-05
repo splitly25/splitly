@@ -2,6 +2,7 @@ import express from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { boardRoute } from '~/routes/v1/boardRoute'
 import { dashboardRoute } from '~/routes/v1/dashboardRoute'
+import {historyRoute} from '~/routes/v1/historyRoute'
 
 const Router = express.Router()
 
@@ -15,5 +16,8 @@ Router.use('/boards', boardRoute)
 
 // Dashboard API routes
 Router.use('/dashboard', dashboardRoute)
+
+// History API routes
+Router.use('/history', historyRoute)
 
 export const APIs_V1 = Router
