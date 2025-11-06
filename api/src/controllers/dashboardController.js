@@ -5,7 +5,7 @@
 
 import { StatusCodes } from 'http-status-codes'
 import { userModel, billModel, groupModel, activityModel } from '~/models/index.js'
-import ApiError from '~/utils/APIError.js'
+import ApiError from '~/utils/ApiError.js'
 
 /**
  * Get dashboard data for a specific user
