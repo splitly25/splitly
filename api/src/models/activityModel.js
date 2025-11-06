@@ -1,3 +1,9 @@
+// ONLY CODE ABOUT DATA STRUCTURE AND DATABASE INTERACTION
+// PLEASE DO NOT ADD ANY LOGIC TO MY MODEL PLEASE
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+
 /**
  * Activity Model
  * Tracks user activities and events in the Spitly application
@@ -90,11 +96,6 @@ const validateBeforeCreate = async (data) => {
   return await ACTIVITY_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
-/**
- * Create a new activity record
- * @param {Object} data - Activity data
- * @returns {Promise<Object>} Created activity result
- */
 const createNew = async (data) => {
   try {
     const validData = await validateBeforeCreate(data)
@@ -109,11 +110,6 @@ const createNew = async (data) => {
   }
 }
 
-/**
- * Find activity by ID
- * @param {string} activityId - Activity ID
- * @returns {Promise<Object|null>} Activity object or null
- */
 const findOneById = async (activityId) => {
   try {
     const result = await GET_DB().collection(ACTIVITY_COLLECTION_NAME).findOne({
@@ -125,12 +121,6 @@ const findOneById = async (activityId) => {
   }
 }
 
-/**
- * Get all activities with pagination
- * @param {number} limit - Number of activities to return
- * @param {number} offset - Number of activities to skip
- * @returns {Promise<Array>} Array of activities
- */
 const getAll = async (limit = 100, offset = 0) => {
   try {
     const result = await GET_DB()
@@ -146,13 +136,6 @@ const getAll = async (limit = 100, offset = 0) => {
   }
 }
 
-/**
- * Get activities by user ID
- * @param {string} userId - User ID
- * @param {number} limit - Number of activities to return
- * @param {number} offset - Number of activities to skip
- * @returns {Promise<Array>} Array of user activities
- */
 const getActivitiesByUser = async (userId, limit = 50, offset = 0) => {
   try {
     const result = await GET_DB()
@@ -171,13 +154,6 @@ const getActivitiesByUser = async (userId, limit = 50, offset = 0) => {
   }
 }
 
-/**
- * Get activities by resource (bill, group, user)
- * @param {string} resourceType - Type of resource ('bill', 'group', 'user')
- * @param {string} resourceId - Resource ID
- * @param {number} limit - Number of activities to return
- * @returns {Promise<Array>} Array of resource activities
- */
 const getActivitiesByResource = async (resourceType, resourceId, limit = 50) => {
   try {
     const result = await GET_DB()
@@ -196,13 +172,6 @@ const getActivitiesByResource = async (resourceType, resourceId, limit = 50) => 
   }
 }
 
-/**
- * Get activities by type
- * @param {string} activityType - Type of activity
- * @param {number} limit - Number of activities to return
- * @param {number} offset - Number of activities to skip
- * @returns {Promise<Array>} Array of activities of specified type
- */
 const getActivitiesByType = async (activityType, limit = 50, offset = 0) => {
   try {
     const result = await GET_DB()
@@ -221,13 +190,6 @@ const getActivitiesByType = async (activityType, limit = 50, offset = 0) => {
   }
 }
 
-/**
- * Get activities within date range
- * @param {Date} startDate - Start date
- * @param {Date} endDate - End date
- * @param {number} limit - Number of activities to return
- * @returns {Promise<Array>} Array of activities in date range
- */
 const getActivitiesByDateRange = async (startDate, endDate, limit = 100) => {
   try {
     const result = await GET_DB()
@@ -248,12 +210,6 @@ const getActivitiesByDateRange = async (startDate, endDate, limit = 100) => {
   }
 }
 
-/**
- * Update activity (limited fields)
- * @param {string} activityId - Activity ID
- * @param {Object} updateData - Data to update
- * @returns {Promise<Object>} Updated activity
- */
 const update = async (activityId, updateData) => {
   try {
     // Filter out invalid fields
@@ -274,11 +230,6 @@ const update = async (activityId, updateData) => {
   }
 }
 
-/**
- * Soft delete activity
- * @param {string} activityId - Activity ID
- * @returns {Promise<Object>} Delete result
- */
 const deleteOneById = async (activityId) => {
   try {
     const result = await GET_DB().collection(ACTIVITY_COLLECTION_NAME).findOneAndUpdate(
@@ -292,14 +243,7 @@ const deleteOneById = async (activityId) => {
   }
 }
 
-/**
- * Helper function to log bill activities
- * @param {string} activityType - Type of activity
- * @param {string} userId - User ID who performed the action
- * @param {string} billId - Bill ID
- * @param {Object} details - Additional details
- * @returns {Promise<Object>} Created activity
- */
+// Helper functions to log activities
 const logBillActivity = async (activityType, userId, billId, details = {}) => {
   return await createNew({
     activityType,
@@ -310,14 +254,6 @@ const logBillActivity = async (activityType, userId, billId, details = {}) => {
   })
 }
 
-/**
- * Helper function to log group activities
- * @param {string} activityType - Type of activity
- * @param {string} userId - User ID who performed the action
- * @param {string} groupId - Group ID
- * @param {Object} details - Additional details
- * @returns {Promise<Object>} Created activity
- */
 const logGroupActivity = async (activityType, userId, groupId, details = {}) => {
   return await createNew({
     activityType,
@@ -328,14 +264,6 @@ const logGroupActivity = async (activityType, userId, groupId, details = {}) => 
   })
 }
 
-/**
- * Helper function to log user activities
- * @param {string} activityType - Type of activity
- * @param {string} userId - User ID who performed the action
- * @param {string} targetUserId - Target user ID (can be same as userId)
- * @param {Object} details - Additional details
- * @returns {Promise<Object>} Created activity
- */
 const logUserActivity = async (activityType, userId, targetUserId, details = {}) => {
   return await createNew({
     activityType,
