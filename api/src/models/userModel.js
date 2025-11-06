@@ -51,7 +51,7 @@ const findOneById = async (userId) => {
   try {
     const res = await GET_DB()
       .collection(USER_COLLECTION_NAME)
-      .findOne({ _id: ObjectId.createFromHexString(userId) });
+      .findOne({ _id: new ObjectId(userId) });
     return res;
   } catch (error) {
     throw new Error(error);
@@ -78,11 +78,53 @@ const update = async (userId, updateData) => {
     const result = await GET_DB()
       .collection(USER_COLLECTION_NAME)
       .findOneAndUpdate(
-        { _id: ObjectId.createFromHexString(userId) },
+        { _id: new ObjectId(userId) },
         { $set: updateData },
         { returnDocument: 'after' }
       );
     return result.value;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getAll = async () => {
+  try {
+    return await GET_DB()
+      .collection(USER_COLLECTION_NAME)
+      .find({ _destroy: false })
+      .sort({ createdAt: -1 })
+      .toArray();
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const findManyByIds = async (userIds) => {
+  try {
+    const objectIds = userIds.map(id => new ObjectId(id));
+    return await GET_DB()
+      .collection(USER_COLLECTION_NAME)
+      .find({
+        _id: { $in: objectIds },
+        _destroy: false
+      })
+      .toArray();
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const deleteOneById = async (userId) => {
+  try {
+    const result = await GET_DB()
+      .collection(USER_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(userId) },
+        { $set: { _destroy: true, updatedAt: Date.now() } },
+        { returnDocument: 'after' }
+      );
+    return result;
   } catch (error) {
     throw new Error(error);
   }
@@ -96,4 +138,7 @@ export const userModel = {
   findOneById,
   findOneByEmail,
   update,
+  getAll,
+  findManyByIds,
+  deleteOneById,
 };

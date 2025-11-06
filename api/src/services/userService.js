@@ -333,10 +333,18 @@ const findOrCreateUserByEmail = async (email, options = {}) => {
     if (!user) {
       // Extract name from email (everything before '@')
       const name = normalizedEmail.split('@')[0]
-      const result = await createNew({
+      // Generate a random password for guest users
+      const randomPassword = uuidv4()
+      
+      const newUserData = {
         email: normalizedEmail,
-        name: name
-      }, { 
+        name: name,
+        password: randomPassword,
+        isGuest: true,
+        userType: userModel.USER_TYPE.GUEST
+      }
+      
+      const result = await createNew(newUserData, { 
         ipAddress: options.ipAddress,
         userAgent: options.userAgent 
       })

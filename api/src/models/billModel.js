@@ -61,7 +61,7 @@ const findOneById = async (billId) => {
   try {
     return await GET_DB()
       .collection(BILL_COLLECTION_NAME)
-      .findOne({ _id: ObjectId.createFromHexString(billId) });
+      .findOne({ _id: new ObjectId(billId) });
   } catch (error) {
     throw new Error(error);
   }
@@ -78,7 +78,171 @@ const update = async (billId, updateData) => {
     });
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
-      .findOneAndUpdate({ _id: ObjectId.createFromHexString(billId) }, { $set: updateData }, { returnDocument: 'after' });
+      .findOneAndUpdate({ _id: new ObjectId(billId) }, { $set: updateData }, { returnDocument: 'after' });
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getAll = async () => {
+  try {
+    return await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({ _destroy: false })
+      .sort({ createdAt: -1 })
+      .toArray();
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getAllWithPagination = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    const bills = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({ _destroy: false })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    
+    const total = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .countDocuments({ _destroy: false });
+    
+    return {
+      bills,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getBillsByUser = async (userId) => {
+  try {
+    return await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({
+        participants: userId,
+        _destroy: false
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    const bills = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({
+        participants: userId,
+        _destroy: false
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    
+    const total = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .countDocuments({
+        participants: userId,
+        _destroy: false
+      });
+    
+    return {
+      bills,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const getBillsByCreator = async (creatorId) => {
+  try {
+    return await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({
+        creatorId: creatorId,
+        _destroy: false
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const markAsPaid = async (billId, userId) => {
+  try {
+    const result = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .findOneAndUpdate(
+        {
+          _id: new ObjectId(billId),
+          'paymentStatus.userId': userId
+        },
+        {
+          $set: {
+            'paymentStatus.$.isPaid': true,
+            'paymentStatus.$.paidDate': Date.now(),
+            updatedAt: Date.now()
+          }
+        },
+        { returnDocument: 'after' }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const optOutUser = async (billId, userId) => {
+  try {
+    const result = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(billId) },
+        {
+          $addToSet: { optedOutUsers: userId },
+          $pull: { participants: userId },
+          $set: { updatedAt: Date.now() }
+        },
+        { returnDocument: 'after' }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const deleteOneById = async (billId) => {
+  try {
+    const result = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(billId) },
+        { $set: { _destroy: true, updatedAt: Date.now() } },
+        { returnDocument: 'after' }
+      );
     return result;
   } catch (error) {
     throw new Error(error);
@@ -91,4 +255,12 @@ export const billModel = {
   createNew,
   findOneById,
   update,
+  getAll,
+  getAllWithPagination,
+  getBillsByUser,
+  getBillsByUserWithPagination,
+  getBillsByCreator,
+  markAsPaid,
+  optOutUser,
+  deleteOneById,
 };
