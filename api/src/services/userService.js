@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-catch */
 import { StatusCodes } from 'http-status-codes';
 import { userModel } from '~/models/rawModels/userModel';
-import ApiError from '~/utils/ApiError';
+import ApiError from '~/utils/APIError';
 import bcryptjs from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { pickUser } from '~/utils/formatters';

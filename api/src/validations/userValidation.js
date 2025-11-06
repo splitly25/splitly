@@ -1,7 +1,7 @@
 import Joi from 'joi';
 import { StatusCodes } from 'http-status-codes';
 import { EMAIL_RULE_MESSAGE, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } from '~/utils/constants';
-import ApiError from '~/utils/ApiError';
+import ApiError from '~/utils/APIError';
 
 const createNew = async (req, res, next) => {
   const correctCondition = Joi.object({
