@@ -8,6 +8,8 @@ import MenuIcon from '@mui/icons-material/Menu'
 import { useNavigate, useLocation } from 'react-router-dom'
 import colors from 'tailwindcss/colors'
 import { useState } from 'react'
+import ChatbotButton from '~/components/Chatbot/ChatbotButton'
+import ChatbotWindow from '../Chatbot/ChatbotWindow'
 
 const SIDEBAR_WIDTH = 80
 
@@ -16,7 +18,16 @@ const Layout = ({ children }) => {
   const location = useLocation()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isSmallScreen = useMediaQuery('(min-width: 900px) and (max-width: 1240px)')
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Chatbot handler
+  const [chatbotWindowOpen, setChatbotWindowOpen] = useState(false)
+  const [numberOfNotifications, setNumberOfNotifications] = useState(2)
+  const [newMessage, setNewMessage] = useState("You have a new message from TingTing Bot!")
+  
+  // Dynamic chatbot width based on screen size
+  const chatbotWidth = isMobile ? '100vw' : isSmallScreen ? '45vw' : '30vw'
 
   const menuItems = [
     { icon: <AddIcon />, path: '/create', label: 'Create', color: colors.purple[200] },
@@ -193,10 +204,46 @@ const Layout = ({ children }) => {
           flexGrow: 1,
           backgroundColor: '#FFFFFF',
           overflow: 'auto',
-          marginTop: isMobile ? '56px' : 0, // Add top margin on mobile for AppBar
+          marginTop: isMobile ? '56px' : 0,
+          transition: 'margin-right 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          marginRight: !isMobile && chatbotWindowOpen ? chatbotWidth : '0',
         }}
       >
         {children}
+      </Box>
+
+      {/* Chatbot Button */}
+      <ChatbotButton 
+        isOpen={chatbotWindowOpen} 
+        setIsOpen={setChatbotWindowOpen} 
+        numberOfNotifications={numberOfNotifications}
+        newMessage={newMessage}
+        setNewMessage={setNewMessage}
+      />
+
+      {/* Chatbot Window */}
+      <Box
+        sx={{ 
+          position: 'fixed',
+          right: isMobile ? 0 : 0,
+          top: isMobile ? 'auto' : 0,
+          bottom: isMobile ? 0 : 'auto',
+          left: isMobile ? 0 : 'auto',
+          height: isMobile ? '70vh' : '100vh',
+          width: chatbotWidth,
+          transform: chatbotWindowOpen 
+            ? 'translate(0, 0)' 
+            : isMobile 
+              ? 'translateY(100%)' 
+              : 'translateX(100%)',
+          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 1199,
+          borderTopLeftRadius: isMobile ? '20px' : 0,
+          borderTopRightRadius: isMobile ? '20px' : 0,
+          overflow: 'hidden',
+        }}
+      >
+        <ChatbotWindow isOpen={chatbotWindowOpen} setIsOpen={setChatbotWindowOpen}/>
       </Box>
     </Box>
   )
