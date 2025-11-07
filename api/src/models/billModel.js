@@ -392,8 +392,6 @@ const deleteOneById = async (billId, options = {}) => {
   }
 }
 
-
-
 /**
  * Send bill reminder with activity logging
  * @param {string} billId - Bill ID
@@ -429,105 +427,6 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
   }
 }
 
-/**
- * Get bills by user with pagination
- * @param {string} userId - User ID to get bills for
- * @param {number} page - Page number (starts from 1)
- * @param {number} limit - Number of bills per page
- * @returns {Promise<{bills: Array, pagination: Object}>} - Bills and pagination info
- */
-const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
-  try {
-    // Calculate skip value (0-indexed)
-    const skip = (page - 1) * limit
-    
-    // Get total count for pagination metadata
-    const totalCount = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .countDocuments({
-        participants: userId,
-        _destroy: false
-      })
-    
-    // Get bills with pagination
-    const bills = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .find({
-        participants: userId,
-        _destroy: false
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray()
-    
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(totalCount / limit)
-    const hasNextPage = page < totalPages
-    const hasPrevPage = page > 1
-    
-    return {
-      bills,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalBills: totalCount,
-        limit,
-        hasNextPage,
-        hasPrevPage
-      }
-    }
-  } catch (error) {
-    throw new Error(error)
-  }
-}
-
-/**
- * Get all bills with pagination
- * @param {number} page - Page number (starts from 1)
- * @param {number} limit - Number of bills per page
- * @returns {Promise<{bills: Array, pagination: Object}>} - Bills and pagination info
- */
-const getAllWithPagination = async (page = 1, limit = 10) => {
-  try {
-    // Calculate skip value (0-indexed)
-    const skip = (page - 1) * limit
-    
-    // Get total count for pagination metadata
-    const totalCount = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .countDocuments({ _destroy: false })
-    
-    // Get bills with pagination
-    const bills = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .find({ _destroy: false })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray()
-    
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(totalCount / limit)
-    const hasNextPage = page < totalPages
-    const hasPrevPage = page > 1
-    
-    return {
-      bills,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalBills: totalCount,
-        limit,
-        hasNextPage,
-        hasPrevPage
-      }
-    }
-  } catch (error) {
-    throw new Error(error)
-  }
-}
-
 export const billModel = {
   BILL_COLLECTION_NAME,
   BILL_COLLECTION_SCHEMA,
@@ -540,7 +439,5 @@ export const billModel = {
   markAsPaid,
   optOutUser,
   deleteOneById,
-  sendReminder,
-  getBillsByUserWithPagination,
-  getAllWithPagination
+  sendReminder
 }
