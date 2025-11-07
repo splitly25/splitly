@@ -1,5 +1,5 @@
 import Layout from '~/components/Layout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
 
@@ -8,6 +8,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [greeting, setGreeting] = useState('')
+  const [gridColumns, setGridColumns] = useState('md:grid-cols-2')
+  const gridRef = useRef(null)
   const navigate = useNavigate()
 
   // For now, using a hardcoded user ID - this should come from authentication context
@@ -22,6 +24,45 @@ const Dashboard = () => {
     }
     setGreeting(getGreeting())
   }, [])
+
+  // Observe grid width and adjust columns dynamically
+  useEffect(() => {
+    const gridElement = gridRef.current
+    if (!gridElement) return
+
+    const updateGridColumns = (width) => {
+      // Define breakpoints based on actual container width
+      // Adjusted for optimal card display (considering ~300px min card width + gaps)
+      if (width >= 1400) {
+        // Wide enough for 7 columns (2+2+3 layout)
+        setGridColumns('grid-cols-7')
+      } else if (width >= 768) {
+        // Medium screens: 2 columns
+        setGridColumns('grid-cols-2')
+      } else {
+        // Mobile: 1 column
+        setGridColumns('grid-cols-1')
+      }
+    }
+
+    // Initial check
+    updateGridColumns(gridElement.offsetWidth)
+
+    // Create ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const width = entry.contentRect.width
+        updateGridColumns(width)
+      }
+    })
+
+    resizeObserver.observe(gridElement)
+
+    // Cleanup
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [dashboardData]) // Re-run when data loads to ensure correct sizing
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -95,9 +136,9 @@ const Dashboard = () => {
         </h3>
 
         {/* Top Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-10 mb-10">
+        <div ref={gridRef} className={`grid ${gridColumns} gap-10 mb-10`}>
           {/* Số tiền bạn còn nợ */}
-          <div className="xl:col-span-2 bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">
                 {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(debtData.youOwe)}
@@ -119,7 +160,7 @@ const Dashboard = () => {
           </div>
 
           {/* Số tiền họ nợ bạn */}
-          <div className="xl:col-span-2 bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm`}>
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(debtData.theyOweYou)}</div>
               <div className="text-sm">là số tiền họ nợ bạn</div>
@@ -139,7 +180,7 @@ const Dashboard = () => {
           </div>
 
           {/* Bạn còn hóa đơn chưa xử lý */}
-          <div className="md:col-span-2 xl:col-span-3 bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-2' ? 'col-span-2' : gridColumns === 'grid-cols-7' ? 'col-span-3' : ''} bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-base font-semibold">
                 Bạn còn {pendingBills.count} hóa đơn chưa xử lý
