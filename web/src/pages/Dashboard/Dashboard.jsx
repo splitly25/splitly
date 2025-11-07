@@ -2,6 +2,7 @@ import Layout from '~/components/Layout'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
+import { formatCurrency } from '~/utils/formatter'
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
@@ -82,10 +83,6 @@ const Dashboard = () => {
     fetchDashboardData()
   }, [currentUserId])
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN').format(Math.abs(amount)) + 'đ'
-  }
-
   const getActivityBgColor = (type) => {
     if (type === 'newBill') return 'bg-teal-100'
     if (type === 'remind') return 'bg-yellow-100'
@@ -141,7 +138,7 @@ const Dashboard = () => {
           <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">
-                {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(debtData.youOwe)}
+                {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(Math.abs(debtData.youOwe))}
               </div>
               <div className="text-sm">là số tiền bạn còn nợ</div>
             </div>
@@ -150,7 +147,7 @@ const Dashboard = () => {
                 debtData.debtDetails.map((debt, index) => (
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="font-medium">{debt.name}</span>
-                    <span className="font-semibold">-{formatCurrency(debt.amount)}</span>
+                    <span className="font-semibold">-{formatCurrency(Math.abs(debt.amount))}</span>
                   </div>
                 ))
               ) : (
@@ -162,7 +159,7 @@ const Dashboard = () => {
           {/* Số tiền họ nợ bạn */}
           <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm`}>
             <div className="text-center mb-6">
-              <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(debtData.theyOweYou)}</div>
+              <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(Math.abs(debtData.theyOweYou))}</div>
               <div className="text-sm">là số tiền họ nợ bạn</div>
             </div>
             <div className="space-y-2 pt-4 border-t border-purple-50/20">
@@ -170,7 +167,7 @@ const Dashboard = () => {
                 debtData.creditDetails.map((credit, index) => (
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="font-medium">{credit.name}</span>
-                    <span className="font-semibold">+{formatCurrency(credit.amount)}</span>
+                    <span className="font-semibold">+{formatCurrency(Math.abs(credit.amount))}</span>
                   </div>
                 ))
               ) : (
