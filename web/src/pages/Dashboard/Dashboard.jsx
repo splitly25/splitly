@@ -155,13 +155,13 @@ const Dashboard = () => {
               {pendingBills.bills && pendingBills.bills.length > 0 ? (
                 pendingBills.bills.map((bill, index) => (
                   <div key={index} className="flex items-center justify-between gap-3 p-2">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                         {bill.name.substring(0, 2).toUpperCase()}
                       </div>
-                      <div className="text-sm font-medium truncate">{bill.name}</div>
+                      <div className="text-sm font-medium truncate min-w-0">{bill.name}</div>
                     </div>
-                    <div className="font-semibold text-sm">{formatCurrency(bill.amount)}</div>
+                    <div className="font-semibold text-sm whitespace-nowrap">{formatCurrency(bill.amount)}</div>
                   </div>
                 ))
               ) : (
