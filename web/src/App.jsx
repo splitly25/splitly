@@ -5,7 +5,7 @@ import Auth from "./pages/Auth/Auth"
 import Dashboard from "./pages/Dashboard"
 import Groups from "./pages/Groups"
 import History from "./pages/History"
-import Bills from "./pages/Bills"
+import Debt from "./pages/Debt"
 
 function App() {
   return (
@@ -19,7 +19,7 @@ function App() {
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path='/groups' element={<Groups />} />
       <Route path='/history' element={<History />} />
-      <Route path='/bills' element={<Bills />} />
+      <Route path='/debt' element={<Debt />} />
 
       <Route path='/login' element={<Auth />} />
       <Route path='/register' element={<Auth />} />

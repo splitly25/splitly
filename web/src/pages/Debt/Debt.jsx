@@ -1,10 +1,10 @@
 import Layout from '~/components/Layout'
 
-const Bills = () => {
+const Debt = () => {
   return (
     <Layout>
     </Layout>
   )
 }
 
-export default Bills
+export default Debt

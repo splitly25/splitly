@@ -34,7 +34,7 @@ const Layout = ({ children }) => {
     { icon: <HomeIcon />, path: '/dashboard', label: 'Home' },
     { icon: <GroupsIcon />, path: '/groups', label: 'Groups' },
     { icon: <HistoryIcon />, path: '/history', label: 'History' },
-    { icon: <DescriptionIcon />, path: '/bills', label: 'Bills' },
+    { icon: <DescriptionIcon />, path: '/debt', label: 'Debt' },
   ]
 
   const isActivePath = (path) => {
