@@ -15,3 +15,18 @@ export const fetchHistoryDataAPI = async(userId, numPage, limit, search, settled
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`)
   return response.data
 }
+
+export const fetchDebtsOwedToMeAPI = async(userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/owed-to-me`)
+  return response.data
+}
+
+export const fetchDebtsIOweAPI = async(userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/i-owe`)
+  return response.data
+}
+
+export const fetchDebtSummaryAPI = async(userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/summary`)
+  return response.data
+}

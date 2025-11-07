@@ -5,6 +5,7 @@ import { dashboardRoute } from '~/routes/v1/dashboardRoute'
 import {historyRoute} from '~/routes/v1/historyRoute'
 import { billRoute } from '~/routes/v1/billRoute'
 import { userRoute } from './userRoute'
+import { debtRoute } from './debtRoute'
 
 const Router = express.Router()
 
@@ -24,5 +25,8 @@ Router.use('/history', historyRoute)
 Router.use('/bills', billRoute)
 
 Router.use('/users', userRoute)
+
+// Debt API routes
+Router.use('/debts', debtRoute)
 
 export const APIs_V1 = Router
