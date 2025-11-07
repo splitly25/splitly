@@ -95,9 +95,9 @@ const Dashboard = () => {
         </h3>
 
         {/* Top Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-10 mb-10">
           {/* Số tiền bạn còn nợ */}
-          <div className="lg:col-span-2 bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className="xl:col-span-2 bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm">
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">
                 {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(debtData.youOwe)}
@@ -119,7 +119,7 @@ const Dashboard = () => {
           </div>
 
           {/* Số tiền họ nợ bạn */}
-          <div className="lg:col-span-2 bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm">
+          <div className="xl:col-span-2 bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm">
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(debtData.theyOweYou)}</div>
               <div className="text-sm">là số tiền họ nợ bạn</div>
@@ -139,7 +139,7 @@ const Dashboard = () => {
           </div>
 
           {/* Bạn còn hóa đơn chưa xử lý */}
-          <div className="md:col-span-2 lg:col-span-3 bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className="md:col-span-2 xl:col-span-3 bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-base font-semibold">
                 Bạn còn {pendingBills.count} hóa đơn chưa xử lý
