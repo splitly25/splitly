@@ -1,12 +1,12 @@
 import Joi from 'joi';
 import { StatusCodes } from 'http-status-codes';
 import { EMAIL_RULE_MESSAGE, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } from '~/utils/constants';
-import ApiError from '~/utils/ApiError';
+import ApiError from '~/utils/APIError.js';
 
 const createNew = async (req, res, next) => {
   const correctCondition = Joi.object({
     email: Joi.string().email().required().trim().message(EMAIL_RULE_MESSAGE),
-    name: Joi.string().required().min(2).max(100).trim(),
+    name: Joi.string().required().min(3).max(30).trim(),
     password: Joi.string().required().pattern(PASSWORD_RULE).message(PASSWORD_RULE_MESSAGE),
     phone: Joi.string()
       .optional()

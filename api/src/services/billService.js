@@ -1,213 +1,393 @@
 /* eslint-disable no-useless-catch */
-import { billModel } from "~/models/rawModels/billModel";
-import { userModel } from "~/models/index.js";
-
-const createNew = async (reqBody) => {
-  try {
-    // Other logic if creation affects other collections is here
-    const createdBill = await billModel.createNew(reqBody);
-    const getNewBill = await billModel.findOneById(createdBill.insertedId);
-
-    return getNewBill;
-  } catch (error) {
-    throw error;
-  }
-};
+import { billModel } from '~/models/billModel.js'
+import { activityModel } from '~/models/activityModel.js'
 
 /**
- * Search bills by name for a user with pagination and formatted data
- * @param {string} userId - User ID to search bills for
- * @param {string} searchTerm - Search term for bill name
- * @param {number} page - Page number
- * @param {number} limit - Items per page
- * @returns {Object} Formatted bills with user info and pagination
+ * Create a new bill with splitting logic and activity logging
+ * @param {Object} reqBody - Bill data from request
+ * @param {Object} options - Additional options (userId for logging)
+ * @returns {Promise<Object>} Created bill
  */
-const searchBillsByUserWithPagination = async (userId, searchTerm, page = 1, limit = 10) => {
+const createNew = async (reqBody, options = {}) => {
   try {
-    // Get bills from model
-    const { bills, pagination } = await billModel.searchBillsByUserWithPagination(
-      userId,
-      searchTerm,
-      page,
-      limit
-    );
-
-    // Collect all unique user IDs
-    const userIdsToFetch = new Set();
-    bills.forEach((bill) => {
-      if (bill.payerId) {
-        userIdsToFetch.add(bill.payerId.toString());
-      }
-      bill.participants.forEach((participantId) => {
-        userIdsToFetch.add(participantId.toString());
-      });
-    });
-
-    // Fetch all users at once
-    let userMap = new Map();
-    if (userIdsToFetch.size > 0) {
-      const users = await userModel.findManyByIds(Array.from(userIdsToFetch));
-      userMap = new Map(users.map((u) => [u._id.toString(), u]));
-    }
-
-    // Format bills with user information
-    const formattedBills = bills.map((bill) => {
-      const payerData = userMap.get(bill.payerId?.toString());
-      const payer = payerData
-        ? {
-            id: payerData._id,
-            name: payerData.name,
-            email: payerData.email,
-            avatar: payerData.avatar,
-          }
-        : {
-            id: bill.payerId,
-            name: "Unknown User",
-            email: "",
-            avatar: null,
-          };
-
-      const participants = bill.participants
-        .map((participantId) => {
-          const participantData = userMap.get(participantId?.toString());
-          return participantData
-            ? {
-                id: participantData._id,
-                name: participantData.name,
-                email: participantData.email,
-                avatar: participantData.avatar,
-              }
-            : null;
+    let paymentStatus = []
+    
+    if (reqBody.splittingMethod === 'equal') {
+      // Equal split: total amount / number of participants
+      const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
+      paymentStatus = reqBody.participants.map(userId => ({
+        userId: userId,
+        amountOwed: amountPerPerson,
+        isPaid: userId === reqBody.payerId, // Payer already paid
+        paidDate: userId === reqBody.payerId ? Date.now() : null
+      }))
+    } else if (reqBody.splittingMethod === 'item-based') {
+      // Item-based split: calculate based on items with discount/tax adjustment
+      const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0)
+      const adjustmentRatio = reqBody.totalAmount / sumOfItemAmounts
+      
+      const userAmounts = {}
+      
+      // Calculate total owed by each user with adjustment
+      reqBody.items.forEach(item => {
+        const adjustedItemAmount = item.amount * adjustmentRatio
+        const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
+        
+        item.allocatedTo.forEach(userId => {
+          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson
         })
-        .filter((p) => p !== null);
-
-      const userPaymentStatus = bill.paymentStatus.find(
-        (status) => status.userId === userId
-      );
-
-      return {
-        id: bill._id,
-        paymentDate: bill.paymentDate,
-        billName: bill.billName,
-        description: bill.description,
-        totalAmount: bill.totalAmount,
-        payer: payer,
-        participants: participants,
-        settled: bill.isSettled,
-        splittingMethod: bill.splittingMethod,
-        userAmountOwed: userPaymentStatus ? userPaymentStatus.amountOwed : 0,
-        userPaidStatus: userPaymentStatus ? userPaymentStatus.isPaid : false,
-        createdAt: bill.createdAt,
-        updatedAt: bill.updatedAt,
-      };
-    });
-
-    return {
-      bills: formattedBills,
-      pagination
-    };
+      })
+      
+      // Create payment status array
+      paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
+        userId: userId,
+        amountOwed: Math.round(amount),
+        isPaid: userId === reqBody.payerId,
+        paidDate: userId === reqBody.payerId ? Date.now() : null
+      }))
+    }
+    
+    const newBillData = {
+      ...reqBody,
+      paymentStatus,
+      createdAt: Date.now()
+    }
+    
+    const createdBill = await billModel.createNew(newBillData)
+    const getNewBill = await billModel.findOneById(createdBill.insertedId.toString())
+    
+    // Log activity if creatorId is provided
+    if (reqBody.creatorId) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_CREATED,
+          reqBody.creatorId,
+          createdBill.insertedId.toString(),
+          {
+            billName: reqBody.billName,
+            amount: reqBody.totalAmount,
+            description: `Created new bill: ${reqBody.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill creation activity:', activityError.message)
+      }
+    }
+    
+    return getNewBill
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
- * Get bills by user with pagination and formatted data
- * @param {string} userId - User ID to get bills for
+ * Get all bills
+ * @returns {Promise<Array>} Array of bills
+ */
+const getAll = async () => {
+  try {
+    return await billModel.getAll()
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get all bills with pagination
  * @param {number} page - Page number
  * @param {number} limit - Items per page
- * @returns {Object} Formatted bills with user info and pagination
+ * @returns {Promise<Object>} Bills with pagination info
+ */
+const getAllWithPagination = async (page = 1, limit = 10) => {
+  try {
+    return await billModel.getAllWithPagination(page, limit)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get bills by user ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} Array of bills
+ */
+const getBillsByUser = async (userId) => {
+  try {
+    return await billModel.getBillsByUser(userId)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get bills by user with pagination
+ * @param {string} userId - User ID
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @returns {Promise<Object>} Bills with pagination info
  */
 const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   try {
-    // Get bills from model
-    const { bills, pagination } = await billModel.getBillsByUserWithPagination(
-      userId,
-      page,
-      limit
-    );
-
-    // Collect all unique user IDs
-    const userIdsToFetch = new Set();
-    bills.forEach((bill) => {
-      if (bill.payerId) {
-        userIdsToFetch.add(bill.payerId.toString());
-      }
-      bill.participants.forEach((participantId) => {
-        userIdsToFetch.add(participantId.toString());
-      });
-    });
-
-    // Fetch all users at once
-    let userMap = new Map();
-    if (userIdsToFetch.size > 0) {
-      const users = await userModel.findManyByIds(Array.from(userIdsToFetch));
-      userMap = new Map(users.map((u) => [u._id.toString(), u]));
-    }
-
-    // Format bills with user information
-    const formattedBills = bills.map((bill) => {
-      const payerData = userMap.get(bill.payerId?.toString());
-      const payer = payerData
-        ? {
-            id: payerData._id,
-            name: payerData.name,
-            email: payerData.email,
-            avatar: payerData.avatar,
-          }
-        : {
-            id: bill.payerId,
-            name: "Unknown User",
-            email: "",
-            avatar: null,
-          };
-
-      const participants = bill.participants
-        .map((participantId) => {
-          const participantData = userMap.get(participantId?.toString());
-          return participantData
-            ? {
-                id: participantData._id,
-                name: participantData.name,
-                email: participantData.email,
-                avatar: participantData.avatar,
-              }
-            : null;
-        })
-        .filter((p) => p !== null);
-
-      const userPaymentStatus = bill.paymentStatus.find(
-        (status) => status.userId === userId
-      );
-
-      return {
-        id: bill._id,
-        paymentDate: bill.paymentDate,
-        billName: bill.billName,
-        description: bill.description,
-        totalAmount: bill.totalAmount,
-        payer: payer,
-        participants: participants,
-        settled: bill.isSettled,
-        splittingMethod: bill.splittingMethod,
-        userAmountOwed: userPaymentStatus ? userPaymentStatus.amountOwed : 0,
-        userPaidStatus: userPaymentStatus ? userPaymentStatus.isPaid : false,
-        createdAt: bill.createdAt,
-        updatedAt: bill.updatedAt,
-      };
-    });
-
-    return {
-      bills: formattedBills,
-      pagination
-    };
+    return await billModel.getBillsByUserWithPagination(userId, page, limit)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
+
+/**
+ * Get bills by creator ID
+ * @param {string} creatorId - Creator user ID
+ * @returns {Promise<Array>} Array of bills
+ */
+const getBillsByCreator = async (creatorId) => {
+  try {
+    return await billModel.getBillsByCreator(creatorId)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get bill by ID
+ * @param {string} billId - Bill ID
+ * @returns {Promise<Object>} Bill object
+ */
+const findOneById = async (billId) => {
+  try {
+    return await billModel.findOneById(billId)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Update bill with activity logging
+ * @param {string} billId - Bill ID
+ * @param {Object} updateData - Data to update
+ * @param {string} updatedBy - User ID who updates
+ * @returns {Promise<Object>} Updated bill
+ */
+const update = async (billId, updateData, updatedBy) => {
+  try {
+    // Get original bill data for activity logging
+    const originalBill = await billModel.findOneById(billId)
+    
+    const result = await billModel.update(billId, updateData)
+    
+    // Log activity if updatedBy is provided
+    if (updatedBy && originalBill) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_UPDATED,
+          updatedBy,
+          billId,
+          {
+            billName: originalBill.billName,
+            previousValue: {
+              billName: originalBill.billName,
+              totalAmount: originalBill.totalAmount,
+              description: originalBill.description
+            },
+            newValue: updateData,
+            description: `Updated bill: ${originalBill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill update activity:', activityError.message)
+      }
+    }
+    
+    return result
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Mark bill as paid for a user
+ * @param {string} billId - Bill ID
+ * @param {string} userId - User ID who paid
+ * @param {string} paidBy - User ID who marked as paid (for logging)
+ * @returns {Promise<Object>} Update result
+ */
+const markAsPaid = async (billId, userId, paidBy) => {
+  try {
+    const bill = await billModel.findOneById(billId)
+    
+    const result = await billModel.markAsPaid(billId, userId)
+    
+    // Log payment activity
+    if (paidBy) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_PAID,
+          paidBy,
+          billId,
+          {
+            billName: bill.billName,
+            paymentStatus: 'paid',
+            description: `Marked payment as completed for bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill payment activity:', activityError.message)
+      }
+    }
+    
+    // Check if all participants have paid
+    const updatedBill = await billModel.findOneById(billId)
+    const allPaid = updatedBill.paymentStatus.every(status => status.isPaid)
+    
+    if (allPaid) {
+      await billModel.update(billId, { isSettled: true })
+      
+      // Log bill settlement activity
+      if (paidBy) {
+        try {
+          await activityModel.logBillActivity(
+            activityModel.ACTIVITY_TYPES.BILL_SETTLED,
+            paidBy,
+            billId,
+            {
+              billName: bill.billName,
+              description: `Bill fully settled: ${bill.billName}`
+            }
+          )
+        } catch (activityError) {
+          console.warn('Failed to log bill settlement activity:', activityError.message)
+        }
+      }
+    }
+    
+    return result
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * User opts out from a bill
+ * @param {string} billId - Bill ID
+ * @param {string} userId - User ID who opts out
+ * @param {string} optedOutBy - User ID for logging
+ * @returns {Promise<Object>} Update result
+ */
+const optOutUser = async (billId, userId, optedOutBy) => {
+  try {
+    const bill = await billModel.findOneById(billId)
+    
+    const result = await billModel.optOutUser(billId, userId)
+    
+    // Log opt-out activity
+    if (optedOutBy) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_USER_OPTED_OUT,
+          optedOutBy,
+          billId,
+          {
+            billName: bill.billName,
+            description: `User opted out from bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill opt-out activity:', activityError.message)
+      }
+    }
+    
+    return result
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Delete bill by ID with activity logging
+ * @param {string} billId - Bill ID
+ * @param {string} deletedBy - User ID who deletes
+ * @returns {Promise<Object>} Delete result
+ */
+const deleteOneById = async (billId, deletedBy) => {
+  try {
+    const bill = await billModel.findOneById(billId)
+    
+    const result = await billModel.deleteOneById(billId)
+    
+    // Log deletion activity
+    if (deletedBy && bill) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_DELETED,
+          deletedBy,
+          billId,
+          {
+            billName: bill.billName,
+            amount: bill.totalAmount,
+            description: `Deleted bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill deletion activity:', activityError.message)
+      }
+    }
+    
+    return result
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Send bill reminder with activity logging
+ * @param {string} billId - Bill ID
+ * @param {string} reminderType - Type of reminder ('email', 'sms', 'notification')
+ * @param {string} recipientUserId - User ID who receives the reminder
+ * @param {string} sentByUserId - User ID who sends the reminder
+ * @returns {Promise<Object>} Reminder result
+ */
+const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId) => {
+  try {
+    const bill = await billModel.findOneById(billId)
+    
+    // Here you would implement your actual reminder logic
+    // For example: await emailService.sendReminder(...)
+    
+    // Log reminder activity
+    if (sentByUserId) {
+      try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_REMINDER_SENT,
+          sentByUserId,
+          billId,
+          {
+            billName: bill.billName,
+            reminderType: reminderType,
+            recipientId: recipientUserId,
+            description: `Sent ${reminderType} reminder for bill: ${bill.billName}`
+          }
+        )
+      } catch (activityError) {
+        console.warn('Failed to log bill reminder activity:', activityError.message)
+      }
+    }
+    
+    return { success: true, message: 'Reminder sent successfully' }
+  } catch (error) {
+    throw error
+  }
+}
 
 export const billService = {
   createNew,
-  searchBillsByUserWithPagination,
-  getBillsByUserWithPagination
-};
+  getAll,
+  getAllWithPagination,
+  getBillsByUser,
+  getBillsByUserWithPagination,
+  getBillsByCreator,
+  findOneById,
+  update,
+  markAsPaid,
+  optOutUser,
+  deleteOneById,
+  sendReminder
+}
