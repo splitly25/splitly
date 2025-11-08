@@ -10,7 +10,7 @@ import AvatarGroup from '@mui/material/AvatarGroup'
 import Tooltip from '@mui/material/Tooltip'
 import Button from '@mui/material/Button'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
-import { captializeFirstLetter } from '~/utils/formatter'
+import { captializeFirstLetter } from '~/utils/formatters'
 
 const MENU_STYLE = {
   color: 'white',

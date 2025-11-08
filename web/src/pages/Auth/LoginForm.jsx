@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -14,32 +14,48 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Avatar from '@mui/material/Avatar'
 import Zoom from '@mui/material/Zoom'
+import Alert from '@mui/material/Alert'
 import {
   EMAIL_RULE,
   PASSWORD_RULE,
   FIELD_REQUIRED_MESSAGE,
   PASSWORD_RULE_MESSAGE,
-  EMAIL_RULE_MESSAGE
+  EMAIL_RULE_MESSAGE,
 } from '~/utils/validators'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
+import { useDispatch } from 'react-redux'
+import { toast } from 'react-toastify'
+import { loginUserAPI } from '~/redux/user/userSlice'
+import { COLORS } from '~/theme'
 
 function LoginForm() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
       email: '',
-      password: ''
-    }
+      password: '',
+    },
   })
   const [showPassword, setShowPassword] = useState(false)
+  let [searchParams] = useSearchParams()
+  const registeredEmail = searchParams.get('registeredEmail')
+  const verifiedEmail = searchParams.get('verifiedEmail')
 
   const onSubmit = async (data) => {
-    // Handle login logic here
-    console.log('Login data:', data)
-    // Add your login API call here
+    const { email, password } = data
+    toast
+      .promise(dispatch(loginUserAPI({ email, password })), {
+        pending: 'Logging in...',
+      })
+      .then((response) => {
+        if (!response.error) navigate('/')
+      })
   }
 
   const handleClickShowPassword = () => {
@@ -48,25 +64,69 @@ function LoginForm() {
 
   return (
     <Zoom in={true} style={{ transitionDelay: '200ms' }}>
-      <Card sx={{ minWidth: 380, maxWidth: 400, width: '100%', mx: 2 }}>
+      <Card
+        sx={{
+          minWidth: 380,
+          maxWidth: 400,
+          width: '100%',
+          mx: 2,
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              mb: 3
+              mb: 3,
             }}
           >
-            <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-              <LockOutlinedIcon />
+            <Avatar
+              sx={{
+                m: 1,
+                bgcolor: COLORS.primary,
+                width: 56,
+                height: 56,
+                boxShadow: `0 4px 20px ${COLORS.primary}40`,
+              }}
+            >
+              <LockOutlinedIcon sx={{ fontSize: 28 }} />
             </Avatar>
-            <Typography component="h1" variant="h5" fontWeight="bold">
+            <Typography
+              component="h1"
+              variant="h5"
+              fontWeight="bold"
+              sx={{ color: COLORS.text, mt: 1 }}
+            >
               Sign In
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: COLORS.textMuted, mt: 0.5 }}
+            >
+              Welcome back to Splitly
             </Typography>
           </Box>
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            {registeredEmail && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Registration successful! A verification email has been sent to <strong>{registeredEmail}</strong>.
+                Please check your inbox to verify your account.
+              </Alert>
+            )}
+
+            {verifiedEmail && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Your account has been verified successfully! You can now sign in with your email{' '}
+                <strong>{verifiedEmail}</strong>.
+              </Alert>
+            )}
+
             <TextField
               fullWidth
               label="Email Address"
@@ -78,8 +138,8 @@ function LoginForm() {
                 required: FIELD_REQUIRED_MESSAGE,
                 pattern: {
                   value: EMAIL_RULE,
-                  message: EMAIL_RULE_MESSAGE
-                }
+                  message: EMAIL_RULE_MESSAGE,
+                },
               })}
             />
             <FieldErrorAlert errors={errors} fieldName="email" />
@@ -94,22 +154,18 @@ function LoginForm() {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
+                    <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
               {...register('password', {
                 required: FIELD_REQUIRED_MESSAGE,
                 pattern: {
                   value: PASSWORD_RULE,
-                  message: PASSWORD_RULE_MESSAGE
-                }
+                  message: PASSWORD_RULE_MESSAGE,
+                },
               })}
             />
             <FieldErrorAlert errors={errors} fieldName="password" />
@@ -118,18 +174,49 @@ function LoginForm() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5 }}
+              sx={{
+                mt: 3,
+                mb: 2,
+                py: 1.5,
+                bgcolor: COLORS.primary,
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: '1rem',
+                borderRadius: 1.5,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  bgcolor: COLORS.primary,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 24px ${COLORS.primary}40`,
+                },
+                '&:disabled': {
+                  opacity: 0.7,
+                  transform: 'none',
+                },
+              }}
               disabled={isSubmitting}
+              className="interceptor-loading"
             >
               {isSubmitting ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Donnot have an account?{' '}
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" sx={{ color: COLORS.textMuted }}>
+                Don't have an account?{' '}
                 <Link
                   to="/register"
-                  style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold' }}
+                  style={{
+                    textDecoration: 'none',
+                    color: COLORS.primary,
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = COLORS.accent
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = COLORS.primary
+                  }}
                 >
                   Sign Up
                 </Link>
@@ -139,7 +226,6 @@ function LoginForm() {
         </CardContent>
       </Card>
     </Zoom>
-
   )
 }
 

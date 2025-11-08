@@ -4,16 +4,12 @@ import { userController } from '~/controllers/userController'
 
 const Router = express.Router()
 
-Router.route('/register').post(
-  userValidation.createNew,
-  userController.createNew
-)
+Router.route('/register').post(userValidation.createNew, userController.createNew)
 
-Router.route('/verify_account').put(
-  userValidation.verifyAccount,
-  userController.verifyAccount
-)
+Router.route('/verify_account').put(userValidation.verifyAccount, userController.verifyAccount)
 
 Router.route('/login').post(userValidation.login, userController.login)
+
+Router.route('/logout').delete(userController.logout)
 
 export const userRoute = Router

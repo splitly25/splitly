@@ -2,7 +2,7 @@ import Layout from '~/components/Layout'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
-import { formatCurrency } from '~/utils/formatter'
+import { formatCurrency } from '~/utils/formatters'
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)

@@ -4,7 +4,7 @@ import { userModel } from '~/models/userModel.js';
 import { activityModel } from '~/models/activityModel.js';
 import ApiError from '~/utils/APIError.js';
 import bcryptjs from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 import { pickUser } from '~/utils/formatters';
 import { WEBSITE_DOMAIN } from '~/utils/constants';
 import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider';

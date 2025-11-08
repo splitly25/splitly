@@ -1,10 +1,6 @@
 import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
-
-export const fetchABCDetailsAPI= async(id) => {
-  const response= await authorizedAxiosInstance.get(`${API_ROOT}/v1/abc/${id}`)
-  return response.data
-}
+import { toast } from 'react-toastify'
 
 export const fetchDashboardDataAPI = async(userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboard/${userId}`)
@@ -28,5 +24,18 @@ export const fetchDebtsIOweAPI = async(userId) => {
 
 export const fetchDebtSummaryAPI = async(userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/summary`)
+  return response.data
+}
+
+// User APIs
+export const registerUserAPI = async (userData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/register`, userData)
+  toast.success('Registration successful! Please check your email to verify your account.', { theme: 'colored' })
+  return response.data
+}
+
+export const verifyUserAccountAPI = async (data) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/verify_account`, data)
+  toast.success('Account verified successfully! Now you can log in.', { theme: 'colored' })
   return response.data
 }
