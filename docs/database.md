@@ -379,6 +379,13 @@
   - `limit` (Number, default: 10): Number of bills per page
   - Returns: `{ bills: Array, pagination: { currentPage, totalPages, totalBills, limit, hasNextPage, hasPrevPage } }`
   - Example: Page 1 with limit 10 returns bills 0-9, Page 2 returns bills 10-19
+- `searchBillsByUserWithPagination(userId, customQuery, page, limit)` - Search bills for a user with custom query filters and pagination
+  - `userId` (String): User ID to search bills for
+  - `customQuery` (Object): Custom MongoDB query filters (built by billService with full text search logic)
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { page, limit, total, totalPages } }`
+  - Note: Full text search logic (billName, description, paymentDate, year, month) is implemented in billService.js
 - `getAllWithPagination(page, limit)` - Get all bills with pagination support
   - `page` (Number, default: 1): Page number (starts from 1)
   - `limit` (Number, default: 10): Number of bills per page
