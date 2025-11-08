@@ -377,144 +377,128 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
   }
 }
 
-// /**
-//  * Full text search bills by user with pagination
-//  * Searches across multiple fields: billName, description, paymentDate
-//  * Also supports partial date matching (day, month, year)
-//  * @param {string} userId - User ID to search bills for
-//  * @param {string} searchTerm - Search term for full text search
-//  * @param {number} page - Page number
-//  * @param {number} limit - Items per page
-//  * @returns {Promise<Object>} Bills with pagination info
-//  */
-// const searchBillsByUserWithPagination = async (userId, searchTerm, page = 1, limit = 10) => {
-//   try {
-//     if (!searchTerm || searchTerm.trim() === '') {
-//       // If no search term, return all bills
-//       return await billModel.getBillsByUserWithPagination(userId, page, limit)
-//     }
+/**
+ * Search bills by user with full text search
+ * @param {string} userId - User ID
+ * @param {string} searchTerm - Search term for billName, description, or date
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @returns {Promise<Object>} Bills with pagination info
+ */
+const searchBillsByUserWithPagination = async (userId, searchTerm = '', page = 1, limit = 10) => {
+  try {
+    // If no search term, return all bills for the user
+    if (!searchTerm || searchTerm.trim() === '') {
+      return await billModel.getBillsByUserWithPagination(userId, page, limit)
+    }
 
-//     const trimmedSearch = searchTerm.trim();
+    const trimmedSearch = searchTerm.trim()
     
-//     // Build full text search query
-//     const searchQuery = {
-//       $or: [
-//         // Search in bill name (case-insensitive)
-//         { billName: { $regex: trimmedSearch, $options: 'i' } },
-//         // Search in description (case-insensitive)
-//         { description: { $regex: trimmedSearch, $options: 'i' } }
-//       ]
-//     };
+    // Build search query with multiple conditions
+    const searchConditions = []
     
-//     // Try to parse search term as a full date and add exact date match
-//     const datePatterns = [
-//       { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: 'DD/MM/YYYY' }, // DD/MM/YYYY
-//       { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, format: 'DD-MM-YYYY' },   // DD-MM-YYYY
-//       { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, format: 'YYYY-MM-DD' }    // YYYY-MM-DD
-//     ];
+    // 1. Search in billName (case-insensitive)
+    searchConditions.push({
+      billName: { $regex: trimmedSearch, $options: 'i' }
+    })
     
-//     let dateMatched = false;
-//     for (const { regex, format } of datePatterns) {
-//       const match = trimmedSearch.match(regex);
-//       if (match) {
-//         let year, month, day;
-//         if (format === 'YYYY-MM-DD') {
-//           [, year, month, day] = match;
-//         } else {
-//           [, day, month, year] = match;
-//         }
-        
-//         // Create start and end of day timestamps
-//         const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-//         const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
-        
-//         if (!isNaN(startDate.getTime())) {
-//           searchQuery.$or.push({
-//             paymentDate: {
-//               $gte: startDate.getTime(),
-//               $lte: endDate.getTime()
-//             }
-//           });
-//           dateMatched = true;
-//         }
-//         break;
-//       }
-//     }
+    // 2. Search in description (case-insensitive)
+    searchConditions.push({
+      description: { $regex: trimmedSearch, $options: 'i' }
+    })
     
-//     // If not a full date, try partial date matching
-//     if (!dateMatched) {
-//       // Check if it's a number that could be a day, month, or year
-//       const numericSearch = parseInt(trimmedSearch);
-//       if (!isNaN(numericSearch)) {
-//         // Could be searching for day (1-31), month (1-12), or year (2000+)
-//         if (numericSearch >= 1 && numericSearch <= 31) {
-//           // Might be searching for a specific day of month
-//           // We'll search for any date where the day matches
-//           const dayRegex = new RegExp(`\\b${numericSearch}\\b`);
-          
-//           // Get all bills first and filter by day (less efficient but flexible)
-//           // Alternative: Add more specific date range queries if needed
-//         }
+    // 3. Try to parse as date in various formats
+    const datePatterns = [
+      /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/,  // DD/MM/YYYY or DD-MM-YYYY
+      /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/   // YYYY/MM/DD or YYYY-MM-DD
+    ]
+    
+    for (const pattern of datePatterns) {
+      const match = trimmedSearch.match(pattern)
+      if (match) {
+        let day, month, year
+        if (pattern.source.startsWith('^(\\d{4})')) {
+          // YYYY-MM-DD format
+          [, year, month, day] = match
+        } else {
+          // DD/MM/YYYY format
+          [, day, month, year] = match
+        }
         
-//         if (numericSearch >= 1 && numericSearch <= 12) {
-//           // Might be searching for a specific month
-//           // Can add month-specific search here if needed
-//         }
+        // Create date range for the entire day
+        const startDate = new Date(year, month - 1, day, 0, 0, 0)
+        const endDate = new Date(year, month - 1, day, 23, 59, 59)
         
-//         if (numericSearch >= 2000 && numericSearch <= 2100) {
-//           // Searching for a year
-//           const yearStart = new Date(numericSearch, 0, 1, 0, 0, 0, 0);
-//           const yearEnd = new Date(numericSearch, 11, 31, 23, 59, 59, 999);
-          
-//           searchQuery.$or.push({
-//             paymentDate: {
-//               $gte: yearStart.getTime(),
-//               $lte: yearEnd.getTime()
-//             }
-//           });
-//         }
-//       }
+        if (!isNaN(startDate.getTime())) {
+          searchConditions.push({
+            paymentDate: {
+              $gte: startDate.getTime(),
+              $lte: endDate.getTime()
+            }
+          })
+          break
+        }
+      }
+    }
+    
+    // 4. Search by year (if 4 digits between 2000-2100)
+    const yearMatch = trimmedSearch.match(/^(20\d{2})$/)
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1])
+      const startOfYear = new Date(year, 0, 1, 0, 0, 0).getTime()
+      const endOfYear = new Date(year, 11, 31, 23, 59, 59).getTime()
       
-//       // Also support searching for month names (Vietnamese)
-//       const monthNames = {
-//         'tháng 1': 0, 'thang 1': 0, 'january': 0, 'jan': 0, '01': 0,
-//         'tháng 2': 1, 'thang 2': 1, 'february': 1, 'feb': 1, '02': 1,
-//         'tháng 3': 2, 'thang 3': 2, 'march': 2, 'mar': 2, '03': 2,
-//         'tháng 4': 3, 'thang 4': 3, 'april': 3, 'apr': 3, '04': 3,
-//         'tháng 5': 4, 'thang 5': 4, 'may': 4, '05': 4,
-//         'tháng 6': 5, 'thang 6': 5, 'june': 5, 'jun': 5, '06': 5,
-//         'tháng 7': 6, 'thang 7': 6, 'july': 6, 'jul': 6, '07': 6,
-//         'tháng 8': 7, 'thang 8': 7, 'august': 7, 'aug': 7, '08': 7,
-//         'tháng 9': 8, 'thang 9': 8, 'september': 8, 'sep': 8, '09': 8,
-//         'tháng 10': 9, 'thang 10': 9, 'october': 9, 'oct': 9, '10': 9,
-//         'tháng 11': 10, 'thang 11': 10, 'november': 10, 'nov': 10, '11': 10,
-//         'tháng 12': 11, 'thang 12': 11, 'december': 11, 'dec': 11, '12': 11
-//       };
-      
-//       const searchLower = trimmedSearch.toLowerCase();
-//       const monthNumber = monthNames[searchLower];
-      
-//       if (monthNumber !== undefined) {
-//         // Search for any date in this month (current year or all years)
-//         const currentYear = new Date().getFullYear();
-//         const monthStart = new Date(currentYear, monthNumber, 1, 0, 0, 0, 0);
-//         const monthEnd = new Date(currentYear, monthNumber + 1, 0, 23, 59, 59, 999);
-        
-//         searchQuery.$or.push({
-//           paymentDate: {
-//             $gte: monthStart.getTime(),
-//             $lte: monthEnd.getTime()
-//           }
-//         });
-//       }
-//     }
+      searchConditions.push({
+        paymentDate: {
+          $gte: startOfYear,
+          $lte: endOfYear
+        }
+      })
+    }
     
-//     // Call model with custom query
-//     return await billModel.searchBillsByUserWithPagination(userId, searchQuery, page, limit)
-//   } catch (error) {
-//     throw error
-//   }
-// }
+    // 5. Search by month name (Vietnamese and English)
+    const monthNames = {
+      'tháng 1': 1, 'tháng 01': 1, 'january': 1, 'jan': 1,
+      'tháng 2': 2, 'tháng 02': 2, 'february': 2, 'feb': 2,
+      'tháng 3': 3, 'tháng 03': 3, 'march': 3, 'mar': 3,
+      'tháng 4': 4, 'tháng 04': 4, 'april': 4, 'apr': 4,
+      'tháng 5': 5, 'tháng 05': 5, 'may': 5,
+      'tháng 6': 6, 'tháng 06': 6, 'june': 6, 'jun': 6,
+      'tháng 7': 7, 'tháng 07': 7, 'july': 7, 'jul': 7,
+      'tháng 8': 8, 'tháng 08': 8, 'august': 8, 'aug': 8,
+      'tháng 9': 9, 'tháng 09': 9, 'september': 9, 'sep': 9,
+      'tháng 10': 10, 'october': 10, 'oct': 10,
+      'tháng 11': 11, 'november': 11, 'nov': 11,
+      'tháng 12': 12, 'december': 12, 'dec': 12
+    }
+    
+    const lowerSearch = trimmedSearch.toLowerCase()
+    const monthNumber = monthNames[lowerSearch]
+    
+    if (monthNumber) {
+      const currentYear = new Date().getFullYear()
+      const startOfMonth = new Date(currentYear, monthNumber - 1, 1, 0, 0, 0).getTime()
+      const endOfMonth = new Date(currentYear, monthNumber, 0, 23, 59, 59).getTime()
+      
+      searchConditions.push({
+        paymentDate: {
+          $gte: startOfMonth,
+          $lte: endOfMonth
+        }
+      })
+    }
+    
+    // Build the custom query with $or condition
+    const customQuery = {
+      $or: searchConditions
+    }
+    
+    // Call the model with the custom query
+    return await billModel.searchBillsByUserWithPagination(userId, customQuery, page, limit)
+  } catch (error) {
+    throw error
+  }
+}
 
 export const billService = {
   createNew,
@@ -522,12 +506,12 @@ export const billService = {
   getAllWithPagination,
   getBillsByUser,
   getBillsByUserWithPagination,
-  // searchBillsByUserWithPagination,
   getBillsByCreator,
   findOneById,
   update,
   markAsPaid,
   optOutUser,
   deleteOneById,
-  sendReminder
+  sendReminder,
+  searchBillsByUserWithPagination
 }

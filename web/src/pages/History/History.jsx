@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import Layout from "~/components/Layout";
+import { useEffect, useState } from "react";
+import { fetchHistoryDataAPI, fetchHistorySearchingAPI } from "~/apis";
 import {
   Box,
   TextField,
@@ -22,161 +24,6 @@ import {
   FilterList as FilterListIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
-
-// --- Mock Components and APIs ---
-
-/**
- * Mock Layout Component
- * Replaces the imported "./components/Layout"
- */
-const Layout = ({ children }) => {
-  return (
-    <Box sx={{ 
-      maxWidth: '1200px', 
-      margin: '0 auto', 
-      padding: '16px', 
-      backgroundColor: '#f9fafb' 
-    }}>
-      {/* A simple layout wrapper */}
-      {children}
-    </Box>
-  );
-};
-
-/**
- * Mock API Data
- */
-const allMockBills = [
-  {
-    id: 'b1',
-    paymentDate: 1678886400000, // Mar 15, 2023
-    billName: 'Đi ăn nhà hàng',
-    description: 'Ăn tối hải sản',
-    totalAmount: 1200000,
-    payer: { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-      { id: 'u3', name: 'Charlie', email: 'charlie@example.com', avatar: null },
-    ],
-    settled: true,
-  },
-  {
-    id: 'b2',
-    paymentDate: 1679318400000, // Mar 20, 2023
-    billName: 'Tiền vé xem phim',
-    description: 'Phim hành động',
-    totalAmount: 450000,
-    payer: { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-      { id: 'u3', name: 'Charlie', email: 'charlie@example.com', avatar: null },
-    ],
-    settled: false,
-  },
-  {
-    id: 'b3',
-    paymentDate: 1681564800000, // Apr 15, 2023
-    billName: 'Mua sắm tạp hóa',
-    description: 'Đồ dùng cho cả tuần',
-    totalAmount: 800000,
-    payer: { id: 'u3', name: 'Charlie', email: 'charlie@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-    ],
-    settled: false,
-  },
-  {
-    id: 'b4',
-    paymentDate: 1684156800000, // May 15, 2023
-    billName: 'Tiền nhà tháng 5',
-    description: 'Tiền thuê nhà',
-    totalAmount: 6000000,
-    payer: { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-    ],
-    settled: true,
-  },
-    {
-    id: 'b5',
-    paymentDate: 1718457600000, // Jun 15, 2024
-    billName: 'Du lịch Đà Lạt',
-    description: 'Vé máy bay và khách sạn',
-    totalAmount: 5000000,
-    payer: { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-      { id: 'u3', name: 'Charlie', email: 'charlie@example.com', avatar: null },
-      { id: 'u4', name: 'David', email: 'david@example.com', avatar: null },
-    ],
-    settled: false,
-  },
-  // Add 15 more bills for pagination demo
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `b${i + 6}`,
-    paymentDate: 1718457600000 - (i * 100000000), // Vary dates
-    billName: `Hóa đơn Mẫu ${i + 1}`,
-    description: `Mô tả cho hóa đơn ${i + 1}`,
-    totalAmount: (i + 1) * 50000,
-    payer: { id: 'u3', name: 'Charlie', email: 'charlie@example.com', avatar: null },
-    participants: [
-      { id: 'u1', name: 'Alice', email: 'alice@example.com', avatar: null },
-      { id: 'u2', name: 'Bob', email: 'bob@example.com', avatar: null },
-    ],
-    settled: i % 3 === 0,
-  }))
-];
-
-
-/**
- * Mock API Function
- * Replaces the imported "./apis"
- * Simulates fetching data with search and pagination.
- */
-const fetchHistoryDataAPI = (userId, page, limit, searchTerm, filter) => {
-  console.log("Mock API Call:", { userId, page, limit, searchTerm, filter });
-  
-  return new Promise((resolve) => {
-    // Simulate network delay
-    setTimeout(() => {
-      // 1. Filter by search term
-      const lowerSearch = searchTerm.toLowerCase();
-      const filteredBills = searchTerm
-        ? allMockBills.filter(
-            (bill) =>
-              bill.billName.toLowerCase().includes(lowerSearch) ||
-              bill.description.toLowerCase().includes(lowerSearch) ||
-              new Date(bill.paymentDate).toLocaleDateString('vi-VN').includes(lowerSearch)
-          )
-        : allMockBills;
-
-      // 2. Paginate results
-      const total = filteredBills.length;
-      const totalPages = Math.ceil(total / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = page * limit;
-      const paginatedBills = filteredBills.slice(startIndex, endIndex);
-
-      // 3. Resolve with API-like structure
-      resolve({
-        bills: paginatedBills,
-        pagination: {
-          total: total,
-          totalPages: totalPages,
-          currentPage: page,
-          limit: limit,
-        },
-      });
-    }, 500); // 500ms delay
-  });
-};
-
-// --- Main History Component ---
 
 const History = () => {
   const [page, setPage] = useState(1);
@@ -216,14 +63,22 @@ const History = () => {
       try {
         setLoading(true);
 
-        // This API call now uses the IN-FILE MOCK function
-        const responseData = await fetchHistoryDataAPI(
-          currentUserId, 
-          page, 
-          10, // 10 items per page
-          debouncedSearch, 
-          "" // Assuming this last param is for other filters, unused for now
-        );
+        // Use search endpoint if there's a search term, otherwise use regular endpoint
+        const responseData = debouncedSearch 
+          ? await fetchHistorySearchingAPI(
+              currentUserId, 
+              page, 
+              10, 
+              debouncedSearch, 
+              ""
+            )
+          : await fetchHistoryDataAPI(
+              currentUserId, 
+              page, 
+              10, 
+              "", 
+              ""
+            );
         
         setHistoryData(responseData.bills || []);
         setTotalPage(responseData.pagination?.totalPages || 1);
@@ -239,10 +94,7 @@ const History = () => {
       }
     };
     
-    // Only fetch if userId is available
-    if (currentUserId) {
-      fetchHistoryData();
-    }
+    fetchHistoryData();
   }, [currentUserId, page, debouncedSearch]);
 
   const formatCurrency = (amount) => {
@@ -281,6 +133,7 @@ const History = () => {
     );
   }
 
+
   return (
     <Layout>
       <Box className="p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-white">
@@ -288,7 +141,6 @@ const History = () => {
           Danh sách hóa đơn
         </h1>
 
-        {/* Search and Filter Bar */}
         <Box className="mb-4 sm:mb-5 md:mb-6 bg-white rounded-2xl shadow-sm p-3 sm:p-4 md:p-6">
           <Box className="flex gap-3 items-center">
             <TextField
@@ -349,7 +201,7 @@ const History = () => {
         </Box>
 
         {/* Search Results Info */}
-        {debouncedSearch && !loading && (
+        {debouncedSearch && (
           <Box className="mb-4 flex items-center gap-2">
             <Typography variant="body2" color="text.secondary">
               Tìm thấy <strong>{totalBills}</strong> kết quả cho "{debouncedSearch}"
@@ -358,24 +210,14 @@ const History = () => {
               <IconButton 
                 size="small" 
                 onClick={handleSearchClear}
-                title="Xóa tìm kiếm"
-                sx={{ 
-                  color: '#574D98', 
-                  width: 24, 
-                  height: 24,
-                  backgroundColor: '#F3F4F6',
-                  '&:hover': {
-                    backgroundColor: '#E5E7EB'
-                  }
-                }}
+                sx={{ color: '#574D98' }}
               >
-                <Box component="span" sx={{ fontSize: '14px', lineHeight: '14px', transform: 'translateY(-1px)' }}>✕</Box>
+                ✕
               </IconButton>
             )}
           </Box>
         )}
 
-        {/* Table Container */}
         <TableContainer
           component={Paper}
           sx={{
@@ -387,7 +229,6 @@ const History = () => {
             position: "relative",
           }}
         >
-          {/* Loading Spinner Overlay */}
           {loading && (
             <Box
               sx={{
@@ -408,7 +249,6 @@ const History = () => {
           )}
 
           <Table sx={{ minWidth: { xs: 600, sm: 700, md: 800 } }}>
-            {/* Table Head */}
             <TableHead>
               <TableRow sx={{ backgroundColor: "#F8B4B4" }}>
                 {tableHeader.map((column) => (
@@ -439,11 +279,8 @@ const History = () => {
                 ))}
               </TableRow>
             </TableHead>
-            
-            {/* Table Body */}
             <TableBody>
               {!loading && historyData.length === 0 ? (
-                // No Results State
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                     <Box className="flex flex-col items-center gap-3">
@@ -463,7 +300,6 @@ const History = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                // Results Rows
                 historyData.map((bill, index) => (
                 <TableRow
                   key={bill.id}
@@ -471,10 +307,8 @@ const History = () => {
                     backgroundColor: index % 2 === 0 ? "#FFF" : "#FCE7E7",
                     "&:hover": {
                       backgroundColor: index % 2 === 0 ? "#FEF2F2" : "#FCD5D5",
-                      cursor: 'pointer' // Add pointer on hover
                     },
                   }}
-                  // onClick={() => handleRowClick(bill.id)} // Example: Add navigation to bill detail
                 >
                   <TableCell
                     align="center"
@@ -510,12 +344,7 @@ const History = () => {
                         sm: "8px 8px",
                         md: "12px 16px",
                       },
-                      maxWidth: '150px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
                     }}
-                    title={bill.billName}
                   >
                     {bill.billName}
                   </TableCell>
@@ -550,7 +379,6 @@ const History = () => {
                   >
                     <Box className="flex items-center justify-start gap-1 sm:gap-2">
                       <Avatar
-                        src={bill.payer.avatar} // Use avatar src
                         sx={{
                           width: { xs: 24, sm: 28, md: 32 },
                           height: { xs: 24, sm: 28, md: 32 },
@@ -561,16 +389,16 @@ const History = () => {
                             sm: "0.75rem",
                             md: "0.875rem",
                           },
+
                         }}
                       >
-                        {bill.payer.name.charAt(0).toUpperCase()}
+                        {bill.payer.name.charAt(0)}
                       </Avatar>
                       <span
                         className="text-gray-700"
                         style={{
                           fontSize: "clamp(0.65rem, 2vw, 1rem)",
                         }}
-                        title={bill.payer.name}
                       >
                         {bill.payer.name}
                       </span>
@@ -592,7 +420,6 @@ const History = () => {
                         "& .MuiAvatar-root": {
                           width: { xs: 24, sm: 28, md: 32 },
                           height: { xs: 24, sm: 28, md: 32 },
-  
                           fontSize: {
                             xs: "0.65rem",
                             sm: "0.75rem",
@@ -600,18 +427,11 @@ const History = () => {
                           },
                           backgroundColor: "#D1D5DB",
                           color: "#6B7280",
-                          border: '2px solid #FFF'
                         },
                       }}
                     >
                       {bill.participants.map((participant, idx) => (
-                        <Avatar 
-                          key={idx} 
-                          src={participant.avatar}
-                          title={participant.name}
-                        >
-                          {participant.name.charAt(0).toUpperCase()}
-                        </Avatar>
+                        <Avatar key={idx}>{participant.name.charAt(0)}</Avatar>
                       ))}
                     </AvatarGroup>
                   </TableCell>
@@ -627,7 +447,6 @@ const History = () => {
                   >
                     <Checkbox
                       checked={bill.settled}
-                      readOnly
                       sx={{
                         color: "#D1D5DB",
                         padding: { xs: "4px", sm: "6px", md: "9px" },
@@ -637,7 +456,6 @@ const History = () => {
                         "&.Mui-checked": {
                           color: "#574D98",
                         },
-                        cursor: 'default'
                       }}
                     />
                   </TableCell>
@@ -648,7 +466,7 @@ const History = () => {
           </Table>
         </TableContainer>
 
-        {/* Pagination - Only show if there are results and more than one page */}
+        {/* Pagination - Only show if there are results */}
         {!loading && historyData.length > 0 && totalPage > 1 && (
           <Box className="flex justify-center mt-4 sm:mt-6 md:mt-8">
             <Pagination
@@ -668,10 +486,10 @@ const History = () => {
                 height: { xs: "24px", sm: "28px", md: "32px" },
                 margin: { xs: "0 2px", sm: "0 3px" },
                 "&.Mui-selected": {
-                  backgroundColor: "#574D98", // Use main purple for selected
+                  backgroundColor: "#374151",
                   color: "#FFF",
                   "&:hover": {
-                    backgroundColor: "#433B7E", // Darker purple on hover
+                    backgroundColor: "#1F2937",
                   },
                 },
                 "&:hover": {

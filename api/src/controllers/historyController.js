@@ -5,6 +5,7 @@
 
 import { StatusCodes } from "http-status-codes";
 import { userModel, billModel } from "~/models/index.js";
+import { billService } from "~/services/billService.js";
 import ApiError from "~/utils/APIError.js";
 
 /**
@@ -206,7 +207,7 @@ const getBillDetail = async (req, res, next) => {
 const getBillBySearching = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { searchTerm, page = 1, limit = 10 } = req.query;
+    const { search, page = 1, limit = 10 } = req.query;
 
     // 1. Validate user
     const user = await userModel.findOneById(userId);
@@ -218,13 +219,11 @@ const getBillBySearching = async (req, res, next) => {
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
-    // 3. Call the search function from the model
-    // We pass (searchTerm || '') to handle undefined or null search terms
-    // The model logic you provided already handles the empty string case
+    // 3. Call the search function from billService
     const { bills: userBills, pagination } =
-      await billModel.searchBillsByUserWithPagination(
+      await billService.searchBillsByUserWithPagination(
         userId,
-        searchTerm || '',
+        search || '',
         pageNum,
         limitNum
       );
