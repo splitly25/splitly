@@ -1,31 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import TingTingGif from '~/assets/tingting.gif';
 import TingTingPng from '~/assets/tingting.png';
 
 const ChatbotWindow = ({ isOpen, setIsOpen }) => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: 'Xin chào! Tôi là TingTing, trợ lý ảo của bạn. Tôi có thể giúp gì cho bạn?',
-      sender: 'bot',
-      time: '18:25 25/10/2025'
-    },
-    {
-      id: 2,
-      text: 'Giúp tôi thêm hatra.dev@gmail.com vào hóa đơn...',
-      sender: 'user',
-      time: '18:24 25/10/2025'
-    },
-    {
-      id: 3,
-      text: 'TingTing đã giúp bạn thêm hatra.dev@gmail.com vào hóa đơn...',
-      sender: 'bot',
-      time: '18:25 25/10/2025'
-    }
-  ]);
+  const [messages, setMessages] = useState(() => {
+    const saved = sessionStorage.getItem('chatMessages');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [inputMessage, setInputMessage] = useState('');
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    sessionStorage.setItem('chatMessages', JSON.stringify(messages));
+    if (messagesEndRef.current) {
+    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }
+  }, [messages]);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -75,7 +67,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 bg-[#FEEBEE] border-x-4 border-[#EF9A9A] flex flex-col gap-3">
         {/* Bot Info Section */}
-        <div className="bg-[#FEEBEE] flex flex-col items-center py-8 px-4">
+        <div className="bg-[#FEEBEE] grow flex flex-col items-center py-8 px-4">
           <div className="w-24 h-24 rounded-full bg-[#E89AC7] flex items-center justify-center mb-4">
             <img
               src={TingTingGif}
@@ -124,7 +116,9 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
+      
 
       {/* Input Area */}
       <form className="flex p-2 gap-2 bg-[#FEEBEE] border-x-4 border-b-4 border-[#EF9A9A] rounded-b-xl" onSubmit={handleSendMessage}>
