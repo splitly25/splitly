@@ -190,8 +190,10 @@ const searchBillsByUserWithPagination = async (userId, customQuery = {}, page = 
     const skip = (page - 1) * limit;
     
     // Build base query with user filter
+    // If customQuery has payerId, it means we're filtering by payer only
+    // Otherwise, filter by participants
     const query = {
-      participants: userId,
+      ...(customQuery.payerId ? {} : { participants: userId }),
       _destroy: false,
       ...customQuery
     };

@@ -499,6 +499,70 @@ const searchBillsByUserWithPagination = async (userId, searchTerm = '', page = 1
     throw error
   }
 }
+/**
+ * Filter bills by user with date range and payer
+ * @param {string} userId - User ID
+ * @param {string} fromDate - Start date in DD/MM/YYYY format
+ * @param {string} toDate - End date in DD/MM/YYYY format
+ * @param {boolean} payer - If true, only get bills where user is the payer
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @returns {Promise<Object>} Bills with pagination info
+ */
+const filterBillsByUser = async (userId, fromDate, toDate, payer, page = 1, limit = 10) => {
+  try {
+    // Build custom query for filtering
+    const customQuery = {}
+    
+    // 1. Date range filter
+    if (fromDate || toDate) {
+      customQuery.paymentDate = {}
+      
+      if (fromDate) {
+        // Parse fromDate (DD/MM/YYYY format)
+        const fromDateMatch = fromDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (fromDateMatch) {
+          const [, day, month, year] = fromDateMatch
+          const startDate = new Date(year, month - 1, day, 0, 0, 0)
+          
+          if (!isNaN(startDate.getTime())) {
+            customQuery.paymentDate.$gte = startDate.getTime()
+          }
+        }
+      }
+      
+      if (toDate) {
+        // Parse toDate (DD/MM/YYYY format)
+        const toDateMatch = toDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (toDateMatch) {
+          const [, day, month, year] = toDateMatch
+          const endDate = new Date(year, month - 1, day, 23, 59, 59)
+          
+          if (!isNaN(endDate.getTime())) {
+            customQuery.paymentDate.$lte = endDate.getTime()
+          }
+        }
+      }
+      
+      // If no valid date conditions were added, remove paymentDate filter
+      if (Object.keys(customQuery.paymentDate).length === 0) {
+        delete customQuery.paymentDate
+      }
+    }
+    
+    // 2. Payer filter - if payer is true, only get bills where userId is the payer
+    if (payer === true || payer === 'true') {
+      customQuery.payerId = userId
+    }
+    
+    // Call the model with the custom query
+    // If payer filter is active, we search with payerId condition
+    // Otherwise, we search with participants condition (handled by model)
+    return await billModel.searchBillsByUserWithPagination(userId, customQuery, page, limit)
+  } catch (error) {
+    throw error
+  }
+}
 
 export const billService = {
   createNew,
@@ -513,5 +577,6 @@ export const billService = {
   optOutUser,
   deleteOneById,
   sendReminder,
-  searchBillsByUserWithPagination
+  searchBillsByUserWithPagination,
+  filterBillsByUser
 }

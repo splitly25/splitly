@@ -22,6 +22,20 @@ export const fetchHistorySearchingAPI = async(userId, numPage, limit, search, se
 
 }
 
+export const fetchHistoryFilterAPI = async(userId, numPage, limit, fromDate, toDate, payer) => {
+  const params = new URLSearchParams({
+    page: numPage,
+    limit: limit
+  })
+  
+  if (fromDate) params.append('fromDate', fromDate)
+  if (toDate) params.append('toDate', toDate)
+  if (payer) params.append('payer', payer)
+  
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/filter/${userId}?${params.toString()}`)
+  return response.data
+}
+
 export const fetchDebtsOwedToMeAPI = async(userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/owed-to-me`)
   return response.data

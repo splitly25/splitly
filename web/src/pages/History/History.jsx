@@ -1,6 +1,6 @@
 import Layout from "~/components/Layout";
 import { useEffect, useState } from "react";
-import { fetchHistoryDataAPI, fetchHistorySearchingAPI } from "~/apis";
+import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from "~/apis";
 import {
   Box,
   TextField,
@@ -19,6 +19,9 @@ import {
   InputAdornment,
   CircularProgress,
   Typography,
+  Popover,
+  Button,
+  FormControlLabel,
 } from "@mui/material";
 import {
   FilterList as FilterListIcon,
@@ -34,6 +37,17 @@ const History = () => {
   const [historyData, setHistoryData] = useState([]);
   const [totalPage, setTotalPage] = useState(1);
   const [totalBills, setTotalBills] = useState(0);
+  
+  // Filter states
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [filterByPayer, setFilterByPayer] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    fromDate: "",
+    toDate: "",
+    payer: false
+  });
 
   const tableHeader = [
     { id: 1, title: "Ngày thanh toán" },
@@ -57,28 +71,44 @@ const History = () => {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // Fetch history data when page or search changes
+  // Fetch history data when page, search, or filters change
   useEffect(() => {
     const fetchHistoryData = async () => {
       try {
         setLoading(true);
 
-        // Use search endpoint if there's a search term, otherwise use regular endpoint
-        const responseData = debouncedSearch 
-          ? await fetchHistorySearchingAPI(
-              currentUserId, 
-              page, 
-              10, 
-              debouncedSearch, 
-              ""
-            )
-          : await fetchHistoryDataAPI(
-              currentUserId, 
-              page, 
-              10, 
-              "", 
-              ""
-            );
+        let responseData;
+        
+        // Priority: Filter > Search > Default
+        if (activeFilters.fromDate || activeFilters.toDate || activeFilters.payer) {
+          // Use filter endpoint
+          responseData = await fetchHistoryFilterAPI(
+            currentUserId,
+            page,
+            10,
+            activeFilters.fromDate,
+            activeFilters.toDate,
+            activeFilters.payer
+          );
+        } else if (debouncedSearch) {
+          // Use search endpoint
+          responseData = await fetchHistorySearchingAPI(
+            currentUserId, 
+            page, 
+            10, 
+            debouncedSearch, 
+            ""
+          );
+        } else {
+          // Use regular endpoint
+          responseData = await fetchHistoryDataAPI(
+            currentUserId, 
+            page, 
+            10, 
+            "", 
+            ""
+          );
+        }
         
         setHistoryData(responseData.bills || []);
         setTotalPage(responseData.pagination?.totalPages || 1);
@@ -95,7 +125,7 @@ const History = () => {
     };
     
     fetchHistoryData();
-  }, [currentUserId, page, debouncedSearch]);
+  }, [currentUserId, page, debouncedSearch, activeFilters]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
@@ -120,6 +150,51 @@ const History = () => {
     setDebouncedSearch("");
     setPage(1);
   };
+
+  const handleFilterClick = (event) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleApplyFilters = () => {
+    setActiveFilters({
+      fromDate,
+      toDate,
+      payer: filterByPayer
+    });
+    setPage(1);
+    handleFilterClose();
+  };
+
+  const handleResetFilters = () => {
+    setFromDate("");
+    setToDate("");
+    setFilterByPayer(false);
+    setActiveFilters({
+      fromDate: "",
+      toDate: "",
+      payer: false
+    });
+    setPage(1);
+  };
+
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    const [day, month, year] = dateString.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  };
+
+  const formatDateForAPI = (dateString) => {
+    if (!dateString) return "";
+    const [year, month, day] = dateString.split("-");
+    return `${day}/${month}/${year}`;
+  };
+
+  const openFilterPopover = Boolean(filterAnchorEl);
+  const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer;
 
   if (error) {
     return (
@@ -183,11 +258,12 @@ const History = () => {
               }}
             />
             <IconButton
+              onClick={handleFilterClick}
               sx={{
-                color: "#574D98",
-                backgroundColor: "#F3F4F6",
+                color: hasActiveFilters ? "#FFF" : "#574D98",
+                backgroundColor: hasActiveFilters ? "#574D98" : "#F3F4F6",
                 "&:hover": {
-                  backgroundColor: "#E5E7EB",
+                  backgroundColor: hasActiveFilters ? "#463A7A" : "#E5E7EB",
                 },
                 borderRadius: "8px",
                 padding: { xs: "6px", sm: "8px" },
@@ -199,6 +275,161 @@ const History = () => {
             </IconButton>
           </Box>
         </Box>
+
+        {/* Filter Popover */}
+        <Popover
+          open={openFilterPopover}
+          anchorEl={filterAnchorEl}
+          onClose={handleFilterClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
+          PaperProps={{
+            sx: {
+              mt: 1,
+              borderRadius: "12px",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+              minWidth: "320px",
+              p: 2,
+            },
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{
+                fontSize: "1rem",
+                fontWeight: 600,
+                color: "#1F2937",
+                mb: 2,
+              }}
+            >
+              Bộ lọc
+            </Typography>
+
+            {/* Date Range Filter */}
+            <Box sx={{ mb: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#374151",
+                  mb: 1,
+                }}
+              >
+                Từ ngày
+              </Typography>
+              <TextField
+                type="date"
+                fullWidth
+                size="small"
+                value={formatDateForInput(fromDate)}
+                onChange={(e) => setFromDate(formatDateForAPI(e.target.value))}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#374151",
+                  mb: 1,
+                }}
+              >
+                Đến ngày
+              </Typography>
+              <TextField
+                type="date"
+                fullWidth
+                size="small"
+                value={formatDateForInput(toDate)}
+                onChange={(e) => setToDate(formatDateForAPI(e.target.value))}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.875rem",
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Payer Filter */}
+            <Box sx={{ mb: 3 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={filterByPayer}
+                    onChange={(e) => setFilterByPayer(e.target.checked)}
+                    sx={{
+                      color: "#D1D5DB",
+                      "&.Mui-checked": {
+                        color: "#574D98",
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: "0.875rem", color: "#374151" }}>
+                    Chỉ hiển thị hóa đơn tôi là người ứng tiền
+                  </Typography>
+                }
+              />
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+              <Button
+                onClick={handleResetFilters}
+                sx={{
+                  color: "#6B7280",
+                  textTransform: "none",
+                  fontSize: "0.875rem",
+                  "&:hover": {
+                    backgroundColor: "#F3F4F6",
+                  },
+                }}
+              >
+                Đặt lại
+              </Button>
+              <Button
+                onClick={handleApplyFilters}
+                variant="contained"
+                sx={{
+                  backgroundColor: "#574D98",
+                  textTransform: "none",
+                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  px: 3,
+                  "&:hover": {
+                    backgroundColor: "#463A7A",
+                  },
+                }}
+              >
+                Áp dụng
+              </Button>
+            </Box>
+          </Box>
+        </Popover>
 
         {/* Search Results Info */}
         {debouncedSearch && (
@@ -215,6 +446,76 @@ const History = () => {
                 ✕
               </IconButton>
             )}
+          </Box>
+        )}
+
+        {/* Active Filters Info */}
+        {hasActiveFilters && !debouncedSearch && (
+          <Box className="mb-4 flex items-center gap-2 flex-wrap">
+            <Typography variant="body2" color="text.secondary">
+              Bộ lọc đang áp dụng:
+            </Typography>
+            {activeFilters.fromDate && (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: "12px",
+                  backgroundColor: "#F3F4F6",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
+                  Từ: {activeFilters.fromDate}
+                </Typography>
+              </Box>
+            )}
+            {activeFilters.toDate && (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: "12px",
+                  backgroundColor: "#F3F4F6",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
+                  Đến: {activeFilters.toDate}
+                </Typography>
+              </Box>
+            )}
+            {activeFilters.payer && (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: "12px",
+                  backgroundColor: "#F3F4F6",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
+                  Tôi là người ứng tiền
+                </Typography>
+              </Box>
+            )}
+            <IconButton 
+              size="small" 
+              onClick={handleResetFilters}
+              sx={{ color: '#574D98', ml: 1 }}
+            >
+              ✕
+            </IconButton>
           </Box>
         )}
 

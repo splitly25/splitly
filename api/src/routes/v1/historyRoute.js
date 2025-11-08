@@ -14,6 +14,9 @@ Router.get('/bill/:billId', historyController.getBillDetail)
 // GET /api/v1/history/search/:userId - Search bills for a user
 Router.get('/search/:userId', historyController.getBillBySearching)
 
+// GET /api/v1/history/filter/:userId - Filter bills by date range and payer
+Router.get('/filter/:userId', historyController.filterBillsByUser)
+
 // GET /api/v1/history/:userId - Get history data for a user (with pagination and filters)
 Router.get('/:userId', historyController.getHistoryData)
 
