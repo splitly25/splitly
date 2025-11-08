@@ -203,7 +203,122 @@ const getBillDetail = async (req, res, next) => {
   }
 };
 
+const getBillBySearching = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { searchTerm, page = 1, limit = 10 } = req.query;
+
+    // 1. Validate user
+    const user = await userModel.findOneById(userId);
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+    }
+
+    // 2. Parse pagination
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+
+    // 3. Call the search function from the model
+    // We pass (searchTerm || '') to handle undefined or null search terms
+    // The model logic you provided already handles the empty string case
+    const { bills: userBills, pagination } =
+      await billModel.searchBillsByUserWithPagination(
+        userId,
+        searchTerm || '',
+        pageNum,
+        limitNum
+      );
+
+    // 4. --- Begin Data Formatting (Copied from getHistoryData) ---
+    const userIdsToFetch = new Set();
+    userBills.forEach((bill) => {
+      if (bill.payerId) {
+        userIdsToFetch.add(bill.payerId.toString());
+      }
+      bill.participants.forEach((participantId) => {
+        userIdsToFetch.add(participantId.toString());
+      });
+    });
+
+    let userMap = new Map();
+
+    if (userIdsToFetch.size > 0) {
+      const users = await userModel.findManyByIds(Array.from(userIdsToFetch));
+      userMap = new Map(users.map((u) => [u._id.toString(), u]));
+    }
+
+    const formattedBills = userBills.map((bill) => {
+      const payerData = userMap.get(bill.payerId?.toString());
+      const payer = payerData
+        ? {
+            id: payerData._id,
+            name: payerData.name,
+            email: payerData.email,
+            avatar: payerData.avatar,
+          }
+        : {
+            id: bill.payerId,
+            name: "Unknown User",
+            email: "",
+            avatar: null,
+          };
+      
+      const participants = bill.participants
+        .map((participantId) => {
+          const participantData = userMap.get(participantId?.toString());
+          return participantData
+            ? {
+                id: participantData._id,
+                name: participantData.name,
+                email: participantData.email,
+                avatar: participantData.avatar,
+              }
+            : null;
+        })
+        .filter((p) => p !== null);
+
+      // Find the payment status for the user making the request
+      const userPaymentStatus = bill.paymentStatus.find(
+        (status) => status.userId === userId
+      );
+
+      return {
+        id: bill._id,
+        paymentDate: bill.paymentDate,
+        billName: bill.billName,
+        description: bill.description,
+        totalAmount: bill.totalAmount,
+        payer: payer,
+        participants: participants,
+        settled: bill.isSettled,
+        splittingMethod: bill.splittingMethod,
+        userAmountOwed: userPaymentStatus ? userPaymentStatus.amountOwed : 0,
+        userPaidStatus: userPaymentStatus ? userPaymentStatus.isPaid : false,
+        createdAt: bill.createdAt,
+        updatedAt: bill.updatedAt,
+      };
+    });
+    // 4. --- End Data Formatting ---
+
+    // 5. Construct final response
+    const searchResultData = {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      bills: formattedBills,
+      pagination: pagination,
+    };
+
+    res.status(StatusCodes.OK).json(searchResultData);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const historyController = {
   getHistoryData,
   getBillDetail,
+  getBillBySearching
 };

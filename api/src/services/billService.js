@@ -377,12 +377,152 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
   }
 }
 
+// /**
+//  * Full text search bills by user with pagination
+//  * Searches across multiple fields: billName, description, paymentDate
+//  * Also supports partial date matching (day, month, year)
+//  * @param {string} userId - User ID to search bills for
+//  * @param {string} searchTerm - Search term for full text search
+//  * @param {number} page - Page number
+//  * @param {number} limit - Items per page
+//  * @returns {Promise<Object>} Bills with pagination info
+//  */
+// const searchBillsByUserWithPagination = async (userId, searchTerm, page = 1, limit = 10) => {
+//   try {
+//     if (!searchTerm || searchTerm.trim() === '') {
+//       // If no search term, return all bills
+//       return await billModel.getBillsByUserWithPagination(userId, page, limit)
+//     }
+
+//     const trimmedSearch = searchTerm.trim();
+    
+//     // Build full text search query
+//     const searchQuery = {
+//       $or: [
+//         // Search in bill name (case-insensitive)
+//         { billName: { $regex: trimmedSearch, $options: 'i' } },
+//         // Search in description (case-insensitive)
+//         { description: { $regex: trimmedSearch, $options: 'i' } }
+//       ]
+//     };
+    
+//     // Try to parse search term as a full date and add exact date match
+//     const datePatterns = [
+//       { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, format: 'DD/MM/YYYY' }, // DD/MM/YYYY
+//       { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, format: 'DD-MM-YYYY' },   // DD-MM-YYYY
+//       { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, format: 'YYYY-MM-DD' }    // YYYY-MM-DD
+//     ];
+    
+//     let dateMatched = false;
+//     for (const { regex, format } of datePatterns) {
+//       const match = trimmedSearch.match(regex);
+//       if (match) {
+//         let year, month, day;
+//         if (format === 'YYYY-MM-DD') {
+//           [, year, month, day] = match;
+//         } else {
+//           [, day, month, year] = match;
+//         }
+        
+//         // Create start and end of day timestamps
+//         const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+//         const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+        
+//         if (!isNaN(startDate.getTime())) {
+//           searchQuery.$or.push({
+//             paymentDate: {
+//               $gte: startDate.getTime(),
+//               $lte: endDate.getTime()
+//             }
+//           });
+//           dateMatched = true;
+//         }
+//         break;
+//       }
+//     }
+    
+//     // If not a full date, try partial date matching
+//     if (!dateMatched) {
+//       // Check if it's a number that could be a day, month, or year
+//       const numericSearch = parseInt(trimmedSearch);
+//       if (!isNaN(numericSearch)) {
+//         // Could be searching for day (1-31), month (1-12), or year (2000+)
+//         if (numericSearch >= 1 && numericSearch <= 31) {
+//           // Might be searching for a specific day of month
+//           // We'll search for any date where the day matches
+//           const dayRegex = new RegExp(`\\b${numericSearch}\\b`);
+          
+//           // Get all bills first and filter by day (less efficient but flexible)
+//           // Alternative: Add more specific date range queries if needed
+//         }
+        
+//         if (numericSearch >= 1 && numericSearch <= 12) {
+//           // Might be searching for a specific month
+//           // Can add month-specific search here if needed
+//         }
+        
+//         if (numericSearch >= 2000 && numericSearch <= 2100) {
+//           // Searching for a year
+//           const yearStart = new Date(numericSearch, 0, 1, 0, 0, 0, 0);
+//           const yearEnd = new Date(numericSearch, 11, 31, 23, 59, 59, 999);
+          
+//           searchQuery.$or.push({
+//             paymentDate: {
+//               $gte: yearStart.getTime(),
+//               $lte: yearEnd.getTime()
+//             }
+//           });
+//         }
+//       }
+      
+//       // Also support searching for month names (Vietnamese)
+//       const monthNames = {
+//         'tháng 1': 0, 'thang 1': 0, 'january': 0, 'jan': 0, '01': 0,
+//         'tháng 2': 1, 'thang 2': 1, 'february': 1, 'feb': 1, '02': 1,
+//         'tháng 3': 2, 'thang 3': 2, 'march': 2, 'mar': 2, '03': 2,
+//         'tháng 4': 3, 'thang 4': 3, 'april': 3, 'apr': 3, '04': 3,
+//         'tháng 5': 4, 'thang 5': 4, 'may': 4, '05': 4,
+//         'tháng 6': 5, 'thang 6': 5, 'june': 5, 'jun': 5, '06': 5,
+//         'tháng 7': 6, 'thang 7': 6, 'july': 6, 'jul': 6, '07': 6,
+//         'tháng 8': 7, 'thang 8': 7, 'august': 7, 'aug': 7, '08': 7,
+//         'tháng 9': 8, 'thang 9': 8, 'september': 8, 'sep': 8, '09': 8,
+//         'tháng 10': 9, 'thang 10': 9, 'october': 9, 'oct': 9, '10': 9,
+//         'tháng 11': 10, 'thang 11': 10, 'november': 10, 'nov': 10, '11': 10,
+//         'tháng 12': 11, 'thang 12': 11, 'december': 11, 'dec': 11, '12': 11
+//       };
+      
+//       const searchLower = trimmedSearch.toLowerCase();
+//       const monthNumber = monthNames[searchLower];
+      
+//       if (monthNumber !== undefined) {
+//         // Search for any date in this month (current year or all years)
+//         const currentYear = new Date().getFullYear();
+//         const monthStart = new Date(currentYear, monthNumber, 1, 0, 0, 0, 0);
+//         const monthEnd = new Date(currentYear, monthNumber + 1, 0, 23, 59, 59, 999);
+        
+//         searchQuery.$or.push({
+//           paymentDate: {
+//             $gte: monthStart.getTime(),
+//             $lte: monthEnd.getTime()
+//           }
+//         });
+//       }
+//     }
+    
+//     // Call model with custom query
+//     return await billModel.searchBillsByUserWithPagination(userId, searchQuery, page, limit)
+//   } catch (error) {
+//     throw error
+//   }
+// }
+
 export const billService = {
   createNew,
   getAll,
   getAllWithPagination,
   getBillsByUser,
   getBillsByUserWithPagination,
+  // searchBillsByUserWithPagination,
   getBillsByCreator,
   findOneById,
   update,

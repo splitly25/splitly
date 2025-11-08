@@ -176,6 +176,52 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   }
 };
 
+/**
+ * Search bills by user with pagination
+ * Accepts a custom query object for flexible searching
+ * @param {string} userId - User ID
+ * @param {Object} customQuery - Custom MongoDB query filters (e.g., for billName, paymentDate)
+ * @param {number} page - Page number (starts from 1)
+ * @param {number} limit - Number of bills per page
+ * @returns {Promise<{bills: Array, pagination: Object}>}
+ */
+const searchBillsByUserWithPagination = async (userId, customQuery = {}, page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    // Build base query with user filter
+    const query = {
+      participants: userId,
+      _destroy: false,
+      ...customQuery
+    };
+    
+    const bills = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    
+    const total = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .countDocuments(query);
+    
+    return {
+      bills,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 const getBillsByCreator = async (creatorId) => {
   try {
     return await GET_DB()
@@ -259,6 +305,7 @@ export const billModel = {
   getAllWithPagination,
   getBillsByUser,
   getBillsByUserWithPagination,
+  searchBillsByUserWithPagination,
   getBillsByCreator,
   markAsPaid,
   optOutUser,
