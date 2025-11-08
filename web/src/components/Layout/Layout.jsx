@@ -1,15 +1,22 @@
-import { Box, Drawer, IconButton, Avatar, Tooltip, AppBar, Toolbar, useMediaQuery, useTheme } from '@mui/material'
+import { Box, Drawer, IconButton, Avatar, Tooltip, AppBar, Toolbar, useMediaQuery, useTheme, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material'
 import HomeIcon from '@mui/icons-material/Home'
 import GroupsIcon from '@mui/icons-material/Groups'
 import HistoryIcon from '@mui/icons-material/History'
 import DescriptionIcon from '@mui/icons-material/Description'
 import AddIcon from '@mui/icons-material/Add'
 import MenuIcon from '@mui/icons-material/Menu'
+import LogoutIcon from '@mui/icons-material/Logout'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
 import { useNavigate, useLocation } from 'react-router-dom'
 import colors from 'tailwindcss/colors'
 import { useState } from 'react'
 import ChatbotButton from '~/components/Chatbot/ChatbotButton'
 import ChatbotWindow from '../Chatbot/ChatbotWindow'
+import { useDispatch } from 'react-redux'
+import { logoutUserAPI } from '~/redux/user/userSlice'
+import { useColorScheme } from '@mui/material/styles'
 
 const SIDEBAR_WIDTH = 80
 
@@ -20,12 +27,19 @@ const Layout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const isSmallScreen = useMediaQuery('(min-width: 900px) and (max-width: 1240px)')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const dispatch = useDispatch()
+  const { mode, setMode } = useColorScheme()
+
+  // Profile menu state
+  const [anchorEl, setAnchorEl] = useState(null)
+  const profileMenuOpen = Boolean(anchorEl)
 
   // Chatbot handler
   const [chatbotWindowOpen, setChatbotWindowOpen] = useState(false)
+  // eslint-disable-next-line no-unused-vars
   const [numberOfNotifications, setNumberOfNotifications] = useState(2)
   const [newMessage, setNewMessage] = useState("You have a new message from TingTing Bot!")
-  
+
   // Dynamic chatbot width based on screen size
   const chatbotWidth = isMobile ? '100vw' : isSmallScreen ? '45vw' : '30vw'
 
@@ -49,6 +63,29 @@ const Layout = ({ children }) => {
     navigate(path)
     if (isMobile) {
       setMobileOpen(false)
+    }
+  }
+
+  const handleProfileMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleProfileMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleModeChange = (newMode) => {
+    setMode(newMode)
+    handleProfileMenuClose()
+  }
+
+  const handleLogout = async () => {
+    handleProfileMenuClose()
+    try {
+      await dispatch(logoutUserAPI(true)).unwrap()
+      navigate('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
     }
   }
 
@@ -106,6 +143,7 @@ const Layout = ({ children }) => {
       <Box sx={{ mt: 'auto' }}>
         <Tooltip title="Profile" placement="right">
           <Avatar
+            onClick={handleProfileMenuOpen}
             sx={{
               width: 48,
               height: 48,
@@ -121,6 +159,62 @@ const Layout = ({ children }) => {
         </Tooltip>
       </Box>
     </Box>
+  )
+
+  const ProfileMenu = (
+    <Menu
+      anchorEl={anchorEl}
+      open={profileMenuOpen}
+      onClose={handleProfileMenuClose}
+      anchorOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      transformOrigin={{
+        vertical: 'bottom',
+        horizontal: 'left',
+      }}
+      sx={{
+        '& .MuiPaper-root': {
+          minWidth: 200,
+          ml: 1,
+        },
+      }}
+    >
+      {/* Theme Mode Options */}
+      <MenuItem onClick={() => handleModeChange('light')}>
+        <ListItemIcon>
+          <LightModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Light Mode</ListItemText>
+        {mode === 'light' && <Box sx={{ ml: 1, color: colors.purple[800] }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('dark')}>
+        <ListItemIcon>
+          <DarkModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Dark Mode</ListItemText>
+        {mode === 'dark' && <Box sx={{ ml: 1, color: colors.purple[800] }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('system')}>
+        <ListItemIcon>
+          <SettingsBrightnessIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>System</ListItemText>
+        {mode === 'system' && <Box sx={{ ml: 1, color: colors.purple[800] }}>✓</Box>}
+      </MenuItem>
+
+      {/* Divider */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
+
+      {/* Logout */}
+      <MenuItem onClick={handleLogout}>
+        <ListItemIcon>
+          <LogoutIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Logout</ListItemText>
+      </MenuItem>
+    </Menu>
   )
 
   return (
@@ -223,7 +317,7 @@ const Layout = ({ children }) => {
 
       {/* Chatbot Window */}
       <Box
-        sx={{ 
+        sx={{
           position: 'fixed',
           right: isMobile ? 0 : 0,
           top: isMobile ? 'auto' : 0,
@@ -231,10 +325,10 @@ const Layout = ({ children }) => {
           left: isMobile ? 0 : 'auto',
           height: isMobile ? '70vh' : '100vh',
           width: chatbotWidth,
-          transform: chatbotWindowOpen 
-            ? 'translate(0, 0)' 
-            : isMobile 
-              ? 'translateY(100%)' 
+          transform: chatbotWindowOpen
+            ? 'translate(0, 0)'
+            : isMobile
+              ? 'translateY(100%)'
               : 'translateX(100%)',
           transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           zIndex: 1199,
@@ -245,6 +339,9 @@ const Layout = ({ children }) => {
       >
         <ChatbotWindow isOpen={chatbotWindowOpen} setIsOpen={setChatbotWindowOpen}/>
       </Box>
+
+      {/* Profile Menu */}
+      {ProfileMenu}
     </Box>
   )
 }

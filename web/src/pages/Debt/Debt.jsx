@@ -25,7 +25,7 @@ import {
 import PaymentIcon from '~/assets/icons/PaymentIcon'
 import Layout from '~/components/Layout'
 import { CURRENT_USER_ID, VIEW_TYPES, COLORS } from './constants'
-import { formatCurrency } from '~/utils/formatter'
+import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 
 // Action Button Component

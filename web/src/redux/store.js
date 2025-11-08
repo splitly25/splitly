@@ -1,12 +1,23 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { userReducer } from './user/userSlice'
+import { persistReducer } from 'redux-persist'
+import storage from 'redux-persist/lib/storage'
+import { combineReducers } from 'redux'
 
-// Placeholder reducer until we add actual slices
-const placeholderReducer = (state = {}, action) => {
-  return state
+const rootPersistConfig = {
+  key: 'root',
+  storage: storage,
+  whitelist: ['user'],
 }
 
+const reducers = combineReducers({
+  user: userReducer,
+  //...
+})
+
+const persistedReducer = persistReducer(rootPersistConfig, reducers)
+
 export const store = configureStore({
-  reducer: {
-    placeholder: placeholderReducer
-  },
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
 })
