@@ -5,9 +5,11 @@ import Auth from './pages/Auth/Auth'
 import Dashboard from './pages/Dashboard'
 import Groups from './pages/Groups'
 import History from './pages/History'
-import Debt from './pages/Debt'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from './redux/user/userSlice'
+import { Outlet } from 'react-router-dom'
+import Bills from './pages/Bills/Bills'
+import Debt from './pages/Debt'
 import AccountVerification from './pages/Auth/AccountVerification'
 
 const ProtectedRoute = ({ user }) => {
@@ -17,7 +19,6 @@ const ProtectedRoute = ({ user }) => {
 
 function App() {
   const currentUser = useSelector(selectCurrentUser)
-
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
@@ -29,6 +30,7 @@ function App() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/boards/:boardId" element={<Board />} />
+        <Route path="/create" element={<Bills />} />
       </Route>
 
       {/* AuthenticationRoutes */}

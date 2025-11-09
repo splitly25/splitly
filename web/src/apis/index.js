@@ -39,3 +39,20 @@ export const verifyUserAccountAPI = async (data) => {
   toast.success('Account verified successfully! Now you can log in.', { theme: 'colored' })
   return response.data
 }
+
+// ============================================
+// BILL APIs
+// ============================================
+
+// Create a new bill
+export const createBillAPI = async (billData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills`, billData)
+  toast.success('Hóa đơn đã được tạo thành công!', { theme: 'colored' })
+  return response.data
+}
+
+// Get all bills for a user
+export const fetchUserBillsAPI = async (userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/bills/user/${userId}`)
+  return response.data
+}
