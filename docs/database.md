@@ -13,6 +13,12 @@
   name: String (required, 2-100 characters),
   avatar: String (URL, optional),
   phone: String (10-11 digits, optional),
+  password: String (hashed, required),
+  isVerified: Boolean (email verified),
+  userType: String (enum: 'member', 'guest', default: 'member'),
+  isGuest: Boolean (default: false),
+  lastActivityDate: Timestamp,
+  verifyToken: String (for email verification),
   createdAt: Timestamp,
   updatedAt: Timestamp,
   _destroy: Boolean (soft delete)
@@ -31,6 +37,12 @@
   "name": "Phi Hùng",
   "avatar": "https://example.com/avatar.jpg",
   "phone": "0123456789",
+  "password": "$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36Z3f6t7a5e5OeF5r5q6u5e", 
+  "isVerified": true,
+  "userType": "member",
+  "isGuest": false,
+  "lastActivityDate": 1699000000000,
+  "verifyToken": "abc123",
   "createdAt": 1699000000000,
   "updatedAt": null,
   "_destroy": false
@@ -361,6 +373,23 @@
 - `getAll()` - Get all bills
 - `getBillsByUser(userId)` - Get all bills for a user (by user ID)
 - `getBillsByCreator(creatorId)` - Get bills created by user (by user ID)
+- `getBillsByUserWithPagination(userId, page, limit)` - Get bills for a user with pagination support
+  - `userId` (String): User ID to get bills for
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { currentPage, totalPages, totalBills, limit, hasNextPage, hasPrevPage } }`
+  - Example: Page 1 with limit 10 returns bills 0-9, Page 2 returns bills 10-19
+- `searchBillsByUserWithPagination(userId, customQuery, page, limit)` - Search bills for a user with custom query filters and pagination
+  - `userId` (String): User ID to search bills for
+  - `customQuery` (Object): Custom MongoDB query filters (built by billService with full text search logic)
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { page, limit, total, totalPages } }`
+  - Note: Full text search logic (billName, description, paymentDate, year, month) is implemented in billService.js
+- `getAllWithPagination(page, limit)` - Get all bills with pagination support
+  - `page` (Number, default: 1): Page number (starts from 1)
+  - `limit` (Number, default: 10): Number of bills per page
+  - Returns: `{ bills: Array, pagination: { currentPage, totalPages, totalBills, limit, hasNextPage, hasPrevPage } }`
 - `update(billId, updateData, options)` - Update bill information (with optional activity logging)
 - `markAsPaid(billId, userId, options)` - Mark a user's payment as paid (with activity logging)
 - `optOutUser(billId, userId, options)` - Remove user from bill (with activity logging)

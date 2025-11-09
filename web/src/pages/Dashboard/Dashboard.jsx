@@ -1,13 +1,16 @@
 import Layout from '~/components/Layout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
+import { formatCurrency } from '~/utils/formatters'
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [greeting, setGreeting] = useState('')
+  const [gridColumns, setGridColumns] = useState('md:grid-cols-2')
+  const gridRef = useRef(null)
   const navigate = useNavigate()
 
   // For now, using a hardcoded user ID - this should come from authentication context
@@ -22,6 +25,45 @@ const Dashboard = () => {
     }
     setGreeting(getGreeting())
   }, [])
+
+  // Observe grid width and adjust columns dynamically
+  useEffect(() => {
+    const gridElement = gridRef.current
+    if (!gridElement) return
+
+    const updateGridColumns = (width) => {
+      // Define breakpoints based on actual container width
+      // Adjusted for optimal card display (considering ~300px min card width + gaps)
+      if (width >= 1400) {
+        // Wide enough for 7 columns (2+2+3 layout)
+        setGridColumns('grid-cols-7')
+      } else if (width >= 768) {
+        // Medium screens: 2 columns
+        setGridColumns('grid-cols-2')
+      } else {
+        // Mobile: 1 column
+        setGridColumns('grid-cols-1')
+      }
+    }
+
+    // Initial check
+    updateGridColumns(gridElement.offsetWidth)
+
+    // Create ResizeObserver to watch for size changes
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const width = entry.contentRect.width
+        updateGridColumns(width)
+      }
+    })
+
+    resizeObserver.observe(gridElement)
+
+    // Cleanup
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [dashboardData]) // Re-run when data loads to ensure correct sizing
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -40,10 +82,6 @@ const Dashboard = () => {
 
     fetchDashboardData()
   }, [currentUserId])
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN').format(Math.abs(amount)) + 'đ'
-  }
 
   const getActivityBgColor = (type) => {
     if (type === 'newBill') return 'bg-teal-100'
@@ -95,12 +133,12 @@ const Dashboard = () => {
         </h3>
 
         {/* Top Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-10">
+        <div ref={gridRef} className={`grid ${gridColumns} gap-10 mb-10`}>
           {/* Số tiền bạn còn nợ */}
-          <div className="lg:col-span-2 bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
             <div className="text-center mb-6">
               <div className="text-4xl md:text-5xl font-bold mb-1">
-                {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(debtData.youOwe)}
+                {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(Math.abs(debtData.youOwe))}
               </div>
               <div className="text-sm">là số tiền bạn còn nợ</div>
             </div>
@@ -109,7 +147,7 @@ const Dashboard = () => {
                 debtData.debtDetails.map((debt, index) => (
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="font-medium">{debt.name}</span>
-                    <span className="font-semibold">-{formatCurrency(debt.amount)}</span>
+                    <span className="font-semibold">-{formatCurrency(Math.abs(debt.amount))}</span>
                   </div>
                 ))
               ) : (
@@ -119,9 +157,9 @@ const Dashboard = () => {
           </div>
 
           {/* Số tiền họ nợ bạn */}
-          <div className="lg:col-span-2 bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm`}>
             <div className="text-center mb-6">
-              <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(debtData.theyOweYou)}</div>
+              <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(Math.abs(debtData.theyOweYou))}</div>
               <div className="text-sm">là số tiền họ nợ bạn</div>
             </div>
             <div className="space-y-2 pt-4 border-t border-purple-50/20">
@@ -129,7 +167,7 @@ const Dashboard = () => {
                 debtData.creditDetails.map((credit, index) => (
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="font-medium">{credit.name}</span>
-                    <span className="font-semibold">+{formatCurrency(credit.amount)}</span>
+                    <span className="font-semibold">+{formatCurrency(Math.abs(credit.amount))}</span>
                   </div>
                 ))
               ) : (
@@ -139,7 +177,7 @@ const Dashboard = () => {
           </div>
 
           {/* Bạn còn hóa đơn chưa xử lý */}
-          <div className="md:col-span-2 lg:col-span-3 bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm">
+          <div className={`${gridColumns === 'grid-cols-2' ? 'col-span-2' : gridColumns === 'grid-cols-7' ? 'col-span-3' : ''} bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-base font-semibold">
                 Bạn còn {pendingBills.count} hóa đơn chưa xử lý
@@ -155,13 +193,13 @@ const Dashboard = () => {
               {pendingBills.bills && pendingBills.bills.length > 0 ? (
                 pendingBills.bills.map((bill, index) => (
                   <div key={index} className="flex items-center justify-between gap-3 p-2">
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                         {bill.name.substring(0, 2).toUpperCase()}
                       </div>
-                      <div className="text-sm font-medium truncate">{bill.name}</div>
+                      <div className="text-sm font-medium truncate min-w-0">{bill.name}</div>
                     </div>
-                    <div className="font-semibold text-sm">{formatCurrency(bill.amount)}</div>
+                    <div className="font-semibold text-sm whitespace-nowrap">{formatCurrency(bill.amount)}</div>
                   </div>
                 ))
               ) : (
