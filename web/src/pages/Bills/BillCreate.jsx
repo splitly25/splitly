@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { useSelector } from 'react-redux'
+import { selectCurrentUser } from '~/redux/user/userSlice'
 import {
   Box,
   Card,
@@ -23,50 +25,53 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import FieldErrorAlert from '~/components/Form/FieldErrorAlert';
+  CircularProgress,
+} from '@mui/material'
+import { styled } from '@mui/material/styles'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
+import SaveIcon from '@mui/icons-material/Save'
+import CancelIcon from '@mui/icons-material/Cancel'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
+import { createBillAPI } from '~/apis'
 
 const SectionTitle = styled(Typography)(({ theme }) => ({
   fontSize: '24px',
   fontWeight: 'bold',
   marginBottom: theme.spacing(3),
-  color: '#000',
-}));
+  color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+}))
 
 const HeaderTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '48px',
-  fontWeight: 400,
+  fontSize: '48px !important',
+  fontWeight: '400 !important',
   marginBottom: theme.spacing(4),
-  color: '#574d98',
+  color: theme.palette.mode === 'dark' ? '#b39ddb' : '#574d98',
+  transition: 'color 0.3s ease',
   [theme.breakpoints.down('md')]: {
-    fontSize: '32px',
+    fontSize: '32px !important',
   },
-}));
+}))
 
 const StyledTableHead = styled(TableHead)(({ theme }) => ({
   '& .MuiTableCell-head': {
-    backgroundColor: '#4a148c',
+    backgroundColor: theme.palette.mode === 'dark' ? '#6a1b9a' : '#4a148c',
     color: theme.palette.common.white,
     fontWeight: 500,
     fontSize: '16px',
     textAlign: 'center',
   },
-}));
+}))
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   '&:nth-of-type(even)': {
-    backgroundColor: '#f3e5f5',
+    backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f3e5f5',
   },
   '&:hover': {
-    backgroundColor: '#ede7f6',
+    backgroundColor: theme.palette.mode === 'dark' ? '#333333' : '#ede7f6',
   },
-}));
+}))
 
 const FormGrid = styled(Box)(({ theme }) => ({
   display: 'grid',
@@ -76,7 +81,7 @@ const FormGrid = styled(Box)(({ theme }) => ({
   [theme.breakpoints.down('md')]: {
     gridTemplateColumns: '1fr',
   },
-}));
+}))
 
 const ButtonGroup = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -84,68 +89,122 @@ const ButtonGroup = styled(Box)(({ theme }) => ({
   justifyContent: 'center',
   flexWrap: 'wrap',
   marginTop: theme.spacing(4),
-}));
+}))
 
 function BillCreate() {
-  const { control, handleSubmit, watch, formState: { errors }, reset } = useForm({
+  const currentUser = useSelector(selectCurrentUser)
+
+  const {
+    control,
+    handleSubmit,
+    // eslint-disable-next-line no-unused-vars
+    watch,
+    formState: { errors },
+    reset,
+  } = useForm({
     defaultValues: {
       billName: '',
-      dateTime: new Date().toISOString().slice(0, 16),
-      category: 'Ăn uống',
-      splitMethod: 'Chia theo sản phẩm',
-      initialAmount: '',
-      notes: '',
+      paymentDate: new Date().toISOString().slice(0, 16),
+      description: '',
+      splittingMethod: 'equal',
+      totalAmount: '',
+      payerId: currentUser?._id || '',
     },
-  });
+  })
 
-  const [members, setMembers] = useState([
-    { id: 1, name: 'Nguyễn Văn A (aina147)', initialAmount: 0, paymentAmount: 0 },
-  ]);
+  const [items, setItems] = useState([{ id: 1, name: 'Item 1', amount: 0, allocatedTo: [] }])
 
-  const [openDialog, setOpenDialog] = useState(false);
-  const [newMember, setNewMember] = useState({ name: '', initialAmount: '', paymentAmount: '' });
+  const [participants, setParticipants] = useState([])
+  const [openDialog, setOpenDialog] = useState(false)
+  const [newItem, setNewItem] = useState({ name: '', amount: '' })
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
-  const handleAddMember = () => {
-    if (newMember.name.trim()) {
-      setMembers([
-        ...members,
+  const handleAddItem = () => {
+    if (newItem.name.trim() && newItem.amount) {
+      setItems([
+        ...items,
         {
-          id: Math.max(...members.map((m) => m.id), 0) + 1,
-          name: newMember.name,
-          initialAmount: parseFloat(newMember.initialAmount) || 0,
-          paymentAmount: parseFloat(newMember.paymentAmount) || 0,
+          id: Math.max(...items.map((i) => i.id), 0) + 1,
+          name: newItem.name,
+          amount: parseFloat(newItem.amount) || 0,
+          allocatedTo: [],
         },
-      ]);
-      setNewMember({ name: '', initialAmount: '', paymentAmount: '' });
-      setOpenDialog(false);
+      ])
+      setNewItem({ name: '', amount: '' })
+      setOpenDialog(false)
     }
-  };
+  }
 
-  const handleDeleteMember = (id) => {
-    setMembers(members.filter((m) => m.id !== id));
-  };
+  const handleDeleteItem = (id) => {
+    setItems(items.filter((i) => i.id !== id))
+  }
 
-  const onSubmit = (data) => {
-    const billData = {
-      ...data,
-      members,
-      initialAmount: parseFloat(data.initialAmount) || 0,
-      totalInitial: members.reduce((sum, m) => sum + m.initialAmount, 0),
-      totalPayment: members.reduce((sum, m) => sum + m.paymentAmount, 0),
-    };
-    console.log('Bill Data:', billData);
-    alert('Hóa đơn đã được lưu! Xem console để chi tiết.');
-  };
+  const onSubmit = async (data) => {
+    try {
+      setIsLoading(true)
+      setSubmitError(null)
+
+      // Validate items
+      if (items.length === 0) {
+        setSubmitError('Vui lòng thêm ít nhất một item!')
+        return
+      }
+
+      if (!currentUser?._id) {
+        setSubmitError('Lỗi: Không tìm thấy thông tin người dùng!')
+        return
+      }
+
+      const billData = {
+        billName: data.billName,
+        creatorId: currentUser._id,
+        payerId: data.payerId || currentUser._id,
+        totalAmount: parseFloat(data.totalAmount) || 0,
+        paymentDate: data.paymentDate,
+        description: data.description,
+        splittingMethod: data.splittingMethod,
+        items: items.map((i) => ({
+          name: i.name,
+          amount: i.amount,
+          allocatedTo: i.allocatedTo,
+        })),
+        participants: participants,
+      }
+
+      await createBillAPI(billData)
+
+      // Reset form on success
+      reset()
+      setItems([{ id: 1, name: 'Item 1', amount: 0, allocatedTo: [] }])
+      setParticipants([])
+    } catch (error) {
+      console.error('Error creating bill:', error)
+      setSubmitError(error.response?.data?.message || 'Lỗi khi tạo hóa đơn. Vui lòng thử lại.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#fff', minHeight: '100vh' }}>
+    <Box
+      sx={{
+        p: { xs: 2, md: 4 },
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#121212' : '#fff'),
+        minHeight: '100vh',
+      }}
+    >
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <HeaderTitle>Hóa đơn mới</HeaderTitle>
       </Box>
 
-      <Card sx={{ boxShadow: 3, borderRadius: 2 }}>
+      <Card
+        sx={{ boxShadow: 3, borderRadius: 2, bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#1e1e1e' : '#fff') }}
+      >
         <CardContent>
+          {submitError && <FieldErrorAlert message={submitError} />}
+
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* General Information Section */}
             <Box sx={{ mb: 4 }}>
@@ -170,9 +229,9 @@ function BillCreate() {
                 />
 
                 <Controller
-                  name="dateTime"
+                  name="paymentDate"
                   control={control}
-                  rules={{ required: 'Thời gian là bắt buộc' }}
+                  rules={{ required: 'Ngày thanh toán là bắt buộc' }}
                   render={({ field }) => (
                     <TextField
                       {...field}
@@ -180,94 +239,87 @@ function BillCreate() {
                       variant="outlined"
                       fullWidth
                       size="small"
-                      error={!!errors.dateTime}
+                      error={!!errors.paymentDate}
                       InputLabelProps={{ shrink: true }}
                     />
                   )}
                 />
 
                 <Controller
-                  name="category"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Phân loại</InputLabel>
-                      <Select {...field} label="Phân loại">
-                        <MenuItem value="Ăn uống">Ăn uống</MenuItem>
-                        <MenuItem value="Du lịch">Du lịch</MenuItem>
-                        <MenuItem value="Vui chơi">Vui chơi</MenuItem>
-                        <MenuItem value="Khác">Khác</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </FormGrid>
-
-              {/* Second Row: Split Method, Initial Amount, Payment Amount */}
-              <FormGrid>
-                <Controller
-                  name="splitMethod"
+                  name="splittingMethod"
                   control={control}
                   render={({ field }) => (
                     <FormControl fullWidth size="small">
                       <InputLabel>Cách chia hóa đơn</InputLabel>
                       <Select {...field} label="Cách chia hóa đơn">
-                        <MenuItem value="Chia theo sản phẩm">Chia theo sản phẩm</MenuItem>
-                        <MenuItem value="Chia bình quân">Chia bình quân</MenuItem>
-                        <MenuItem value="Tùy chỉnh">Tùy chỉnh</MenuItem>
+                        <MenuItem value="equal">Chia bình quân</MenuItem>
+                        <MenuItem value="item-based">Chia theo sản phẩm</MenuItem>
                       </Select>
                     </FormControl>
                   )}
                 />
+              </FormGrid>
 
+              {/* Second Row: Total Amount, Payer ID, Description */}
+              <FormGrid>
                 <Controller
-                  name="initialAmount"
+                  name="totalAmount"
                   control={control}
                   rules={{
-                    required: 'Tổng số tiền ban đầu là bắt buộc',
-                    pattern: { value: /^\d+$/, message: 'Vui lòng nhập số' },
+                    required: 'Tổng số tiền là bắt buộc',
+                    pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Vui lòng nhập số hợp lệ' },
                   }}
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label="Tổng số tiền ban đầu"
+                      label="Tổng số tiền"
                       variant="outlined"
                       fullWidth
                       size="small"
-                      placeholder="200,000"
-                      error={!!errors.initialAmount}
+                      placeholder="200000"
+                      error={!!errors.totalAmount}
+                      type="number"
                     />
                   )}
                 />
 
-                <Box sx={{ p: 1, border: '1px solid #ccc', borderRadius: 1, display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ color: '#666' }}>
-                    Tổng số tiền thanh toán: <strong>0 đ</strong>
-                  </Typography>
-                </Box>
+                <Controller
+                  name="payerId"
+                  control={control}
+                  rules={{ required: 'Người thanh toán là bắt buộc' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="ID người thanh toán"
+                      variant="outlined"
+                      fullWidth
+                      size="small"
+                      disabled
+                      error={!!errors.payerId}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Mô tả"
+                      variant="outlined"
+                      fullWidth
+                      size="small"
+                      placeholder="Mô tả chi tiết (tùy chọn)"
+                    />
+                  )}
+                />
               </FormGrid>
 
-              {/* Notes */}
-              <Controller
-                name="notes"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Ghi chú"
-                    variant="outlined"
-                    fullWidth
-                    multiline
-                    rows={3}
-                    size="small"
-                    sx={{ mb: 2 }}
-                  />
-                )}
-              />
-
               {errors.billName && <FieldErrorAlert message={errors.billName.message} />}
-              {errors.dateTime && <FieldErrorAlert message={errors.dateTime.message} />}
-              {errors.initialAmount && <FieldErrorAlert message={errors.initialAmount.message} />}
+              {errors.paymentDate && <FieldErrorAlert message={errors.paymentDate.message} />}
+              {errors.totalAmount && <FieldErrorAlert message={errors.totalAmount.message} />}
+              {errors.payerId && <FieldErrorAlert message={errors.payerId.message} />}
             </Box>
 
             {/* Bill Details Section */}
@@ -285,11 +337,11 @@ function BillCreate() {
                     fontSize: '12px',
                   }}
                 >
-                  Thêm thành viên
+                  Thêm sản phẩm
                 </Button>
               </Box>
 
-              {/* Members Table */}
+              {/* Items Table */}
               <TableContainer sx={{ borderRadius: 2, overflow: 'hidden' }}>
                 <Table>
                   <StyledTableHead>
@@ -297,32 +349,36 @@ function BillCreate() {
                       <TableCell align="center" sx={{ width: '50px' }}>
                         STT
                       </TableCell>
-                      <TableCell sx={{ minWidth: '200px' }}>Họ và tên</TableCell>
-                      <TableCell align="center">Số tiền ban đầu</TableCell>
-                      <TableCell align="center">Số tiền thanh toán</TableCell>
-                      <TableCell align="center">Xóa thành viên</TableCell>
+                      <TableCell sx={{ minWidth: '200px' }}>Tên sản phẩm</TableCell>
+                      <TableCell align="center">Số tiền</TableCell>
+                      <TableCell align="center">Xóa</TableCell>
                     </TableRow>
                   </StyledTableHead>
                   <TableBody>
-                    {members.map((member, idx) => (
-                      <StyledTableRow key={member.id}>
+                    {items.map((item, idx) => (
+                      <StyledTableRow key={item.id}>
                         <TableCell align="center">{idx + 1}</TableCell>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar sx={{ bgcolor: '#bdbdbd', width: 42, height: 42 }}>
-                              {member.name.substring(0, 1)}
-                            </Avatar>
-                            <Typography variant="body2">{member.name}</Typography>
-                          </Box>
+                          <TextField
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...items]
+                              updated[idx].name = e.target.value
+                              setItems(updated)
+                            }}
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                          />
                         </TableCell>
                         <TableCell align="center">
                           <TextField
                             type="number"
-                            value={member.initialAmount}
+                            value={item.amount}
                             onChange={(e) => {
-                              const updated = [...members];
-                              updated[idx].initialAmount = parseFloat(e.target.value) || 0;
-                              setMembers(updated);
+                              const updated = [...items]
+                              updated[idx].amount = parseFloat(e.target.value) || 0
+                              setItems(updated)
                             }}
                             variant="outlined"
                             size="small"
@@ -331,26 +387,7 @@ function BillCreate() {
                           />
                         </TableCell>
                         <TableCell align="center">
-                          <TextField
-                            type="number"
-                            value={member.paymentAmount}
-                            onChange={(e) => {
-                              const updated = [...members];
-                              updated[idx].paymentAmount = parseFloat(e.target.value) || 0;
-                              setMembers(updated);
-                            }}
-                            variant="outlined"
-                            size="small"
-                            sx={{ width: '120px' }}
-                            inputProps={{ step: '1000' }}
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteMember(member.id)}
-                            sx={{ color: '#ef5350' }}
-                          >
+                          <IconButton size="small" onClick={() => handleDeleteItem(item.id)} sx={{ color: '#ef5350' }}>
                             <DeleteIcon />
                           </IconButton>
                         </TableCell>
@@ -368,6 +405,7 @@ function BillCreate() {
                   startIcon={<CancelIcon />}
                   onClick={() => reset()}
                   sx={{ textTransform: 'uppercase' }}
+                  disabled={isLoading}
                 >
                   Xóa hóa đơn
                 </Button>
@@ -380,6 +418,7 @@ function BillCreate() {
                     '&:hover': { bgcolor: '#ce93d8' },
                   }}
                   startIcon={<CheckCircleIcon />}
+                  disabled={isLoading}
                 >
                   Quyết toán ngay
                 </Button>
@@ -389,11 +428,13 @@ function BillCreate() {
                     bgcolor: '#4a148c',
                     textTransform: 'uppercase',
                     '&:hover': { bgcolor: '#6a1b9a' },
+                    position: 'relative',
                   }}
-                  startIcon={<SaveIcon />}
+                  startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                   type="submit"
+                  disabled={isLoading}
                 >
-                  Lưu hóa đơn
+                  {isLoading ? 'Đang lưu...' : 'Lưu hóa đơn'}
                 </Button>
               </ButtonGroup>
             </Box>
@@ -401,49 +442,36 @@ function BillCreate() {
         </CardContent>
       </Card>
 
-      {/* Add Member Dialog */}
+      {/* Add Item Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Thêm thành viên mới</DialogTitle>
+        <DialogTitle>Thêm sản phẩm mới</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <TextField
-            label="Tên thành viên"
+            label="Tên sản phẩm"
             fullWidth
-            value={newMember.name}
-            onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+            value={newItem.name}
+            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
             margin="normal"
           />
           <TextField
-            label="Số tiền ban đầu"
+            label="Số tiền"
             type="number"
             fullWidth
-            value={newMember.initialAmount}
-            onChange={(e) => setNewMember({ ...newMember, initialAmount: e.target.value })}
-            margin="normal"
-            inputProps={{ step: '1000' }}
-          />
-          <TextField
-            label="Số tiền thanh toán"
-            type="number"
-            fullWidth
-            value={newMember.paymentAmount}
-            onChange={(e) => setNewMember({ ...newMember, paymentAmount: e.target.value })}
+            value={newItem.amount}
+            onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
             margin="normal"
             inputProps={{ step: '1000' }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
-          <Button
-            onClick={handleAddMember}
-            variant="contained"
-            sx={{ bgcolor: '#4a148c' }}
-          >
+          <Button onClick={handleAddItem} variant="contained" sx={{ bgcolor: '#4a148c' }}>
             Thêm
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
-  );
+  )
 }
 
-export default BillCreate;
+export default BillCreate

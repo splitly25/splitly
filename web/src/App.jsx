@@ -5,10 +5,12 @@ import Auth from './pages/Auth/Auth'
 import Dashboard from './pages/Dashboard'
 import Groups from './pages/Groups'
 import History from './pages/History'
-import Bills from './pages/Bills'
 import { useSelector } from 'react-redux'
-import { selectCurrentUser } from './store/authSlice'
+import { selectCurrentUser } from './redux/user/userSlice'
 import { Outlet } from 'react-router-dom'
+import Bills from './pages/Bills/Bills'
+import Debt from './pages/Debt'
+import AccountVerification from './pages/Auth/AccountVerification'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -28,11 +30,7 @@ function App() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/boards/:boardId" element={<Board />} />
-      </Route>
-      {/* <Route path='/bills' element={<Bills />} /> */}
-
-      <Route element={<ProtectedRoute user={currentUser} />}>
-        <Route path="/bills" element={<Bills />} />
+        <Route path="/create" element={<Bills />} />
       </Route>
 
       {/* AuthenticationRoutes */}
