@@ -51,3 +51,11 @@ export const fetchDebtSummaryAPI = async(userId) => {
   return response.data
 }
 
+// OCR Bill
+export const sendOcrBillAPI = async(imageData, userId) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills/scan`, {
+    userId: userId, 
+    imageData: imageData
+  })
+  return response.data
+}

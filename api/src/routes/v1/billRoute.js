@@ -7,5 +7,6 @@ const Router = express.Router()
 Router.route('/')
   .post(billValidation.createNew, billController.createNew)
 
-
+Router.route('/scan')
+  .post(billValidation.scan, billController.scan)
 export const billRoute = Router

@@ -8,6 +8,15 @@ const createNew = async (req, res, next) => {
   } catch (error) { next(error) }
 }
 
+const scan = async (req, res, next) => {
+  try {
+    const scannedBill = await billService.scanBill(req.body)
+    res.status(StatusCodes.OK).json(scannedBill)
+
+  } catch (error) {next(error)}
+}
+
 export const billController = {
-  createNew
+  createNew, 
+  scan,
 }
