@@ -6,8 +6,17 @@ import Dashboard from "./pages/Dashboard"
 import Groups from "./pages/Groups"
 import History from "./pages/History"
 import Bills from "./pages/Bills"
+import { useSelector } from "react-redux"
+import { selectCurrentUser } from "./store/authSlice"
+import { Outlet } from "react-router-dom"
+
+const ProtectedRoute = ({ user }) => {
+  if (!user) return <Navigate to="/login" replace={true} />
+  return <Outlet />
+}
 
 function App() {
+  const currentUser = useSelector(selectCurrentUser)
   return (
     <Routes>
       <Route path='/' element={
@@ -19,7 +28,11 @@ function App() {
       <Route path='/dashboard' element={<Dashboard />} />
       <Route path='/groups' element={<Groups />} />
       <Route path='/history' element={<History />} />
-      <Route path='/bills' element={<Bills />} />
+      {/* <Route path='/bills' element={<Bills />} /> */}
+      
+      <Route element={<ProtectedRoute user={currentUser} />}>
+        <Route path='/bills' element={<Bills />} />
+      </Route>
 
       <Route path='/login' element={<Auth />} />
       <Route path='/register' element={<Auth />} />
