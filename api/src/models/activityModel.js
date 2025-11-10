@@ -21,6 +21,11 @@ const ACTIVITY_TYPES = {
   BILL_REMINDER_SENT: 'bill_reminder_sent',
   BILL_USER_OPTED_OUT: 'bill_user_opted_out',
   
+  // Payment activities
+  PAYMENT_INITIATED: 'payment_initiated',
+  PAYMENT_CONFIRMED: 'payment_confirmed',
+  PAYMENT_REJECTED: 'payment_rejected',
+  
   // Group activities
   GROUP_CREATED: 'group_created',
   GROUP_UPDATED: 'group_updated',
@@ -62,6 +67,13 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
     userEmail: Joi.string().email().optional(),
     userName: Joi.string().optional(),
     
+    // For payment activities
+    note: Joi.string().allow('').optional(),
+    debtorName: Joi.string().optional(),
+    creditorName: Joi.string().optional(),
+    debtorEmail: Joi.string().email().optional(),
+    creditorEmail: Joi.string().email().optional(),
+    
     // For reminders
     reminderType: Joi.string().valid('email', 'notification', 'sms').optional(),
     recipientId: Joi.string().optional(),
@@ -74,7 +86,7 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
     ipAddress: Joi.string().ip().optional(),
     userAgent: Joi.string().optional(),
     description: Joi.string().max(500).optional()
-  }).default({}),
+  }).unknown(true).default({}),
   
   // Activity timestamp
   createdAt: Joi.date().timestamp('javascript').default(Date.now),

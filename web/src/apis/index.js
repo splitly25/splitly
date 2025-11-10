@@ -27,6 +27,12 @@ export const fetchDebtSummaryAPI = async(userId) => {
   return response.data
 }
 
+export const submitPaymentRequestAPI = async(userId, paymentData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/payment`, paymentData)
+  toast.success('Yêu cầu thanh toán đã được gửi thành công!', { theme: 'colored' })
+  return response.data
+}
+
 // User APIs
 export const registerUserAPI = async (userData) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/register`, userData)

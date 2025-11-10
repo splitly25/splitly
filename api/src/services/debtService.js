@@ -1,6 +1,8 @@
 /* eslint-disable no-useless-catch */
 import { billModel } from '~/models/billModel.js'
 import { userModel } from '~/models/userModel.js'
+import { activityModel } from '~/models/activityModel.js'
+import { sendPaymentEmail } from '~/utils/emailService.js'
 
 /**
  * Calculate debts for people who owe money to the current user
@@ -169,8 +171,65 @@ const getDebtSummary = async (userId) => {
   }
 }
 
+/**
+ * Initiate payment request from debtor to creditor
+ * @param {string} debtorId - User ID who is making the payment
+ * @param {string} creditorId - User ID who will receive the payment
+ * @param {number} amount - Payment amount
+ * @param {string} note - Optional payment note
+ * @returns {Promise<Object>} Payment initiation result
+ */
+const initiatePayment = async (debtorId, creditorId, amount, note = '') => {
+  try {
+    // Get user details
+    const [debtor, creditor] = await Promise.all([
+      userModel.findOneById(debtorId),
+      userModel.findOneById(creditorId)
+    ])
+
+    if (!debtor || !creditor) {
+      throw new Error('User not found')
+    }
+
+    // Create activity log for payment initiation
+    const activity = await activityModel.createNew({
+      activityType: activityModel.ACTIVITY_TYPES.PAYMENT_INITIATED,
+      userId: debtorId,
+      resourceType: 'user',
+      resourceId: creditorId,
+      details: {
+        amount,
+        note,
+        debtorName: debtor.name,
+        creditorName: creditor.name,
+        debtorEmail: debtor.email,
+        creditorEmail: creditor.email
+      }
+    })
+
+    // Send email notification
+    const emailSent = await sendPaymentEmail({
+      recipientEmail: creditor.email,
+      recipientName: creditor.name,
+      payerName: debtor.name,
+      amount: amount,
+      note: note || ''
+    })
+
+    return {
+      success: true,
+      activityId: activity.insertedId.toString(),
+      emailSent,
+      message: 'Payment request initiated successfully'
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 export const debtService = {
   getDebtsOwedToMe,
   getDebtsIOwe,
-  getDebtSummary
+  getDebtSummary,
+  initiatePayment
 }

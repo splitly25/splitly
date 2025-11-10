@@ -27,6 +27,8 @@ import Layout from '~/components/Layout'
 import { CURRENT_USER_ID, VIEW_TYPES, COLORS } from './constants'
 import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
+import PaymentDialog from './PaymentDialog'
+import { submitPaymentRequestAPI } from '~/apis'
 
 // Action Button Component
 const ActionButton = ({ icon: Icon, tooltip, onClick, color }) => (
@@ -38,7 +40,7 @@ const ActionButton = ({ icon: Icon, tooltip, onClick, color }) => (
 )
 
 // Debt Column Component
-const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgColor, cardBgColor, cardTextColor, columnType }) => {
+const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgColor, cardBgColor, cardTextColor, columnType, onPaymentClick }) => {
   const tableHeaders = columnType === VIEW_TYPES.I_OWE
     ? ['Người bạn nợ', 'Số tiền', 'Thanh toán']
     : ['Người nợ bạn', 'Số tiền', 'Nhắc nhở', 'Xác nhận thanh toán']
@@ -109,10 +111,10 @@ const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgCol
             <TableBody>
               {debts.map((debt, index) => {
                 const actions = columnType === VIEW_TYPES.I_OWE 
-                  ? [{ icon: PaymentIcon, tooltip: 'Thanh toán', action: 'payment' }]
+                  ? [{ icon: PaymentIcon, tooltip: 'Thanh toán', action: 'payment', onClick: () => onPaymentClick(debt) }]
                   : [
-                      { icon: NotificationsActiveIcon, tooltip: 'Nhắc nhở', action: 'remind' },
-                      { icon: CheckCircleIcon, tooltip: 'Xác nhận thanh toán', action: 'confirm' }
+                      { icon: NotificationsActiveIcon, tooltip: 'Nhắc nhở', action: 'remind', onClick: () => console.log('remind', debt) },
+                      { icon: CheckCircleIcon, tooltip: 'Xác nhận thanh toán', action: 'confirm', onClick: () => console.log('confirm', debt) }
                     ]
 
                 return (
@@ -161,7 +163,7 @@ const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgCol
                     >
                       {formatCurrency(debt.totalAmount)}
                     </TableCell>
-                    {actions.map(({ icon, tooltip, action }, idx) => (
+                    {actions.map(({ icon, tooltip, action, onClick }, idx) => (
                       <TableCell
                         key={action}
                         align="center"
@@ -174,7 +176,7 @@ const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgCol
                           icon={icon}
                           tooltip={tooltip}
                           color={cardTextColor}
-                          onClick={() => console.log(`${action} clicked for`, debt.userName)}
+                          onClick={onClick}
                         />
                       </TableCell>
                     ))}
@@ -194,10 +196,28 @@ const Debt = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [activeView, setActiveView] = useState(VIEW_TYPES.OWED_TO_ME)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [selectedCreditor, setSelectedCreditor] = useState(null)
   const { loading, error, debtData } = useDebt(CURRENT_USER_ID)
 
   const handleViewChange = (event, newView) => {
     if (newView) setActiveView(newView)
+  }
+
+  const handlePaymentClick = (creditor) => {
+    setSelectedCreditor(creditor)
+    setPaymentDialogOpen(true)
+  }
+
+  const handlePaymentSubmit = async (paymentData) => {
+    try {
+      await submitPaymentRequestAPI(CURRENT_USER_ID, paymentData)
+      // Optionally refresh debt data here
+      // window.location.reload() // Simple approach
+    } catch (error) {
+      console.error('Payment submission failed:', error)
+      throw error
+    }
   }
 
   const renderColumn = (type) => {
@@ -216,6 +236,7 @@ const Debt = () => {
         cardBgColor={config.cardBg}
         cardTextColor={config.cardText}
         columnType={type}
+        onPaymentClick={handlePaymentClick}
       />
     )
   }
@@ -293,6 +314,14 @@ const Debt = () => {
           </Box>
         )}
       </div>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        creditor={selectedCreditor}
+        onSubmit={handlePaymentSubmit}
+      />
     </Layout>
   )
 }

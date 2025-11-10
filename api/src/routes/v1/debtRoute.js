@@ -13,4 +13,7 @@ Router.get('/:userId/i-owe', debtValidation.getUserDebts, debtController.getDebt
 // Get comprehensive debt summary
 Router.get('/:userId/summary', debtValidation.getUserDebts, debtController.getDebtSummary)
 
+// Initiate payment request
+Router.post('/:userId/payment', debtValidation.getUserDebts, debtValidation.initiatePayment, debtController.initiatePayment)
+
 export const debtRoute = Router

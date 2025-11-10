@@ -55,7 +55,7 @@ const getDashboardData = async (req, res, next) => {
     ).slice(0, 10) // Take only 10 after filtering
     
     // Format activities for display
-    const formattedActivities = await formatActivitiesForDisplay(filteredActivities)
+    const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userId)
     
     const dashboardData = {
       user: {
@@ -156,7 +156,7 @@ const getPendingBills = (bills, userId) => {
 /**
  * Format activities for display in dashboard
  */
-const formatActivitiesForDisplay = async (activities) => {
+const formatActivitiesForDisplay = async (activities, currentUserId) => {
   const formatted = []
   
   for (const activity of activities) {
@@ -166,20 +166,33 @@ const formatActivitiesForDisplay = async (activities) => {
     // Get user who performed the action
     const actor = await userModel.findOneById(activity.userId)
     const actorName = actor ? actor.name : 'Someone'
+    const isCurrentUser = activity.userId === currentUserId
+    const actorDisplay = isCurrentUser ? 'Bạn' : actorName
     
     switch (activity.activityType) {
+      // Bill activities
       case 'bill_created':
-        message = `${actorName} đã thêm bạn vào hóa đơn ${activity.details.billName || 'Unknown'}`
+        message = `${actorDisplay} đã tạo hóa đơn ${activity.details.billName || 'mới'}`
         type = 'newBill'
         break
         
+      case 'bill_updated':
+        message = `${actorDisplay} đã cập nhật hóa đơn ${activity.details.billName || 'Unknown'}`
+        type = 'newBill'
+        break
+        
+      case 'bill_deleted':
+        message = `${actorDisplay} đã xóa hóa đơn ${activity.details.billName || 'Unknown'}`
+        type = 'default'
+        break
+        
       case 'bill_reminder_sent':
-        message = `${actorName} đã nhắc bạn trả tiền hóa đơn ${activity.details.billName || 'Unknown'}`
+        message = `${actorDisplay} đã gửi nhắc nhở thanh toán hóa đơn ${activity.details.billName || 'Unknown'}`
         type = 'remind'
         break
         
       case 'bill_paid':
-        message = `${actorName} đã thanh toán hóa đơn ${activity.details.billName || 'Unknown'}`
+        message = `${actorDisplay} đã thanh toán hóa đơn ${activity.details.billName || 'Unknown'}`
         type = 'payment'
         break
         
@@ -188,13 +201,84 @@ const formatActivitiesForDisplay = async (activities) => {
         type = 'settled'
         break
         
-      case 'group_member_added':
-        message = `${actorName} đã thêm bạn vào nhóm ${activity.details.groupName || 'Unknown'}`
+      case 'bill_user_opted_out':
+        message = `${actorDisplay} đã rời khỏi hóa đơn ${activity.details.billName || 'Unknown'}`
+        type = 'default'
+        break
+        
+      // Payment activities
+      case 'payment_initiated': {
+        const amount = activity.details.amount ? `${activity.details.amount.toLocaleString('vi-VN')} đ` : 'số tiền'
+        if (isCurrentUser) {
+          // Current user is paying someone else
+          message = `Bạn đã gửi ${amount} cho ${activity.details.creditorName || 'người nhận'}`
+        } else {
+          // Someone else is paying the current user
+          message = `${actorName} đã gửi bạn ${amount}`
+        }
+        type = 'payment'
+        break
+      }
+        
+      case 'payment_confirmed': {
+        const amount = activity.details.amount ? `${activity.details.amount.toLocaleString('vi-VN')} đ` : 'số tiền'
+        if (isCurrentUser) {
+          // Current user confirmed someone's payment
+          message = `Bạn đã xác nhận thanh toán ${amount} từ ${activity.details.debtorName || 'người gửi'}`
+        } else {
+          // Someone confirmed current user's payment
+          message = `${actorName} đã xác nhận thanh toán ${amount} từ bạn`
+        }
+        type = 'payment'
+        break
+      }
+        
+      case 'payment_rejected': {
+        const amount = activity.details.amount ? `${activity.details.amount.toLocaleString('vi-VN')} đ` : 'số tiền'
+        if (isCurrentUser) {
+          // Current user rejected someone's payment
+          message = `Bạn đã từ chối thanh toán ${amount} từ ${activity.details.debtorName || 'người gửi'}`
+        } else {
+          // Someone rejected current user's payment
+          message = `${actorName} đã từ chối thanh toán ${amount} từ bạn`
+        }
+        type = 'default'
+        break
+      }
+        
+      // Group activities
+      case 'group_created':
+        message = `${actorDisplay} đã tạo nhóm ${activity.details.groupName || 'mới'}`
         type = 'group'
         break
         
+      case 'group_updated':
+        message = `${actorDisplay} đã cập nhật nhóm ${activity.details.groupName || 'Unknown'}`
+        type = 'group'
+        break
+        
+      case 'group_deleted':
+        message = `${actorDisplay} đã xóa nhóm ${activity.details.groupName || 'Unknown'}`
+        type = 'default'
+        break
+        
+      case 'group_member_added':
+        message = `${actorDisplay} đã thêm ${activity.details.memberEmail || 'thành viên mới'} vào nhóm ${activity.details.groupName || 'Unknown'}`
+        type = 'group'
+        break
+        
+      case 'group_member_removed':
+        message = `${actorDisplay} đã xóa ${activity.details.memberEmail || 'thành viên'} khỏi nhóm ${activity.details.groupName || 'Unknown'}`
+        type = 'group'
+        break
+        
+      case 'group_bill_added':
+        message = `${actorDisplay} đã thêm hóa đơn ${activity.details.billName || 'mới'} vào nhóm ${activity.details.groupName || 'Unknown'}`
+        type = 'newBill'
+        break
+        
       default:
-        message = activity.details.description || 'Hoạt động không xác định'
+        message = activity.details.description || `${actorDisplay} đã thực hiện hoạt động ${activity.activityType || 'không xác định'}`
         type = 'default'
     }
     
