@@ -51,15 +51,15 @@ class ClovaXClient {
 
             const requestBody = JSON.stringify(request);
 
-            console.log("=== ACTUAL REQUEST BEING SENT ===");
-            console.log("URL:", this.endpoint);
-            console.log("Headers:", {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.apiKey.substring(0, 10)}...`,
-                "X-NCP-CLOVASTUDIO-REQUEST-ID": requestId,
-            });
-            console.log("Body length:", requestBody.length);
-            console.log("Body (first 500 chars):", requestBody.substring(0, 500));
+            // console.log("=== ACTUAL REQUEST BEING SENT ===");
+            // console.log("URL:", this.endpoint);
+            // console.log("Headers:", {
+            //     "Content-Type": "application/json",
+            //     "Authorization": `Bearer ${this.apiKey.substring(0, 10)}...`,
+            //     "X-NCP-CLOVASTUDIO-REQUEST-ID": requestId,
+            // });
+            // console.log("Body length:", requestBody.length);
+            // console.log("Body (first 500 chars):", requestBody.substring(0, 500));
 
             const response = await fetch(this.endpoint, {
                 method: "POST",
