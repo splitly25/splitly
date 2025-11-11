@@ -44,9 +44,30 @@ const logout = async (req, res, next) => {
   }
 }
 
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await userService.getAll()
+    res.status(StatusCodes.OK).json(users)
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.userId
+    const user = await userService.findOneById(userId)
+    res.status(StatusCodes.OK).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
   login,
   logout,
+  getAllUsers,
+  getUserById,
 }

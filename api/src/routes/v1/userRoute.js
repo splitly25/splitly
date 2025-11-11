@@ -1,8 +1,11 @@
 import express from 'express'
 import { userValidation } from '~/validations/userValidation'
 import { userController } from '~/controllers/userController'
+import { authMiddleware } from '~/middlewares/authMiddleware'
 
 const Router = express.Router()
+
+Router.route('/').get(authMiddleware.isAuthorized, userController.getAllUsers)
 
 Router.route('/register').post(userValidation.createNew, userController.createNew)
 
@@ -10,6 +13,8 @@ Router.route('/verify_account').put(userValidation.verifyAccount, userController
 
 Router.route('/login').post(userValidation.login, userController.login)
 
-Router.route('/logout').delete(userController.logout)
+Router.route('/logout').delete(authMiddleware.isAuthorized, userController.logout)
+
+Router.route('/:userId').get(authMiddleware.isAuthorized, userController.getUserById)
 
 export const userRoute = Router
