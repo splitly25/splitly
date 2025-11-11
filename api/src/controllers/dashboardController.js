@@ -80,6 +80,66 @@ const getDashboardData = async (req, res, next) => {
 }
 
 /**
+ * Calculate total spending for a user in a specific month
+ * This includes all amounts the user is responsible for (paid or unpaid)
+ */
+const calculateTotalSpendingForMonth = (bills, userId, year, month) => {
+  let totalSpending = 0
+  
+  for (const bill of bills) {
+    const billDate = new Date(bill.createdAt)
+    const billYear = billDate.getFullYear()
+    const billMonth = billDate.getMonth() // 0-11
+    
+    // Check if bill is in the specified month
+    if (billYear === year && billMonth === month) {
+      for (const status of bill.paymentStatus) {
+        if (status.userId === userId) {
+          // Add all amounts this user owes (paid or unpaid)
+          totalSpending += status.amountOwed
+        }
+      }
+    }
+  }
+  
+  return totalSpending
+}
+
+/**
+ * Calculate total spending for current and previous month
+ */
+const calculateMonthlySpending = (bills, userId) => {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() // 0-11
+  
+  // Calculate previous month
+  let previousYear = currentYear
+  let previousMonth = currentMonth - 1
+  if (previousMonth < 0) {
+    previousMonth = 11
+    previousYear = currentYear - 1
+  }
+  
+  const currentMonthSpending = calculateTotalSpendingForMonth(bills, userId, currentYear, currentMonth)
+  const previousMonthSpending = calculateTotalSpendingForMonth(bills, userId, previousYear, previousMonth)
+  
+  // Calculate percentage change
+  let percentageChange = 0
+  if (previousMonthSpending > 0) {
+    percentageChange = ((currentMonthSpending - previousMonthSpending) / previousMonthSpending) * 100
+  } else if (currentMonthSpending > 0) {
+    percentageChange = 100 // If there was no spending last month but there is this month
+  }
+  
+  return {
+    currentMonthSpending,
+    previousMonthSpending,
+    percentageChange: Math.round(percentageChange * 10) / 10 // Round to 1 decimal place
+  }
+}
+
+/**
  * Calculate debt data (what user owes and what others owe them)
  */
 const calculateDebtData = async (bills, userId) => {
@@ -87,6 +147,9 @@ const calculateDebtData = async (bills, userId) => {
   let theyOweYou = 0
   const debtDetails = {}
   const creditDetails = {}
+  
+  // Calculate monthly spending
+  const monthlySpending = calculateMonthlySpending(bills, userId)
   
   for (const bill of bills) {
     for (const status of bill.paymentStatus) {
@@ -100,9 +163,10 @@ const calculateDebtData = async (bills, userId) => {
           const payer = await userModel.findOneById(bill.payerId)
           const payerName = payer ? payer.name : 'Unknown'
           if (!debtDetails[payerName]) {
-            debtDetails[payerName] = 0
+            debtDetails[payerName] = { amount: 0, billCount: 0 }
           }
-          debtDetails[payerName] += status.amountOwed
+          debtDetails[payerName].amount += status.amountOwed
+          debtDetails[payerName].billCount += 1
         }
       } else {
         // This is what others owe the current user
@@ -114,19 +178,31 @@ const calculateDebtData = async (bills, userId) => {
           const debtor = await userModel.findOneById(status.userId)
           const debtorName = debtor ? debtor.name : 'Unknown'
           if (!creditDetails[debtorName]) {
-            creditDetails[debtorName] = 0
+            creditDetails[debtorName] = { amount: 0, billCount: 0 }
           }
-          creditDetails[debtorName] += status.amountOwed
+          creditDetails[debtorName].amount += status.amountOwed
+          creditDetails[debtorName].billCount += 1
         }
       }
     }
   }
   
   return {
+    currentMonthSpending: monthlySpending.currentMonthSpending,
+    previousMonthSpending: monthlySpending.previousMonthSpending,
+    percentageChange: monthlySpending.percentageChange,
     youOwe,
     theyOweYou,
-    debtDetails: Object.entries(debtDetails).map(([name, amount]) => ({ name, amount })),
-    creditDetails: Object.entries(creditDetails).map(([name, amount]) => ({ name, amount }))
+    debtDetails: Object.entries(debtDetails).map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    })),
+    creditDetails: Object.entries(creditDetails).map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    }))
   }
 }
 

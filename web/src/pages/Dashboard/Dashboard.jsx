@@ -3,67 +3,643 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
 import { formatCurrency } from '~/utils/formatters'
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  Chip,
+  IconButton,
+  Button,
+  Grid,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material'
+import {
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  AttachMoney as MoneyIcon,
+  ArrowForward as ArrowForwardIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from '@mui/icons-material'
+import { COLORS } from '~/theme'
+
+// Total Spending Card Component
+const TotalSpendingCard = ({ debtData }) => {
+  // Use current month spending from backend
+  const currentMonthSpending = debtData.currentMonthSpending || 0
+  const percentageChange = debtData.percentageChange || 0
+  
+  // Determine if spending increased or decreased
+  const isIncrease = percentageChange >= 0
+  const TrendIcon = isIncrease ? TrendingUpIcon : TrendingDownIcon
+  const trendColor = isIncrease ? '#ff4444' : '#00a63e'
+  const changeText = isIncrease ? 'Tăng' : 'Giảm'
+  
+  return (
+    <Card
+      sx={{
+        borderRadius: '16px',
+        border: '1px solid',
+        borderColor: 'divider',
+        height: '100%',
+        width: '100%',
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            fontFamily: "'Nunito Sans', sans-serif",
+            fontWeight: 500,
+            fontSize: '14px',
+            color: 'text.secondary',
+            mb: 5,
+          }}
+        >
+          Tổng chi tiêu tháng này
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                fontSize: '24px',
+                color: 'text.primary',
+                mb: 1,
+              }}
+            >
+              {formatCurrency(currentMonthSpending)}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TrendIcon sx={{ fontSize: 14, color: trendColor }} />
+              <Typography variant="caption" sx={{ fontSize: '14px', color: trendColor }}>
+                {changeText} {Math.abs(percentageChange).toFixed(1)}% so với tháng trước
+              </Typography>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: COLORS.gradientPrimary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MoneyIcon sx={{ fontSize: 24, color: 'white' }} />
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
+// You Owe Card Component
+const YouOweCard = ({ debtData }) => {
+  const [showAmount, setShowAmount] = useState(true)
+
+  const toggleVisibility = () => {
+    setShowAmount(!showAmount)
+  }
+
+  return (
+    <Card
+      sx={{
+        borderRadius: '16px',
+        border: '1px solid #ffd6a7',
+        backgroundColor: '#fff9f0',
+        height: '100%',
+        width: '100%',
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ArrowForwardIcon sx={{ fontSize: 20, color: '#ca3500' }} />
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontFamily: "'Nunito Sans', sans-serif",
+                fontWeight: 500,
+                fontSize: '14px',
+                color: 'text.primary',
+              }}
+            >
+              Mình nợ người khác
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={toggleVisibility}>
+            {showAmount ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+        <Box
+          sx={{
+            borderBottom: '1px solid #ffd6a7',
+            pb: 2,
+            mb: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+              Tổng số tiền
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
+            >
+              {showAmount ? formatCurrency(Math.abs(debtData.youOwe)) : '*******'}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+              Số người
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
+            >
+              {debtData.debtDetails?.length || 0}
+            </Typography>
+          </Box>
+        </Box>
+        {debtData.debtDetails && debtData.debtDetails.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {debtData.debtDetails.map((debt, index) => (
+              <Card
+                key={index}
+                sx={{
+                  borderRadius: '16px',
+                  border: '1px solid #ffedd4',
+                  p: 1.5,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      background: COLORS.gradientPrimary,
+                      fontSize: '14px',
+                    }}
+                  >
+                    {debt.name.substring(0, 2).toUpperCase()}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '14px' }}>
+                      {debt.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                      {debt.billCount} {debt.billCount === 1 ? 'hóa đơn' : 'hóa đơn'}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 700, fontSize: '14px', color: '#ca3500' }}
+                >
+                  {showAmount ? formatCurrency(Math.abs(debt.amount)) : '*******'}
+                </Typography>
+              </Card>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            Không có nợ nào
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// They Owe You Card Component
+const TheyOweYouCard = ({ debtData }) => {
+  const [showAmount, setShowAmount] = useState(true)
+
+  const toggleVisibility = () => {
+    setShowAmount(!showAmount)
+  }
+
+  return (
+    <Card
+      sx={{
+        borderRadius: '16px',
+        border: '1px solid #b9f8cf',
+        backgroundColor: '#f0fdf4',
+        height: '100%',
+        width: '100%',
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ArrowForwardIcon sx={{ fontSize: 20, color: '#008236' }} />
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontFamily: "'Nunito Sans', sans-serif",
+                fontWeight: 500,
+                fontSize: '14px',
+                color: 'text.primary',
+              }}
+            >
+              Người khác nợ mình
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={toggleVisibility}>
+            {showAmount ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+        <Box
+          sx={{
+            borderBottom: '1px solid #b9f8cf',
+            pb: 2,
+            mb: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+              Tổng số tiền
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
+            >
+              {showAmount ? formatCurrency(Math.abs(debtData.theyOweYou)) : '*******'}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+              Số người
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
+            >
+              {debtData.creditDetails?.length || 0}
+            </Typography>
+          </Box>
+        </Box>
+        {debtData.creditDetails && debtData.creditDetails.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {debtData.creditDetails.map((credit, index) => (
+              <Card
+                key={index}
+                sx={{
+                  borderRadius: '16px',
+                  border: '1px solid #d4f5e0',
+                  p: 1.5,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      background: COLORS.gradientPrimary,
+                      fontSize: '14px',
+                    }}
+                  >
+                    {credit.name.substring(0, 2).toUpperCase()}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '14px' }}>
+                      {credit.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                      {credit.billCount} {credit.billCount === 1 ? 'hóa đơn' : 'hóa đơn'}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 700, fontSize: '14px', color: '#008236' }}
+                >
+                  {showAmount ? formatCurrency(Math.abs(credit.amount)) : '*******'}
+                </Typography>
+              </Card>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            Không có ai nợ bạn
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Pending Bills Card Component
+const PendingBillsCard = ({ pendingBills, navigate }) => {
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A'
+    const date = new Date(timestamp)
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
+  return (
+    <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: "'Nunito Sans', sans-serif",
+              fontWeight: 600,
+              fontSize: '20px',
+            }}
+          >
+            Hóa đơn chưa quyết toán
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<ArrowForwardIcon />}
+            onClick={() => navigate('/history')}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Xem tất cả
+          </Button>
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {pendingBills.bills && pendingBills.bills.length > 0 ? (
+            pendingBills.bills.slice(0, 2).map((bill, index) => (
+              <Box
+                key={bill.id || index}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 2,
+                  borderRadius: '16px',
+                  '&:hover': { backgroundColor: 'action.hover' },
+                  cursor: 'pointer',
+                }}
+                onClick={() => navigate('/history')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      background: COLORS.gradientPrimary,
+                      fontSize: '16px',
+                    }}
+                  >
+                    {bill.name.substring(0, 1).toUpperCase()}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '16px' }}>
+                      {bill.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                      {formatDate(bill.createdAt)}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '16px', mb: 0.5 }}>
+                    {formatCurrency(bill.amount)}
+                  </Typography>
+                  <Chip
+                    label="Chưa thanh toán"
+                    size="small"
+                    sx={{
+                      backgroundColor: '#ffedd4',
+                      color: '#9f2d00',
+                      fontSize: '12px',
+                      height: '22px',
+                    }}
+                  />
+                </Box>
+              </Box>
+            ))
+          ) : (
+            <Typography variant="body2" sx={{ textAlign: 'center', p: 4, color: 'text.secondary' }}>
+              Không có hóa đơn chưa quyết toán
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Recent Activities Card Component
+const RecentActivitiesCard = ({ activities, navigate }) => {
+  return (
+    <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: "'Nunito Sans', sans-serif",
+              fontWeight: 600,
+              fontSize: '20px',
+            }}
+          >
+            Hoạt động gần đây
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<ArrowForwardIcon />}
+            onClick={() => navigate('/activity')}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Xem tất cả
+          </Button>
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {activities && activities.length > 0 ? (
+            activities.slice(0, 3).map((activity) => (
+              <Box
+                key={activity.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 1.5,
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    background: COLORS.gradientPrimary,
+                    fontSize: '12px',
+                  }}
+                >
+                  NA
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontSize: '14px', mb: 0.5 }}>
+                    {activity.message}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                    18:30 - 10/11
+                  </Typography>
+                </Box>
+              </Box>
+            ))
+          ) : (
+            <Typography variant="body2" sx={{ textAlign: 'center', p: 2, color: 'text.secondary' }}>
+              Không có hoạt động gần đây
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Groups Card Component
+const GroupsCard = ({ groups, navigate }) => {
+  return (
+    <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: "'Nunito Sans', sans-serif",
+              fontWeight: 600,
+              fontSize: '20px',
+            }}
+          >
+            Nhóm chi tiêu
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<ArrowForwardIcon />}
+            onClick={() => navigate('/groups')}
+            sx={{ textTransform: 'none', color: 'text.secondary' }}
+          >
+            Xem tất cả
+          </Button>
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {groups && groups.length > 0 ? (
+            groups.slice(0, 5).map((group) => (
+              <Box
+                key={group._id}
+                sx={{
+                  p: 1.5,
+                  borderRadius: '16px',
+                  '&:hover': { backgroundColor: 'action.hover' },
+                  cursor: 'pointer',
+                }}
+                onClick={() => navigate('/groups')}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ display: 'flex', ml: -0.5 }}>
+                    {group.memberDetails && group.memberDetails.slice(0, 3).map((member, idx) => (
+                      <Avatar
+                        key={member._id || idx}
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          fontSize: '12px',
+                          background: COLORS.gradientPrimary,
+                          border: '2px solid white',
+                          ml: idx > 0 ? -1 : 0,
+                        }}
+                      >
+                        {member.name.substring(0, 2).toUpperCase()}
+                      </Avatar>
+                    ))}
+                    {group.memberDetails && group.memberDetails.length > 3 && (
+                      <Avatar
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          fontSize: '10px',
+                          background: COLORS.gradientPrimary,
+                          border: '2px solid white',
+                          ml: -1,
+                        }}
+                      >
+                        +{group.memberDetails.length - 3}
+                      </Avatar>
+                    )}
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '14px' }}>
+                    {group.groupName}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                    {group.bills?.length || 0} hóa đơn
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                    {group.memberDetails?.length || 0} thành viên
+                  </Typography>
+                </Box>
+              </Box>
+            ))
+          ) : (
+            <Typography variant="body2" sx={{ textAlign: 'center', p: 2, color: 'text.secondary' }}>
+              Không có nhóm nào
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [greeting, setGreeting] = useState('')
-  const [gridColumns, setGridColumns] = useState('md:grid-cols-2')
-  const gridRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(0)
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'))
+  const containerRef = useRef(null)
 
   // For now, using a hardcoded user ID - this should come from authentication context
   const currentUserId = '69097a08cfc3fcbcfb0f5b72' // This should be from auth context
 
+  // Measure container width
   useEffect(() => {
-    const getGreeting = () => {
-      const hour = new Date().getHours()
-      if (hour < 12) return 'Chào buổi sáng'
-      if (hour < 18) return 'Chào buổi chiều'
-      return 'Chào buổi tối'
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const element = containerRef.current
+        const computedStyle = window.getComputedStyle(element)
+        const paddingLeft = parseFloat(computedStyle.paddingLeft)
+        const paddingRight = parseFloat(computedStyle.paddingRight)
+        // Get the width minus padding
+        const actualWidth = element.offsetWidth - paddingLeft - paddingRight
+        setContainerWidth(actualWidth)
+      }
     }
-    setGreeting(getGreeting())
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
   }, [])
 
-  // Observe grid width and adjust columns dynamically
-  useEffect(() => {
-    const gridElement = gridRef.current
-    if (!gridElement) return
-
-    const updateGridColumns = (width) => {
-      // Define breakpoints based on actual container width
-      // Adjusted for optimal card display (considering ~300px min card width + gaps)
-      if (width >= 1400) {
-        // Wide enough for 7 columns (2+2+3 layout)
-        setGridColumns('grid-cols-7')
-      } else if (width >= 768) {
-        // Medium screens: 2 columns
-        setGridColumns('grid-cols-2')
-      } else {
-        // Mobile: 1 column
-        setGridColumns('grid-cols-1')
-      }
-    }
-
-    // Initial check
-    updateGridColumns(gridElement.offsetWidth)
-
-    // Create ResizeObserver to watch for size changes
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const width = entry.contentRect.width
-        updateGridColumns(width)
-      }
-    })
-
-    resizeObserver.observe(gridElement)
-
-    // Cleanup
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [dashboardData]) // Re-run when data loads to ensure correct sizing
+  // Determine layout based on actual container width (after subtracting padding)
+  const shouldUseThreeColumns = containerWidth >= 1000  // Enough space for 3 columns
+  const shouldUseTwoColumns = containerWidth >= 600 && containerWidth < 1000  // 2 columns mode
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -83,21 +659,23 @@ const Dashboard = () => {
     fetchDashboardData()
   }, [currentUserId])
 
-  const getActivityBgColor = (type) => {
-    if (type === 'newBill') return 'bg-teal-100'
-    if (type === 'remind') return 'bg-yellow-100'
-    if (type === 'payment') return 'bg-green-100'
-    if (type === 'settled') return 'bg-blue-100'
-    if (type === 'group') return 'bg-purple-100'
-    return 'bg-sky-100'
-  }
-
   if (loading) {
     return (
       <Layout>
-        <div className="p-8 md:p-10 min-h-screen bg-white flex items-center justify-center">
-          <div className="text-xl text-[#574D98]">Loading dashboard...</div>
-        </div>
+        <Box
+          sx={{
+            p: { xs: 3, md: 4 },
+            minHeight: '100vh',
+            backgroundColor: 'background.default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="h5" color="text.secondary">
+            Loading dashboard...
+          </Typography>
+        </Box>
       </Layout>
     )
   }
@@ -105,9 +683,20 @@ const Dashboard = () => {
   if (error) {
     return (
       <Layout>
-        <div className="p-8 md:p-10 min-h-screen bg-white flex items-center justify-center">
-          <div className="text-xl text-red-600">{error}</div>
-        </div>
+        <Box
+          sx={{
+            p: { xs: 3, md: 4 },
+            minHeight: '100vh',
+            backgroundColor: 'background.default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="h5" color="error">
+            {error}
+          </Typography>
+        </Box>
       </Layout>
     )
   }
@@ -115,9 +704,20 @@ const Dashboard = () => {
   if (!dashboardData) {
     return (
       <Layout>
-        <div className="p-8 md:p-10 min-h-screen bg-white flex items-center justify-center">
-          <div className="text-xl text-[#574D98]">No data available</div>
-        </div>
+        <Box
+          sx={{
+            p: { xs: 3, md: 4 },
+            minHeight: '100vh',
+            backgroundColor: 'background.default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="h5" color="text.secondary">
+            No data available
+          </Typography>
+        </Box>
       </Layout>
     )
   }
@@ -126,148 +726,97 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="p-8 md:p-10 min-h-screen bg-white">
-        {/* Greeting */}
-        <h3 className="text-2xl md:text-3xl text-[#574D98] mb-8">
-          {greeting}, <span className="text-[#574D98] font-bold">{user.name}</span>
-        </h3>
+      <Box
+        ref={containerRef}
+        sx={{
+          p: { xs: 3, md: 4 },
+          minHeight: '100vh',
+          backgroundColor: 'background.default',
+        }}
+      >
+        {/* Header Section */}
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Nunito Sans', sans-serif",
+              fontWeight: 700,
+              fontSize: { xs: '24px', md: '30px' },
+              color: 'text.primary',
+              mb: 1,
+            }}
+          >
+            Trang chủ
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '16px' }}>
+            Xin chào! Đây là tổng quan chi tiêu của bạn.
+          </Typography>
+        </Box>
 
         {/* Top Cards Grid */}
-        <div ref={gridRef} className={`grid ${gridColumns} gap-10 mb-10`}>
-          {/* Số tiền bạn còn nợ */}
-          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-red-100 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
-            <div className="text-center mb-6">
-              <div className="text-4xl md:text-5xl font-bold mb-1">
-                {debtData.youOwe > 0 ? '-' : ''}{formatCurrency(Math.abs(debtData.youOwe))}
-              </div>
-              <div className="text-sm">là số tiền bạn còn nợ</div>
-            </div>
-            <div className="space-y-2 pt-4 border-t border-[#574D98]/20">
-              {debtData.debtDetails && debtData.debtDetails.length > 0 ? (
-                debtData.debtDetails.map((debt, index) => (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <span className="font-medium">{debt.name}</span>
-                    <span className="font-semibold">-{formatCurrency(Math.abs(debt.amount))}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-center">Không có nợ nào</div>
-              )}
-            </div>
-          </div>
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          {/* Tổng chi tiêu Card */}
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? '100%' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? '100%' : '100%')
+            }}
+          >
+            <TotalSpendingCard debtData={debtData} />
+          </Grid>
 
-          {/* Số tiền họ nợ bạn */}
-          <div className={`${gridColumns === 'grid-cols-7' ? 'col-span-2' : ''} bg-purple-900 rounded-3xl p-6 text-purple-50 shadow-sm`}>
-            <div className="text-center mb-6">
-              <div className="text-4xl md:text-5xl font-bold mb-1">+{formatCurrency(Math.abs(debtData.theyOweYou))}</div>
-              <div className="text-sm">là số tiền họ nợ bạn</div>
-            </div>
-            <div className="space-y-2 pt-4 border-t border-purple-50/20">
-              {debtData.creditDetails && debtData.creditDetails.length > 0 ? (
-                debtData.creditDetails.map((credit, index) => (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <span className="font-medium">{credit.name}</span>
-                    <span className="font-semibold">+{formatCurrency(Math.abs(credit.amount))}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-center">Không có ai nợ bạn</div>
-              )}
-            </div>
-          </div>
+          {/* Mình nợ người khác Card */}
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
+            }}
+          >
+            <YouOweCard debtData={debtData} />
+          </Grid>
 
-          {/* Bạn còn hóa đơn chưa xử lý */}
-          <div className={`${gridColumns === 'grid-cols-2' ? 'col-span-2' : gridColumns === 'grid-cols-7' ? 'col-span-3' : ''} bg-red-50 rounded-3xl p-6 text-[#574D98] shadow-sm`}>
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-base font-semibold">
-                Bạn còn {pendingBills.count} hóa đơn chưa xử lý
-              </h4>
-              <button 
-                onClick={() => navigate('/bills')}
-                className="text-sm text-[#574D98] hover:underline cursor-pointer"
-              >
-                Xem thêm
-              </button>
-            </div>
-            <div className="space-y-2">
-              {pendingBills.bills && pendingBills.bills.length > 0 ? (
-                pendingBills.bills.map((bill, index) => (
-                  <div key={index} className="flex items-center justify-between gap-3 p-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                        {bill.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className="text-sm font-medium truncate min-w-0">{bill.name}</div>
-                    </div>
-                    <div className="font-semibold text-sm whitespace-nowrap">{formatCurrency(bill.amount)}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-center p-4">Không có hóa đơn chưa xử lý</div>
-              )}
-            </div>
-          </div>
-        </div>
+          {/* Người khác nợ mình Card */}
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
+            }}
+          >
+            <TheyOweYouCard debtData={debtData} />
+          </Grid>
+        </Grid>
 
-        {/* Bottom Section - Activities and Groups */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
-          {/* Nhóm của tôi - Left on desktop, Second on mobile */}
-          <div className="order-2 lg:order-1">
-            <h4 className="text-2xl font-semibold text-[#574D98] mb-4">Nhóm của tôi</h4>
-            <div className="space-y-3">
-              {groups && groups.length > 0 ? (
-                groups.map((group) => (
-                  <div
-                    key={group._id}
-                    className="bg-red-50 rounded-3xl p-4 shadow text-zinc-900 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-base">{group.groupName}</span>
-                      <div className="flex -space-x-2">
-                        {group.memberDetails && group.memberDetails.slice(0, 3).map((member, index) => (
-                          <div
-                            key={index}
-                            className="w-9 h-9 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-white text-xs font-semibold"
-                            title={member.name}
-                          >
-                            {member.name.substring(0, 1).toUpperCase()}
-                          </div>
-                        ))}
-                        {group.memberDetails && group.memberDetails.length > 3 && (
-                          <div className="w-9 h-9 rounded-full bg-gray-500 border-2 border-white flex items-center justify-center text-white text-xs font-semibold">
-                            +{group.memberDetails.length - 3}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center p-4 text-gray-500">Không có nhóm nào</div>
-              )}
-            </div>
-          </div>
+        {/* Bottom Section */}
+        <Grid container spacing={2}>
+          {/* Left Column - Hóa đơn chưa quyết toán and Hoạt động gần đây */}
+          <Grid item xs={12} lg={8} sx={{ display: 'flex', flexGrow: 2, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
+              <PendingBillsCard pendingBills={pendingBills} navigate={navigate} />
+              <RecentActivitiesCard activities={activities} navigate={navigate} />
+            </Box>
+          </Grid>
 
-          {/* Các hoạt động gần đây - Right on desktop, First on mobile */}
-          <div className="order-1 lg:order-2">
-            <h4 className="text-2xl font-semibold text-[#574D98] mb-4">Các hoạt động gần đây</h4>
-            <div className="rounded-3xl p-5 space-y-3 shadow-md">
-              {activities && activities.length > 0 ? (
-                activities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className={`${getActivityBgColor(activity.type)} rounded-xl p-4 font-semibold text-base leading-relaxed shadow-md`}
-                  >
-                    {activity.message}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center p-4 text-gray-500">Không có hoạt động gần đây</div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Right Column - Nhóm chi tiêu */}
+          <Grid item xs={12} lg={4} sx={{ display: 'flex', flexGrow: 1, minWidth: 0 }}>
+            <GroupsCard groups={groups} navigate={navigate} />
+          </Grid>
+        </Grid>
+      </Box>
     </Layout>
   )
 }
