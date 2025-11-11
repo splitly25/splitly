@@ -15,6 +15,8 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import Avatar from '@mui/material/Avatar'
 import Zoom from '@mui/material/Zoom'
 import Alert from '@mui/material/Alert'
+import Divider from '@mui/material/Divider'
+import GoogleIcon from '@mui/icons-material/Google'
 import {
   EMAIL_RULE,
   PASSWORD_RULE,
@@ -66,13 +68,13 @@ function LoginForm() {
     <Zoom in={true} style={{ transitionDelay: '200ms' }}>
       <Card
         sx={{
-          minWidth: 380,
-          maxWidth: 400,
+          minWidth: 300,
+          maxWidth: 450,
           width: '100%',
           mx: 2,
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          borderRadius: 3,
-          background: 'rgba(255, 255, 255, 0.95)',
+          boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
+          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(10px)',
         }}
       >
@@ -88,25 +90,27 @@ function LoginForm() {
             <Avatar
               sx={{
                 m: 1,
-                bgcolor: COLORS.primary,
+                background: COLORS.gradientPrimary,
                 width: 56,
                 height: 56,
-                boxShadow: `0 4px 20px ${COLORS.primary}40`,
+                boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)',
               }}
             >
-              <LockOutlinedIcon sx={{ fontSize: 28 }} />
+              <LockOutlinedIcon sx={{ fontSize: 28, color: '#fff' }} />
             </Avatar>
             <Typography
               component="h1"
               variant="h5"
               fontWeight="bold"
-              sx={{ color: COLORS.text, mt: 1 }}
+              color="text.primary"
+              sx={{ mt: 1 }}
             >
               Sign In
             </Typography>
             <Typography
               variant="body2"
-              sx={{ color: COLORS.textMuted, mt: 0.5 }}
+              color="text.secondary"
+              sx={{ mt: 0.5 }}
             >
               Welcome back to Splitly
             </Typography>
@@ -174,20 +178,16 @@ function LoginForm() {
               type="submit"
               fullWidth
               variant="contained"
+              color="primary"
               sx={{
                 mt: 3,
                 mb: 2,
                 py: 1.5,
-                bgcolor: COLORS.primary,
-                color: '#fff',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontSize: '1rem',
-                borderRadius: 1.5,
                 transition: 'all 0.3s ease',
                 '&:hover': {
-                  bgcolor: COLORS.primary,
                   transform: 'translateY(-2px)',
-                  boxShadow: `0 8px 24px ${COLORS.primary}40`,
                 },
                 '&:disabled': {
                   opacity: 0.7,
@@ -200,22 +200,46 @@ function LoginForm() {
               {isSubmitting ? 'Signing In...' : 'Sign In'}
             </Button>
 
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                OR
+              </Typography>
+            </Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              sx={{
+                py: 1.5,
+                fontWeight: 500,
+                fontSize: '1rem',
+                borderColor: 'divider',
+                color: 'text.primary',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'rgba(239, 154, 154, 0.04)',
+                  transform: 'translateY(-2px)',
+                },
+              }}
+              onClick={() => {
+                // TODO: Implement Google login
+                console.log('Google login - to be implemented')
+              }}
+            >
+              Continue with Google
+            </Button>
+
             <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Typography variant="body2" sx={{ color: COLORS.textMuted }}>
+              <Typography variant="body2" color="text.primary">
                 Don't have an account?{' '}
                 <Link
                   to="/register"
                   style={{
                     textDecoration: 'none',
                     color: COLORS.primary,
-                    fontWeight: '600',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.color = COLORS.accent
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.color = COLORS.primary
+                    fontWeight: '500',
                   }}
                 >
                   Sign Up
