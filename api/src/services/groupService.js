@@ -1,6 +1,10 @@
 /* eslint-disable no-useless-catch */
 import { groupModel } from '~/models/groupModel.js'
 import { activityModel } from '~/models/activityModel.js'
+import ApiError from '~/utils/APIError'
+import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
+import { pickUser } from '~/utils/formatters'
 
 /**
  * Create a new group with activity logging
@@ -15,32 +19,37 @@ const createNew = async (reqBody, creatorId) => {
     if (!members.includes(creatorId)) {
       members.push(creatorId)
     }
-    
+    const creatorObjectId = new ObjectId(creatorId)
+    const memberObjectIds = members.map((memberId) => new ObjectId(memberId))
+
     const groupData = {
       ...reqBody,
-      creatorId,
-      members,
-      createdAt: Date.now()
+      creatorId: creatorObjectId,
+      members: memberObjectIds,
+      createdAt: Date.now(),
     }
-    
+
     const createdGroup = await groupModel.createNew(groupData)
-    const newGroup = await groupModel.findOneById(createdGroup.insertedId.toString())
-    
+    // insertedId is already an ObjectId, convert to string properly
+    const insertedId = createdGroup.insertedId
+    const groupIdString = insertedId instanceof ObjectId ? insertedId.toString() : String(insertedId)
+    const newGroup = await groupModel.findOneById(groupIdString)
+
     // Log group creation activity
     try {
       await activityModel.logGroupActivity(
         activityModel.ACTIVITY_TYPES.GROUP_CREATED,
         creatorId,
-        createdGroup.insertedId.toString(),
+        groupIdString,
         {
           groupName: reqBody.groupName,
-          description: `Created new group: ${reqBody.groupName}`
+          description: `Created new group: ${reqBody.groupName}`,
         }
       )
     } catch (activityError) {
       console.warn('Failed to log group creation activity:', activityError.message)
     }
-    
+
     return newGroup
   } catch (error) {
     throw error
@@ -79,7 +88,11 @@ const getGroupsByUser = async (userId) => {
  */
 const findOneById = async (groupId) => {
   try {
-    return await groupModel.findOneById(groupId)
+    const group = await groupModel.findOneById(groupId)
+    if (!group) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found')
+    }
+    return group
   } catch (error) {
     throw error
   }
@@ -96,31 +109,26 @@ const update = async (groupId, updateData, updatedBy) => {
   try {
     // Get original group data for activity logging
     const originalGroup = await groupModel.findOneById(groupId)
-    
+
     const result = await groupModel.update(groupId, updateData)
-    
+
     // Log activity if updatedBy is provided
     if (updatedBy && originalGroup) {
       try {
-        await activityModel.logGroupActivity(
-          activityModel.ACTIVITY_TYPES.GROUP_UPDATED,
-          updatedBy,
-          groupId,
-          {
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_UPDATED, updatedBy, groupId, {
+          groupName: originalGroup.groupName,
+          previousValue: {
             groupName: originalGroup.groupName,
-            previousValue: {
-              groupName: originalGroup.groupName,
-              description: originalGroup.description
-            },
-            newValue: updateData,
-            description: `Updated group: ${originalGroup.groupName}`
-          }
-        )
+            description: originalGroup.description,
+          },
+          newValue: updateData,
+          description: `Updated group: ${originalGroup.groupName}`,
+        })
       } catch (activityError) {
         console.warn('Failed to log group update activity:', activityError.message)
       }
     }
-    
+
     return result
   } catch (error) {
     throw error
@@ -138,28 +146,23 @@ const update = async (groupId, updateData, updatedBy) => {
 const addMember = async (groupId, memberId, addedBy, memberEmail) => {
   try {
     const group = await groupModel.findOneById(groupId)
-    
+
     const result = await groupModel.addMember(groupId, memberId)
-    
+
     // Log activity if addedBy is provided
     if (addedBy) {
       try {
-        await activityModel.logGroupActivity(
-          activityModel.ACTIVITY_TYPES.GROUP_MEMBER_ADDED,
-          addedBy,
-          groupId,
-          {
-            groupName: group.groupName,
-            memberId: memberId,
-            memberEmail: memberEmail,
-            description: `Added member to group: ${group.groupName}`
-          }
-        )
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_MEMBER_ADDED, addedBy, groupId, {
+          groupName: group.groupName,
+          memberId: memberId,
+          memberEmail: memberEmail,
+          description: `Added member to group: ${group.groupName}`,
+        })
       } catch (activityError) {
         console.warn('Failed to log group member addition activity:', activityError.message)
       }
     }
-    
+
     return result
   } catch (error) {
     throw error
@@ -177,28 +180,23 @@ const addMember = async (groupId, memberId, addedBy, memberEmail) => {
 const removeMember = async (groupId, memberId, removedBy, memberEmail) => {
   try {
     const group = await groupModel.findOneById(groupId)
-    
+
     const result = await groupModel.removeMember(groupId, memberId)
-    
+
     // Log activity if removedBy is provided
     if (removedBy) {
       try {
-        await activityModel.logGroupActivity(
-          activityModel.ACTIVITY_TYPES.GROUP_MEMBER_REMOVED,
-          removedBy,
-          groupId,
-          {
-            groupName: group.groupName,
-            memberId: memberId,
-            memberEmail: memberEmail,
-            description: `Removed member from group: ${group.groupName}`
-          }
-        )
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_MEMBER_REMOVED, removedBy, groupId, {
+          groupName: group.groupName,
+          memberId: memberId,
+          memberEmail: memberEmail,
+          description: `Removed member from group: ${group.groupName}`,
+        })
       } catch (activityError) {
         console.warn('Failed to log group member removal activity:', activityError.message)
       }
     }
-    
+
     return result
   } catch (error) {
     throw error
@@ -216,27 +214,22 @@ const removeMember = async (groupId, memberId, removedBy, memberEmail) => {
 const addBill = async (groupId, billId, addedBy, billName) => {
   try {
     const group = await groupModel.findOneById(groupId)
-    
+
     const result = await groupModel.addBill(groupId, billId)
-    
+
     // Log activity if addedBy is provided
     if (addedBy) {
       try {
-        await activityModel.logGroupActivity(
-          activityModel.ACTIVITY_TYPES.GROUP_BILL_ADDED,
-          addedBy,
-          groupId,
-          {
-            groupName: group.groupName,
-            billName: billName,
-            description: `Added bill "${billName || 'Unknown'}" to group: ${group.groupName}`
-          }
-        )
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_BILL_ADDED, addedBy, groupId, {
+          groupName: group.groupName,
+          billName: billName,
+          description: `Added bill "${billName || 'Unknown'}" to group: ${group.groupName}`,
+        })
       } catch (activityError) {
         console.warn('Failed to log group bill addition activity:', activityError.message)
       }
     }
-    
+
     return result
   } catch (error) {
     throw error
@@ -252,27 +245,52 @@ const addBill = async (groupId, billId, addedBy, billName) => {
 const deleteOneById = async (groupId, deletedBy) => {
   try {
     const group = await groupModel.findOneById(groupId)
-    
+
     const result = await groupModel.deleteOneById(groupId)
-    
+
     // Log deletion activity
     if (deletedBy && group) {
       try {
-        await activityModel.logGroupActivity(
-          activityModel.ACTIVITY_TYPES.GROUP_DELETED,
-          deletedBy,
-          groupId,
-          {
-            groupName: group.groupName,
-            description: `Deleted group: ${group.groupName}`
-          }
-        )
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_DELETED, deletedBy, groupId, {
+          groupName: group.groupName,
+          description: `Deleted group: ${group.groupName}`,
+        })
       } catch (activityError) {
         console.warn('Failed to log group deletion activity:', activityError.message)
       }
     }
-    
+
     return result
+  } catch (error) {
+    throw error
+  }
+}
+
+const getGroupAndMembers = async (groupId) => {
+  try {
+    const groupWithMembers = await groupModel.getGroupAndMembers(groupId)
+    if (!groupWithMembers) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Group not found')
+    }
+    if (groupWithMembers.members && Array.isArray(groupWithMembers.members)) {
+      groupWithMembers.members = groupWithMembers.members.map((member) => pickUser(member))
+    }
+
+    return groupWithMembers
+  } catch (error) {
+    throw error
+  }
+}
+
+const getAllGroupsAndMembers = async () => {
+  try {
+    const groupsWithMembers = await groupModel.getAllGroupsAndMembers()
+    return groupsWithMembers.map((group) => {
+      if (group.members && Array.isArray(group.members)) {
+        group.members = group.members.map((member) => pickUser(member))
+      }
+      return group
+    })
   } catch (error) {
     throw error
   }
@@ -287,5 +305,7 @@ export const groupService = {
   addMember,
   removeMember,
   addBill,
-  deleteOneById
+  deleteOneById,
+  getGroupAndMembers,
+  getAllGroupsAndMembers,
 }
