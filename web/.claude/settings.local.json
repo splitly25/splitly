@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__figma-remote-mcp__get_screenshot",
+      "mcp__figma-remote-mcp__get_design_context"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
