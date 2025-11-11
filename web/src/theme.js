@@ -93,9 +93,12 @@ const theme = extendTheme({
         info: {
           main: COLORS.info,
         },
+        error: {
+          main: '#EF5350',
+        },
         text: {
-          primary: '#F3F4F6',
-          secondary: '#D1D5DB',
+          primary: '#FFFFFF', // Pure white for better readability
+          secondary: '#9CA3AF', // Medium gray for secondary text
         },
         background: {
           default: '#111827',
@@ -107,13 +110,21 @@ const theme = extendTheme({
   },
   components: {
     MuiCssBaseline: {
-      styleOverrides: {
+      styleOverrides: (theme) => ({
         body: {
           '*::-webkit-scrollbar': { width: '8px', height: '8px' },
-          '*::-webkit-scrollbar-thumb': { backgroundColor: COLORS.border, borderRadius: '8px' },
-          '*::-webkit-scrollbar-thumb:hover': { backgroundColor: COLORS.primary },
+          '*::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.mode === 'dark' ? '#4B5563' : COLORS.border,
+            borderRadius: '8px'
+          },
+          '*::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: theme.palette.mode === 'dark' ? '#6B7280' : COLORS.primary
+          },
+          '*::-webkit-scrollbar-track': {
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : 'transparent'
+          },
         },
-      },
+      }),
     },
     // Customize MUI Button component
     MuiButton: {
@@ -134,39 +145,41 @@ const theme = extendTheme({
     },
     MuiInputLabel: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           fontSize: '0.875rem',
-        },
+          color: theme.palette.text.primary,
+        }),
       },
     },
     MuiTypography: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
+          color: theme.palette.text.primary,
           '&.MuiTypography-body1': {
             fontSize: '0.875rem',
           },
-        },
+        }),
       },
     },
     // Customize MUI TextField component
     MuiOutlinedInput: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           fontSize: '0.875rem',
           borderRadius: '16px', // Default border radius from design system
           '& fieldset': {
-            borderColor: COLORS.border,
+            borderColor: theme.palette.divider,
             borderWidth: '1px !important',
           },
           '&:hover fieldset': {
-            borderColor: COLORS.primary,
+            borderColor: theme.palette.primary.main,
             borderWidth: '1px !important',
           },
           '&.Mui-focused fieldset': {
-            borderColor: COLORS.secondary,
+            borderColor: theme.palette.primary.main,
             borderWidth: '2px !important',
           },
-        },
+        }),
       },
     },
   },
