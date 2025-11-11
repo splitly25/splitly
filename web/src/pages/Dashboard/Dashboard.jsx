@@ -22,6 +22,7 @@ import {
   AttachMoney as MoneyIcon,
   ArrowForward as ArrowForwardIcon,
   Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material'
 import { COLORS } from '~/theme'
 
@@ -102,6 +103,12 @@ const TotalSpendingCard = ({ debtData }) => {
 
 // You Owe Card Component
 const YouOweCard = ({ debtData }) => {
+  const [showAmount, setShowAmount] = useState(true)
+
+  const toggleVisibility = () => {
+    setShowAmount(!showAmount)
+  }
+
   return (
     <Card
       sx={{
@@ -128,8 +135,8 @@ const YouOweCard = ({ debtData }) => {
               Mình nợ người khác
             </Typography>
           </Box>
-          <IconButton size="small">
-            <VisibilityIcon fontSize="small" />
+          <IconButton size="small" onClick={toggleVisibility}>
+            {showAmount ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
           </IconButton>
         </Box>
         <Box
@@ -149,7 +156,7 @@ const YouOweCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
             >
-              {formatCurrency(Math.abs(debtData.youOwe))}
+              {showAmount ? formatCurrency(Math.abs(debtData.youOwe)) : '******'}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
@@ -202,7 +209,7 @@ const YouOweCard = ({ debtData }) => {
                   variant="body2"
                   sx={{ fontWeight: 700, fontSize: '14px', color: '#ca3500' }}
                 >
-                  {formatCurrency(Math.abs(debt.amount))}
+                  {showAmount ? formatCurrency(Math.abs(debt.amount)) : '******'}
                 </Typography>
               </Card>
             ))}
@@ -219,6 +226,12 @@ const YouOweCard = ({ debtData }) => {
 
 // They Owe You Card Component
 const TheyOweYouCard = ({ debtData }) => {
+  const [showAmount, setShowAmount] = useState(true)
+
+  const toggleVisibility = () => {
+    setShowAmount(!showAmount)
+  }
+
   return (
     <Card
       sx={{
@@ -245,8 +258,8 @@ const TheyOweYouCard = ({ debtData }) => {
               Người khác nợ mình
             </Typography>
           </Box>
-          <IconButton size="small">
-            <VisibilityIcon fontSize="small" />
+          <IconButton size="small" onClick={toggleVisibility}>
+            {showAmount ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
           </IconButton>
         </Box>
         <Box
@@ -266,7 +279,7 @@ const TheyOweYouCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {formatCurrency(Math.abs(debtData.theyOweYou))}
+              {showAmount ? formatCurrency(Math.abs(debtData.theyOweYou)) : '******'}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
@@ -319,7 +332,7 @@ const TheyOweYouCard = ({ debtData }) => {
                   variant="body2"
                   sx={{ fontWeight: 700, fontSize: '14px', color: '#008236' }}
                 >
-                  {formatCurrency(Math.abs(credit.amount))}
+                  {showAmount ? formatCurrency(Math.abs(credit.amount)) : '******'}
                 </Typography>
               </Card>
             ))}
