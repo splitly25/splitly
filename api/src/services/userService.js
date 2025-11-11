@@ -211,7 +211,7 @@ const logout = async (userId, logoutDetails = {}) => {
  * @returns {Promise<Array>} Array of users
  */
 const getAll = async () => {
-   try {
+  try {
     const users = await userModel.getAll()
     return users.map((user) => pickUser(user))
   } catch (error) {

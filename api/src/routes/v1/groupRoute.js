@@ -5,13 +5,14 @@ import { groupValidation } from '~/validations/groupValidation'
 
 const Router = express.Router()
 
-Router.route('/getAllGroupAndMembers').get(groupController.getAllGroupAndMembers)
+Router.route('/getAllGroupAndMembers').get(authMiddleware.isAuthorized, groupController.getAllGroupAndMembers)
 
-Router.route('/getGroupAndMembers/:groupId').get(groupController.getGroupAndMembers)
+Router.route('/getGroupAndMembers/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupAndMembers)
 
-Router.route('/').get(groupController.getAllGroups).post(groupValidation.createNew, groupController.createNew)
+Router.route('/')
+  .get(authMiddleware.isAuthorized, groupController.getAllGroups)
+  .post(authMiddleware.isAuthorized, groupValidation.createNew, groupController.createNew)
 
-
-Router.route('/:groupId').get(groupController.getGroupById)
+Router.route('/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupById)
 
 export const groupRoute = Router
