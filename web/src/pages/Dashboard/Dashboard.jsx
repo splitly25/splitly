@@ -632,10 +632,20 @@ const Dashboard = () => {
       }
     }
 
+    // Initial measurement
     updateWidth()
+    
+    // Add resize listener
     window.addEventListener('resize', updateWidth)
-    return () => window.removeEventListener('resize', updateWidth)
-  }, [])
+    
+    // Measure again after a short delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(updateWidth, 100)
+    
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+      clearTimeout(timeoutId)
+    }
+  }, [dashboardData])
 
   // Determine layout based on actual container width (after subtracting padding)
   const shouldUseThreeColumns = containerWidth >= 1000  // Enough space for 3 columns
