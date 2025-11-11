@@ -4,16 +4,7 @@ import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } 
 import {
   Box,
   TextField,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Pagination,
-  Checkbox,
   Avatar,
   AvatarGroup,
   InputAdornment,
@@ -22,10 +13,15 @@ import {
   Popover,
   Button,
   FormControlLabel,
+  Checkbox,
+  Chip,
+  Card,
+  CardContent,
 } from "@mui/material";
 import {
-  FilterList as FilterListIcon,
+  FilterAlt as FilterListIcon,
   Search as SearchIcon,
+  CalendarToday as CalendarIcon,
 } from "@mui/icons-material";
 
 const History = () => {
@@ -37,6 +33,7 @@ const History = () => {
   const [historyData, setHistoryData] = useState([]);
   const [totalPage, setTotalPage] = useState(1);
   const [totalBills, setTotalBills] = useState(0);
+  const [statusFilter, setStatusFilter] = useState("all"); // all, paid, unpaid, pending
   
   // Filter states
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
@@ -56,6 +53,13 @@ const History = () => {
     { id: 4, title: "Người ứng tiền" },
     { id: 5, title: "Người tham gia" },
     { id: 6, title: "Đã quyết toán" },
+  ];
+
+  // Status tabs configuration
+  const statusTabs = [
+    { id: "all", label: "Tất cả"},
+    { id: "paid", label: "Đã thanh toán"},
+    { id: "unpaid", label: "Chưa thanh toán"},
   ];
 
   // For now, using a hardcoded user ID - this should come from authentication context
@@ -193,13 +197,42 @@ const History = () => {
     return `${day}/${month}/${year}`;
   };
 
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
+  const getStatusBadge = (bill) => {
+    if (bill.settled) {
+      return { label: "Đã thanh toán", color: "#10B981", bgColor: "#D1FAE5" };
+    }
+    // You can add more logic here based on bill properties
+    return { label: "Chưa thanh toán", color: "#F59E0B", bgColor: "#FEF3C7" };
+  };
+
+  const getCategoryLabel = (bill) => {
+    // Extract category from bill data, defaulting to "Ăn uống" if not available
+    return bill.category || "Ăn uống";
+  };
+
+  // Filter data by status
+  const getFilteredData = () => {
+    if (statusFilter === "all") return historyData;
+    if (statusFilter === "paid") return historyData.filter(bill => bill.settled);
+    if (statusFilter === "unpaid") return historyData.filter(bill => !bill.settled);
+    // For pending, you might need additional logic based on your data structure
+    return historyData;
+  };
+
+  const filteredHistoryData = getFilteredData();
   const openFilterPopover = Boolean(filterAnchorEl);
   const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer;
+  const hoverGradient = "linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)";
 
   if (error) {
     return (
       <Layout>
-        <Box className="p-6 md:p-10 min-h-screen bg-white flex items-center justify-center">
+        <Box className="p-6 md:p-10 min-h-screen bg-gray-50 flex items-center justify-center">
           <Typography color="error" variant="h6">
             {error}
           </Typography>
@@ -208,19 +241,25 @@ const History = () => {
     );
   }
 
-
   return (
     <Layout>
-      <Box className="p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-white">
-        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-[#574D98] mb-4 sm:mb-6 md:mb-8">
-          Danh sách hóa đơn
-        </h1>
+      <Box className="p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-gray-50">
+        {/* Header */}
+        <Box className="mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+            Hóa đơn của tôi
+          </h1>
+          <Typography className="text-sm sm:text-base text-gray-500">
+            Quản lý tất cả hóa đơn chi tiêu
+          </Typography>
+        </Box>
 
-        <Box className="mb-4 sm:mb-5 md:mb-6 bg-white rounded-2xl shadow-sm p-3 sm:p-4 md:p-6">
-          <Box className="flex gap-3 items-center">
+        {/* Search and Filter Bar */}
+        <Box className="mb-6 bg-white rounded-2xl shadow-sm p-4 md:p-6">
+          <Box className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <TextField
               fullWidth
-              placeholder="Tìm kiếm theo tên hóa đơn, mô tả, ngày tháng năm..."
+              placeholder="Tìm kiếm hóa đơn..."
               value={searchText}
               onChange={handleSearchChange}
               variant="outlined"
@@ -231,7 +270,7 @@ const History = () => {
                     <SearchIcon
                       sx={{
                         color: "#9CA3AF",
-                        fontSize: { xs: "1rem", sm: "1.25rem" },
+                        fontSize: { xs: "1.25rem", sm: "1.5rem" },
                       }}
                     />
                   </InputAdornment>
@@ -239,9 +278,9 @@ const History = () => {
               }}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
+                  borderRadius: "12px",
                   backgroundColor: "#F9FAFB",
-                  fontSize: { xs: "0.75rem", sm: "0.875rem", md: "1rem" },
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                   "& fieldset": {
                     borderColor: "#E5E7EB",
                   },
@@ -253,26 +292,29 @@ const History = () => {
                   },
                 },
                 "& .MuiOutlinedInput-input": {
-                  padding: { xs: "6px 8px", sm: "8px 12px", md: "8.5px 14px" },
+                  padding: { xs: "10px 14px", sm: "12px 14px" },
                 },
               }}
             />
-            <IconButton
+            <Button
               onClick={handleFilterClick}
+              startIcon={<FilterListIcon />}
               sx={{
-                color: hasActiveFilters ? "#FFF" : "#574D98",
-                backgroundColor: hasActiveFilters ? "#574D98" : "#F3F4F6",
+                color: hasActiveFilters ? "#FFF" : "#0A0A0A",
+                backgroundColor: hasActiveFilters ? "#0A0A0A" : "#F3F4F6",
                 "&:hover": {
                   backgroundColor: hasActiveFilters ? "#463A7A" : "#E5E7EB",
                 },
-                borderRadius: "8px",
-                padding: { xs: "6px", sm: "8px" },
+                borderRadius: "12px",
+                padding: { xs: "10px 16px", sm: "12px 20px" },
+                textTransform: "none",
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+                whiteSpace: "nowrap",
+                minWidth: { xs: "auto", sm: "180px" },
               }}
             >
-              <FilterListIcon
-                sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-              />
-            </IconButton>
+              Bộ lọc nâng cao
+            </Button>
           </Box>
         </Box>
 
@@ -292,10 +334,10 @@ const History = () => {
           PaperProps={{
             sx: {
               mt: 1,
-              borderRadius: "12px",
-              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+              borderRadius: "16px",
+              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
               minWidth: "320px",
-              p: 2,
+              p: 3,
             },
           }}
         >
@@ -303,13 +345,13 @@ const History = () => {
             <Typography
               variant="h6"
               sx={{
-                fontSize: "1rem",
-                fontWeight: 600,
+                fontSize: "1.125rem",
+                fontWeight: 700,
                 color: "#1F2937",
-                mb: 2,
+                mb: 3,
               }}
             >
-              Bộ lọc
+              Bộ lọc nâng cao
             </Typography>
 
             {/* Date Range Filter */}
@@ -318,7 +360,7 @@ const History = () => {
                 variant="body2"
                 sx={{
                   fontSize: "0.875rem",
-                  fontWeight: 500,
+                  fontWeight: 600,
                   color: "#374151",
                   mb: 1,
                 }}
@@ -343,12 +385,12 @@ const History = () => {
               />
             </Box>
 
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: "0.875rem",
-                  fontWeight: 500,
+                  fontWeight: 600,
                   color: "#374151",
                   mb: 1,
                 }}
@@ -404,6 +446,7 @@ const History = () => {
                   color: "#6B7280",
                   textTransform: "none",
                   fontSize: "0.875rem",
+                  fontWeight: 600,
                   "&:hover": {
                     backgroundColor: "#F3F4F6",
                   },
@@ -415,9 +458,10 @@ const History = () => {
                 onClick={handleApplyFilters}
                 variant="contained"
                 sx={{
-                  backgroundColor: "#574D98",
+                  background: hoverGradient,
                   textTransform: "none",
                   fontSize: "0.875rem",
+                  fontWeight: 600,
                   borderRadius: "8px",
                   px: 3,
                   "&:hover": {
@@ -431,373 +475,246 @@ const History = () => {
           </Box>
         </Popover>
 
-        {/* Search Results Info */}
-        {debouncedSearch && (
-          <Box className="mb-4 flex items-center gap-2">
-            <Typography variant="body2" color="text.secondary">
-              Tìm thấy <strong>{totalBills}</strong> kết quả cho "{debouncedSearch}"
-            </Typography>
-            {searchText && (
-              <IconButton 
-                size="small" 
-                onClick={handleSearchClear}
-                sx={{ color: '#574D98' }}
-              >
-                ✕
-              </IconButton>
-            )}
-          </Box>
-        )}
-
-        {/* Active Filters Info */}
-        {hasActiveFilters && !debouncedSearch && (
-          <Box className="mb-4 flex items-center gap-2 flex-wrap">
-            <Typography variant="body2" color="text.secondary">
-              Bộ lọc đang áp dụng:
-            </Typography>
-            {activeFilters.fromDate && (
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: "12px",
-                  backgroundColor: "#F3F4F6",
-                  fontSize: "0.875rem",
-                }}
-              >
-                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
-                  Từ: {activeFilters.fromDate}
-                </Typography>
-              </Box>
-            )}
-            {activeFilters.toDate && (
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: "12px",
-                  backgroundColor: "#F3F4F6",
-                  fontSize: "0.875rem",
-                }}
-              >
-                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
-                  Đến: {activeFilters.toDate}
-                </Typography>
-              </Box>
-            )}
-            {activeFilters.payer && (
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: "12px",
-                  backgroundColor: "#F3F4F6",
-                  fontSize: "0.875rem",
-                }}
-              >
-                <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
-                  Tôi là người ứng tiền
-                </Typography>
-              </Box>
-            )}
-            <IconButton 
-              size="small" 
-              onClick={handleResetFilters}
-              sx={{ color: '#574D98', ml: 1 }}
-            >
-              ✕
-            </IconButton>
-          </Box>
-        )}
-
-        <TableContainer
-          component={Paper}
-          sx={{
-            borderRadius: { xs: "12px", md: "16px" },
-            boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
-            overflow: "auto",
-            maxWidth: "100%",
-            minHeight: loading ? "400px" : "auto",
-            position: "relative",
-          }}
-        >
-          {loading && (
-            <Box
+        {/* Status Tabs */}
+        <Box className="mb-6 flex gap-2 sm:gap-3 overflow-x-auto pb-2">
+          {statusTabs.map((tab) => (
+            <Button
+              key={tab.id}
+              onClick={() => handleStatusFilterChange(tab.id)}
               sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(255, 255, 255, 0.8)",
-                zIndex: 10,
+                background: statusFilter === tab.id ? hoverGradient : "#FFF",
+                color: statusFilter === tab.id ? "#FFF" : "#6B7280",
+                borderRadius: "20px",
+                padding: { xs: "6px 16px", sm: "8px 20px" },
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: { xs: "0.813rem", sm: "0.938rem" },
+                whiteSpace: "nowrap",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                "&:hover": {
+                  background: statusFilter === tab.id ? hoverGradient : "#F9FAFB",
+                  opacity: statusFilter === tab.id ? 0.9 : 1,
+                },
+                transition: "all 0.2s ease",
               }}
             >
-              <CircularProgress sx={{ color: "#574D98" }} />
-            </Box>
-          )}
+              {tab.label}
+            </Button>
+          ))}
+        </Box>
 
-          <Table sx={{ minWidth: { xs: 600, sm: 700, md: 800 } }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: "#F8B4B4" }}>
-                {tableHeader.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    align={
-                      column.id === 4 ? "left" : "center"
-                    }
-                    sx={{
-                      color: "#1F2937",
-                      fontWeight: 600,
-                      fontSize: {
-                        xs: "0.7rem",
-                        sm: "0.8rem",
-                        md: "0.875rem",
-                        lg: "0.95rem",
-                      },
-                      padding: {
-                        xs: "8px 4px",
-                        sm: "10px 8px",
-                        md: "12px 16px",
-                      },
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {column.title}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {!loading && historyData.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Box className="flex flex-col items-center gap-3">
-                      <SearchIcon sx={{ fontSize: 64, color: "#D1D5DB" }} />
-                      <Typography variant="h6" color="text.secondary">
-                        {debouncedSearch 
-                          ? `Không tìm thấy hóa đơn cho "${debouncedSearch}"`
-                          : "Không có hóa đơn nào"
-                        }
-                      </Typography>
-                      {debouncedSearch && (
-                        <Typography variant="body2" color="text.secondary">
-                          Thử tìm kiếm với từ khóa khác
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                historyData.map((bill, index) => (
-                <TableRow
+        {/* Results Count */}
+        <Box className="mb-4">
+          <Typography className="text-sm sm:text-base text-gray-600">
+            Hiển thị {filteredHistoryData.length} hóa đơn
+          </Typography>
+        </Box>
+
+        {/* Bills Card List */}
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "400px",
+            }}
+          >
+            <CircularProgress sx={{ color: "#574D98" }} />
+          </Box>
+        ) : filteredHistoryData.length === 0 ? (
+          <Box className="flex flex-col items-center justify-center py-16">
+            <SearchIcon sx={{ fontSize: 80, color: "#D1D5DB", mb: 2 }} />
+            <Typography variant="h6" className="text-gray-500 mb-2">
+              {debouncedSearch
+                ? `Không tìm thấy hóa đơn cho "${debouncedSearch}"`
+                : "Không có hóa đơn nào"}
+            </Typography>
+            {debouncedSearch && (
+              <Typography variant="body2" className="text-gray-400">
+                Thử tìm kiếm với từ khóa khác
+              </Typography>
+            )}
+          </Box>
+        ) : (
+          <Box className="space-y-4">
+            {filteredHistoryData.map((bill) => {
+              const statusBadge = getStatusBadge(bill);
+              return (
+                <Card
                   key={bill.id}
                   sx={{
-                    backgroundColor: index % 2 === 0 ? "#FFF" : "#FCE7E7",
+                    borderRadius: "16px",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                    transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: index % 2 === 0 ? "#FEF2F2" : "#FCD5D5",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                      transform: "translateY(-2px)",
                     },
                   }}
                 >
-                  <TableCell
-                    align="center"
-                    sx={{
-                      color: "#374151",
-                      fontSize: {
-                        xs: "0.65rem",
-                        sm: "0.75rem",
-                        md: "0.875rem",
-                        lg: "1rem",
-                      },
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    {formatDate(bill.paymentDate)}
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      color: "#374151",
-                      fontSize: {
-                        xs: "0.65rem",
-                        sm: "0.75rem",
-                        md: "0.875rem",
-                        lg: "1rem",
-                      },
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    {bill.billName}
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      color: "#374151",
-                      fontWeight: 500,
-                      fontSize: {
-                        xs: "0.65rem",
-                        sm: "0.75rem",
-                        md: "0.875rem",
-                        lg: "1rem",
-                      },
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    {formatCurrency(bill.totalAmount)}đ
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    <Box className="flex items-center justify-start gap-1 sm:gap-2">
-                      <Avatar
-                        sx={{
-                          width: { xs: 24, sm: 28, md: 32 },
-                          height: { xs: 24, sm: 28, md: 32 },
-                          backgroundColor: "#D1D5DB",
-                          color: "#6B7280",
-                          fontSize: {
-                            xs: "0.65rem",
-                            sm: "0.75rem",
-                            md: "0.875rem",
-                          },
+                  <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+                    <Box className="flex flex-col sm:flex-row gap-4">
+                      {/* Left: Avatar */}
+                      <Box className="flex-shrink-0">
+                        <Avatar
+                          sx={{
+                            width: { xs: 48, sm: 56 },
+                            height: { xs: 48, sm: 56 },
+                            background: hoverGradient,
+                            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                            fontWeight: 700,
+                          }}
+                        >
+                          {bill.billName.charAt(0).toUpperCase()}
+                        </Avatar>
+                      </Box>
 
-                        }}
-                      >
-                        {bill.payer.name.charAt(0)}
-                      </Avatar>
-                      <span
-                        className="text-gray-700"
-                        style={{
-                          fontSize: "clamp(0.65rem, 2vw, 1rem)",
-                        }}
-                      >
-                        {bill.payer.name}
-                      </span>
+                      {/* Middle: Bill Info */}
+                      <Box className="flex-grow">
+                        {/* Bill Name and Status */}
+                        <Box className="flex flex-wrap items-center gap-2 mb-2">
+                          <Typography
+                            sx={{
+                              fontSize: { xs: "1rem", sm: "1.125rem" },
+                              fontWeight: 700,
+                              color: "#1F2937",
+                            }}
+                          >
+                            {bill.billName}
+                          </Typography>
+                          <Chip
+                            label={statusBadge.label}
+                            size="small"
+                            sx={{
+                              backgroundColor: statusBadge.bgColor,
+                              color: statusBadge.color,
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              height: "24px",
+                            }}
+                          />
+                        </Box>
+
+                        {/* Date, Category, and Participants */}
+                        <Box className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600 mb-3">
+                          {/* Date */}
+                          <Box className="flex items-center gap-1">
+                            <CalendarIcon sx={{ fontSize: "1rem", color: "#9CA3AF" }} />
+                            <Typography sx={{ fontSize: "0.875rem" }}>
+                              {formatDate(bill.paymentDate)}
+                            </Typography>
+                          </Box>
+
+                          {/* Category */}
+                          <Typography
+                            sx={{
+                              fontSize: "0.875rem",
+                              color: "#6B7280",
+                            }}
+                          >
+                            • {getCategoryLabel(bill)}
+                          </Typography>
+
+                          {/* Participants */}
+                          <Box className="flex items-center gap-1">
+                            <AvatarGroup
+                              max={4}
+                              sx={{
+                                "& .MuiAvatar-root": {
+                                  width: 24,
+                                  height: 24,
+                                  fontSize: "0.75rem",
+                                  backgroundColor: "#D1D5DB",
+                                  color: "#6B7280",
+                                  border: "2px solid white",
+                                },
+                              }}
+                            >
+                              {bill.participants.map((participant, idx) => (
+                                <Avatar key={idx}>
+                                  {participant.name.charAt(0)}
+                                </Avatar>
+                              ))}
+                            </AvatarGroup>
+                            {bill.participants.length > 1 && (
+                              <Typography sx={{ fontSize: "0.875rem", color: "#9CA3AF" }}>
+                                +{bill.participants.length - 1}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Right: Amount and Payer */}
+                      <Box className="flex flex-col items-end justify-between sm:min-w-[180px]">
+                        <Typography
+                          sx={{
+                            fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                            fontWeight: 700,
+                            color: "#1F2937",
+                          }}
+                        >
+                          {formatCurrency(bill.totalAmount)} đ
+                        </Typography>
+                        <Box className="text-right">
+                          <Typography
+                            sx={{
+                              fontSize: "0.75rem",
+                              color: "#9CA3AF",
+                              mb: 0.5,
+                            }}
+                          >
+                            Người trả:
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: "0.875rem",
+                              fontWeight: 600,
+                              color: "#6B7280",
+                            }}
+                          >
+                            {bill.payer.name}
+                          </Typography>
+                        </Box>
+                      </Box>
                     </Box>
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    <AvatarGroup
-                      className="flex justify-center "
-                      max={3}
-                      sx={{
-                        "& .MuiAvatar-root": {
-                          width: { xs: 24, sm: 28, md: 32 },
-                          height: { xs: 24, sm: 28, md: 32 },
-                          fontSize: {
-                            xs: "0.65rem",
-                            sm: "0.75rem",
-                            md: "0.875rem",
-                          },
-                          backgroundColor: "#D1D5DB",
-                          color: "#6B7280",
-                        },
-                      }}
-                    >
-                      {bill.participants.map((participant, idx) => (
-                        <Avatar key={idx}>{participant.name.charAt(0)}</Avatar>
-                      ))}
-                    </AvatarGroup>
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      padding: {
-                        xs: "6px 4px",
-                        sm: "8px 8px",
-                        md: "12px 16px",
-                      },
-                    }}
-                  >
-                    <Checkbox
-                      checked={bill.settled}
-                      sx={{
-                        color: "#D1D5DB",
-                        padding: { xs: "4px", sm: "6px", md: "9px" },
-                        "& .MuiSvgIcon-root": {
-                          fontSize: { xs: "1rem", sm: "1.25rem", md: "1.5rem" },
-                        },
-                        "&.Mui-checked": {
-                          color: "#574D98",
-                        },
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
+        )}
 
-        {/* Pagination - Only show if there are results */}
-        {!loading && historyData.length > 0 && totalPage > 1 && (
-          <Box className="flex justify-center mt-4 sm:mt-6 md:mt-8">
+        {/* Pagination */}
+        {!loading && filteredHistoryData.length > 0 && totalPage > 1 && (
+          <Box className="flex justify-center mt-8">
             <Pagination
               count={totalPage}
               page={page}
               onChange={handlePageChange}
               color="primary"
               shape="rounded"
-              size="small"
+              size="medium"
               siblingCount={{ xs: 0, sm: 1 }}
               boundaryCount={{ xs: 1, sm: 1 }}
-            sx={{
-              "& .MuiPaginationItem-root": {
-                color: "#6B7280",
-                fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.875rem" },
-                minWidth: { xs: "24px", sm: "28px", md: "32px" },
-                height: { xs: "24px", sm: "28px", md: "32px" },
-                margin: { xs: "0 2px", sm: "0 3px" },
-                "&.Mui-selected": {
-                  backgroundColor: "#374151",
-                  color: "#FFF",
+              sx={{
+                "& .MuiPaginationItem-root": {
+                  color: "#6B7280",
+                  fontWeight: 600,
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
+                  "&.Mui-selected": {
+                    backgroundColor: "#574D98",
+                    color: "#FFF",
+                    "&:hover": {
+                      backgroundColor: "#463A7A",
+                    },
+                  },
                   "&:hover": {
-                    backgroundColor: "#1F2937",
+                    backgroundColor: "#F3F4F6",
                   },
                 },
-                "&:hover": {
-                  backgroundColor: "#F3F4F6",
-                },
-              },
-            }}
+              }}
             />
           </Box>
         )}
