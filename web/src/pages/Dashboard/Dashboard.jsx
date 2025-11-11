@@ -1,5 +1,5 @@
 import Layout from '~/components/Layout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchDashboardDataAPI } from '~/apis'
 import { formatCurrency } from '~/utils/formatters'
@@ -156,7 +156,7 @@ const YouOweCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
             >
-              {showAmount ? formatCurrency(Math.abs(debtData.youOwe)) : '******'}
+              {showAmount ? formatCurrency(Math.abs(debtData.youOwe)) : '*******'}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
@@ -209,7 +209,7 @@ const YouOweCard = ({ debtData }) => {
                   variant="body2"
                   sx={{ fontWeight: 700, fontSize: '14px', color: '#ca3500' }}
                 >
-                  {showAmount ? formatCurrency(Math.abs(debt.amount)) : '******'}
+                  {showAmount ? formatCurrency(Math.abs(debt.amount)) : '*******'}
                 </Typography>
               </Card>
             ))}
@@ -279,7 +279,7 @@ const TheyOweYouCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {showAmount ? formatCurrency(Math.abs(debtData.theyOweYou)) : '******'}
+              {showAmount ? formatCurrency(Math.abs(debtData.theyOweYou)) : '*******'}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
@@ -332,7 +332,7 @@ const TheyOweYouCard = ({ debtData }) => {
                   variant="body2"
                   sx={{ fontWeight: 700, fontSize: '14px', color: '#008236' }}
                 >
-                  {showAmount ? formatCurrency(Math.abs(credit.amount)) : '******'}
+                  {showAmount ? formatCurrency(Math.abs(credit.amount)) : '*******'}
                 </Typography>
               </Card>
             ))}
@@ -608,13 +608,38 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [containerWidth, setContainerWidth] = useState(0)
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
+  const containerRef = useRef(null)
 
   // For now, using a hardcoded user ID - this should come from authentication context
   const currentUserId = '69097a08cfc3fcbcfb0f5b72' // This should be from auth context
+
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const element = containerRef.current
+        const computedStyle = window.getComputedStyle(element)
+        const paddingLeft = parseFloat(computedStyle.paddingLeft)
+        const paddingRight = parseFloat(computedStyle.paddingRight)
+        // Get the width minus padding
+        const actualWidth = element.offsetWidth - paddingLeft - paddingRight
+        setContainerWidth(actualWidth)
+      }
+    }
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
+
+  // Determine layout based on actual container width (after subtracting padding)
+  const shouldUseThreeColumns = containerWidth >= 1000  // Enough space for 3 columns
+  const shouldUseTwoColumns = containerWidth >= 600 && containerWidth < 1000  // 2 columns mode
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -702,6 +727,7 @@ const Dashboard = () => {
   return (
     <Layout>
       <Box
+        ref={containerRef}
         sx={{
           p: { xs: 3, md: 4 },
           minHeight: '100vh',
@@ -730,17 +756,47 @@ const Dashboard = () => {
         {/* Top Cards Grid */}
         <Grid container spacing={2} sx={{ mb: 4 }}>
           {/* Tổng chi tiêu Card */}
-          <Grid item xs={12} sm={6} lg={4} sx={{ display: 'flex', flexGrow: 1, minWidth: 0 }}>
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? '100%' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? '100%' : '100%')
+            }}
+          >
             <TotalSpendingCard debtData={debtData} />
           </Grid>
 
           {/* Mình nợ người khác Card */}
-          <Grid item xs={12} sm={6} lg={4} sx={{ display: 'flex', flexGrow: 1, minWidth: 0 }}>
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
+            }}
+          >
             <YouOweCard debtData={debtData} />
           </Grid>
 
           {/* Người khác nợ mình Card */}
-          <Grid item xs={12} sm={6} lg={4} sx={{ display: 'flex', flexGrow: 1, minWidth: 0 }}>
+          <Grid 
+            item 
+            xs={12}
+            sx={{ 
+              display: 'flex', 
+              flexGrow: 1, 
+              minWidth: 0,
+              flexBasis: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%'),
+              maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
+            }}
+          >
             <TheyOweYouCard debtData={debtData} />
           </Grid>
         </Grid>
