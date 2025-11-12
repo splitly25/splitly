@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard"
 import Groups from "./pages/Groups"
 import History from "./pages/History"
 import Debt from "./pages/Debt"
-
+import Ocr from "./pages/Bill"
 function App() {
   return (
     <Routes>
@@ -20,10 +20,10 @@ function App() {
       <Route path='/groups' element={<Groups />} />
       <Route path='/history' element={<History />} />
       <Route path='/debt' element={<Debt />} />
-
+      <Route path='ocr' element={<Ocr/>} />
       <Route path='/login' element={<Auth />} />
       <Route path='/register' element={<Auth />} />
-
+      
       <Route path='*' element={<NotFound />} />
     </Routes>
   )

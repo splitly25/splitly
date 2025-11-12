@@ -630,7 +630,7 @@ Return only valid JSON. Do not include explanations or extra text.
 
   const response = await client.createChatCompletion(request);
 
-  const content = response?.result?.message?.content ?? "";
+  const content = response?.result?.message?.content ?? '';
 
   console.log(content);
 
