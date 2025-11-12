@@ -11,12 +11,12 @@ import { ClovaXClient } from '~/providers/ClovaStudioProvider';
  */
 const createNew = async (reqBody, options = {}) => {
   try {
-    let paymentStatus = [];
-
+    let paymentStatus = []
+    
     if (reqBody.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
-      const amountPerPerson = reqBody.totalAmount / reqBody.participants.length;
-      paymentStatus = reqBody.participants.map((userId) => ({
+      const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
+      paymentStatus = reqBody.participants.map(userId => ({
         userId: userId,
         amountOwed: amountPerPerson,
         amountPaid: userId === reqBody.payerId ? amountPerPerson : 0, // Payer already paid
@@ -24,21 +24,21 @@ const createNew = async (reqBody, options = {}) => {
       }))
     } else if (reqBody.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
-      const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0);
-      const adjustmentRatio = reqBody.totalAmount / sumOfItemAmounts;
-
-      const userAmounts = {};
-
+      const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0)
+      const adjustmentRatio = reqBody.totalAmount / sumOfItemAmounts
+      
+      const userAmounts = {}
+      
       // Calculate total owed by each user with adjustment
-      reqBody.items.forEach((item) => {
-        const adjustedItemAmount = item.amount * adjustmentRatio;
-        const amountPerPerson = adjustedItemAmount / item.allocatedTo.length;
-
-        item.allocatedTo.forEach((userId) => {
-          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson;
-        });
-      });
-
+      reqBody.items.forEach(item => {
+        const adjustedItemAmount = item.amount * adjustmentRatio
+        const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
+        
+        item.allocatedTo.forEach(userId => {
+          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson
+        })
+      })
+      
       // Create payment status array
       paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
         userId: userId,
@@ -46,20 +46,17 @@ const createNew = async (reqBody, options = {}) => {
         amountPaid: userId === reqBody.payerId ? Math.round(amount) : 0,
         paidDate: userId === reqBody.payerId ? Date.now() : null
       }))
-        isPaid: userId === reqBody.payerId,
-        paidDate: userId === reqBody.payerId ? Date.now() : null,
-      }));
     }
-
+    
     const newBillData = {
       ...reqBody,
       paymentStatus,
-      createdAt: Date.now(),
-    };
-
-    const createdBill = await billModel.createNew(newBillData);
-    const getNewBill = await billModel.findOneById(createdBill.insertedId.toString());
-
+      createdAt: Date.now()
+    }
+    
+    const createdBill = await billModel.createNew(newBillData)
+    const getNewBill = await billModel.findOneById(createdBill.insertedId.toString())
+    
     // Log activity if creatorId is provided
     if (reqBody.creatorId) {
       try {
@@ -70,19 +67,19 @@ const createNew = async (reqBody, options = {}) => {
           {
             billName: reqBody.billName,
             amount: reqBody.totalAmount,
-            description: `Created new bill: ${reqBody.billName}`,
+            description: `Created new bill: ${reqBody.billName}`
           }
-        );
+        )
       } catch (activityError) {
-        console.warn('Failed to log bill creation activity:', activityError.message);
+        console.warn('Failed to log bill creation activity:', activityError.message)
       }
     }
-
-    return getNewBill;
+    
+    return getNewBill
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get all bills
