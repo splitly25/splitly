@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { debtService } from '~/services/debtService.js'
+import ApiError from '~/utils/APIError'
 
 /**
  * Get list of people who owe money to the current user
@@ -7,6 +8,12 @@ import { debtService } from '~/services/debtService.js'
 const getDebtsOwedToMe = async (req, res, next) => {
   try {
     const { userId } = req.params
+    
+    // Security check: Verify that the authenticated user is requesting their own data
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own debt data')
+    }
+    
     const debts = await debtService.getDebtsOwedToMe(userId)
     res.status(StatusCodes.OK).json(debts)
   } catch (error) {
@@ -20,6 +27,12 @@ const getDebtsOwedToMe = async (req, res, next) => {
 const getDebtsIOwe = async (req, res, next) => {
   try {
     const { userId } = req.params
+    
+    // Security check: Verify that the authenticated user is requesting their own data
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own debt data')
+    }
+    
     const debts = await debtService.getDebtsIOwe(userId)
     res.status(StatusCodes.OK).json(debts)
   } catch (error) {
@@ -33,6 +46,12 @@ const getDebtsIOwe = async (req, res, next) => {
 const getDebtSummary = async (req, res, next) => {
   try {
     const { userId } = req.params
+    
+    // Security check: Verify that the authenticated user is requesting their own data
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own debt data')
+    }
+    
     const summary = await debtService.getDebtSummary(userId)
     res.status(StatusCodes.OK).json(summary)
   } catch (error) {
@@ -47,6 +66,11 @@ const initiatePayment = async (req, res, next) => {
   try {
     const { userId } = req.params
     const { creditorId, amount, note } = req.body
+    
+    // Security check: Verify that the authenticated user is initiating payment for themselves
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only initiate payment for yourself')
+    }
     
     const result = await debtService.initiatePayment(userId, creditorId, amount, note)
     
