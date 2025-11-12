@@ -1,6 +1,6 @@
-import Layout from "~/components/Layout";
-import { useEffect, useState } from "react";
-import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from "~/apis";
+import Layout from '~/components/Layout';
+import { useEffect, useState } from 'react';
+import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from '~/apis';
 import {
   Box,
   TextField,
@@ -17,53 +17,49 @@ import {
   Chip,
   Card,
   CardContent,
-} from "@mui/material";
-import {
-  FilterAlt as FilterListIcon,
-  Search as SearchIcon,
-  CalendarToday as CalendarIcon,
-} from "@mui/icons-material";
+} from '@mui/material';
+import { FilterAlt as FilterListIcon, Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 
 const History = () => {
   const [page, setPage] = useState(1);
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [totalPage, setTotalPage] = useState(1);
   const [totalBills, setTotalBills] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("all"); // all, paid, unpaid, pending
-  
+  const [statusFilter, setStatusFilter] = useState('all'); // all, paid, unpaid, pending
+
   // Filter states
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [filterByPayer, setFilterByPayer] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
-    fromDate: "",
-    toDate: "",
-    payer: false
+    fromDate: '',
+    toDate: '',
+    payer: false,
   });
 
   const tableHeader = [
-    { id: 1, title: "Ngày thanh toán" },
-    { id: 2, title: "Tên hóa đơn" },
-    { id: 3, title: "Số tiền" },
-    { id: 4, title: "Người ứng tiền" },
-    { id: 5, title: "Người tham gia" },
-    { id: 6, title: "Đã quyết toán" },
+    { id: 1, title: 'Ngày thanh toán' },
+    { id: 2, title: 'Tên hóa đơn' },
+    { id: 3, title: 'Số tiền' },
+    { id: 4, title: 'Người ứng tiền' },
+    { id: 5, title: 'Người tham gia' },
+    { id: 6, title: 'Đã quyết toán' },
   ];
 
   // Status tabs configuration
   const statusTabs = [
-    { id: "all", label: "Tất cả"},
-    { id: "paid", label: "Đã thanh toán"},
-    { id: "unpaid", label: "Chưa thanh toán"},
+    { id: 'all', label: 'Tất cả' },
+    { id: 'paid', label: 'Đã thanh toán' },
+    { id: 'unpaid', label: 'Chưa thanh toán' },
   ];
 
   // For now, using a hardcoded user ID - this should come from authentication context
-  const currentUserId = "69097a08cfc3fcbcfb0f5b72"; // This should be from auth context
+  const currentUserId = '69097a08cfc3fcbcfb0f5b72'; // This should be from auth context
 
   // Debounce search input
   useEffect(() => {
@@ -82,7 +78,7 @@ const History = () => {
         setLoading(true);
 
         let responseData;
-        
+
         // Priority: Filter > Search > Default
         if (activeFilters.fromDate || activeFilters.toDate || activeFilters.payer) {
           // Use filter endpoint
@@ -96,49 +92,37 @@ const History = () => {
           );
         } else if (debouncedSearch) {
           // Use search endpoint
-          responseData = await fetchHistorySearchingAPI(
-            currentUserId, 
-            page, 
-            10, 
-            debouncedSearch, 
-            ""
-          );
+          responseData = await fetchHistorySearchingAPI(currentUserId, page, 10, debouncedSearch, '');
         } else {
           // Use regular endpoint
-          responseData = await fetchHistoryDataAPI(
-            currentUserId, 
-            page, 
-            10, 
-            "", 
-            ""
-          );
+          responseData = await fetchHistoryDataAPI(currentUserId, page, 10, '', '');
         }
-        
+
         setHistoryData(responseData.bills || []);
         setTotalPage(responseData.pagination?.totalPages || 1);
         setTotalBills(responseData.pagination?.total || 0);
 
         setError(null);
       } catch (err) {
-        console.error("Error fetching history data", err);
-        setError("Failed to load history data");
+        console.error('Error fetching history data', err);
+        setError('Failed to load history data');
         setHistoryData([]);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchHistoryData();
   }, [currentUserId, page, debouncedSearch, activeFilters]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("vi-VN").format(amount);
+    return new Intl.NumberFormat('vi-VN').format(amount);
   };
 
   const formatDate = (timestamp) => {
-    if(!timestamp) return 'N/A';
+    if (!timestamp) return 'N/A';
     return new Date(timestamp).toLocaleDateString('vi-VN');
-  }
+  };
 
   const handlePageChange = (event, value) => {
     setPage(value);
@@ -150,8 +134,8 @@ const History = () => {
   };
 
   const handleSearchClear = () => {
-    setSearchText("");
-    setDebouncedSearch("");
+    setSearchText('');
+    setDebouncedSearch('');
     setPage(1);
   };
 
@@ -167,33 +151,33 @@ const History = () => {
     setActiveFilters({
       fromDate,
       toDate,
-      payer: filterByPayer
+      payer: filterByPayer,
     });
     setPage(1);
     handleFilterClose();
   };
 
   const handleResetFilters = () => {
-    setFromDate("");
-    setToDate("");
+    setFromDate('');
+    setToDate('');
     setFilterByPayer(false);
     setActiveFilters({
-      fromDate: "",
-      toDate: "",
-      payer: false
+      fromDate: '',
+      toDate: '',
+      payer: false,
     });
     setPage(1);
   };
 
   const formatDateForInput = (dateString) => {
-    if (!dateString) return "";
-    const [day, month, year] = dateString.split("/");
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    if (!dateString) return '';
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   };
 
   const formatDateForAPI = (dateString) => {
-    if (!dateString) return "";
-    const [year, month, day] = dateString.split("-");
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
   };
 
@@ -204,22 +188,22 @@ const History = () => {
 
   const getStatusBadge = (bill) => {
     if (bill.settled) {
-      return { label: "Đã thanh toán", color: "#10B981", bgColor: "#D1FAE5" };
+      return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' };
     }
     // You can add more logic here based on bill properties
-    return { label: "Chưa thanh toán", color: "#F59E0B", bgColor: "#FEF3C7" };
+    return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' };
   };
 
   const getCategoryLabel = (bill) => {
     // Extract category from bill data, defaulting to "Ăn uống" if not available
-    return bill.category || "Ăn uống";
+    return bill.category || 'Ăn uống';
   };
 
   // Filter data by status
   const getFilteredData = () => {
-    if (statusFilter === "all") return historyData;
-    if (statusFilter === "paid") return historyData.filter(bill => bill.settled);
-    if (statusFilter === "unpaid") return historyData.filter(bill => !bill.settled);
+    if (statusFilter === 'all') return historyData;
+    if (statusFilter === 'paid') return historyData.filter((bill) => bill.settled);
+    if (statusFilter === 'unpaid') return historyData.filter((bill) => !bill.settled);
     // For pending, you might need additional logic based on your data structure
     return historyData;
   };
@@ -227,7 +211,7 @@ const History = () => {
   const filteredHistoryData = getFilteredData();
   const openFilterPopover = Boolean(filterAnchorEl);
   const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer;
-  const hoverGradient = "linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)";
+  const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)';
 
   if (error) {
     return (
@@ -243,15 +227,11 @@ const History = () => {
 
   return (
     <Layout>
-      <Box className="p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-gray-50">
+      <Box className="main-container">
         {/* Header */}
         <Box className="mb-6">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-            Hóa đơn của tôi
-          </h1>
-          <Typography className="text-sm sm:text-base text-gray-500">
-            Quản lý tất cả hóa đơn chi tiêu
-          </Typography>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">Hóa đơn của tôi</h1>
+          <Typography className="text-sm sm:text-base text-gray-500">Quản lý tất cả hóa đơn chi tiêu</Typography>
         </Box>
 
         {/* Search and Filter Bar */}
@@ -269,30 +249,30 @@ const History = () => {
                   <InputAdornment position="start">
                     <SearchIcon
                       sx={{
-                        color: "#9CA3AF",
-                        fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                        color: '#9CA3AF',
+                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
                       }}
                     />
                   </InputAdornment>
                 ),
               }}
               sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "12px",
-                  backgroundColor: "#F9FAFB",
-                  fontSize: { xs: "0.875rem", sm: "1rem" },
-                  "& fieldset": {
-                    borderColor: "#E5E7EB",
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  backgroundColor: '#F9FAFB',
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  '& fieldset': {
+                    borderColor: '#E5E7EB',
                   },
-                  "&:hover fieldset": {
-                    borderColor: "#D1D5DB",
+                  '&:hover fieldset': {
+                    borderColor: '#D1D5DB',
                   },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#574D98",
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#574D98',
                   },
                 },
-                "& .MuiOutlinedInput-input": {
-                  padding: { xs: "10px 14px", sm: "12px 14px" },
+                '& .MuiOutlinedInput-input': {
+                  padding: { xs: '10px 14px', sm: '12px 14px' },
                 },
               }}
             />
@@ -300,17 +280,17 @@ const History = () => {
               onClick={handleFilterClick}
               startIcon={<FilterListIcon />}
               sx={{
-                color: hasActiveFilters ? "#FFF" : "#0A0A0A",
-                backgroundColor: hasActiveFilters ? "#0A0A0A" : "#F3F4F6",
-                "&:hover": {
-                  backgroundColor: hasActiveFilters ? "#463A7A" : "#E5E7EB",
+                color: hasActiveFilters ? '#FFF' : '#0A0A0A',
+                backgroundColor: hasActiveFilters ? '#0A0A0A' : '#F3F4F6',
+                '&:hover': {
+                  backgroundColor: hasActiveFilters ? '#463A7A' : '#E5E7EB',
                 },
-                borderRadius: "12px",
-                padding: { xs: "10px 16px", sm: "12px 20px" },
-                textTransform: "none",
-                fontSize: { xs: "0.875rem", sm: "1rem" },
-                whiteSpace: "nowrap",
-                minWidth: { xs: "auto", sm: "180px" },
+                borderRadius: '12px',
+                padding: { xs: '10px 16px', sm: '12px 20px' },
+                textTransform: 'none',
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                whiteSpace: 'nowrap',
+                minWidth: { xs: 'auto', sm: '180px' },
               }}
             >
               Bộ lọc nâng cao
@@ -324,19 +304,19 @@ const History = () => {
           anchorEl={filterAnchorEl}
           onClose={handleFilterClose}
           anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "right",
+            vertical: 'bottom',
+            horizontal: 'right',
           }}
           transformOrigin={{
-            vertical: "top",
-            horizontal: "right",
+            vertical: 'top',
+            horizontal: 'right',
           }}
           PaperProps={{
             sx: {
               mt: 1,
-              borderRadius: "16px",
-              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
-              minWidth: "320px",
+              borderRadius: '16px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+              minWidth: '320px',
               p: 3,
             },
           }}
@@ -345,9 +325,9 @@ const History = () => {
             <Typography
               variant="h6"
               sx={{
-                fontSize: "1.125rem",
+                fontSize: '1.125rem',
                 fontWeight: 700,
-                color: "#1F2937",
+                color: '#1F2937',
                 mb: 3,
               }}
             >
@@ -359,9 +339,9 @@ const History = () => {
               <Typography
                 variant="body2"
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: '0.875rem',
                   fontWeight: 600,
-                  color: "#374151",
+                  color: '#374151',
                   mb: 1,
                 }}
               >
@@ -377,9 +357,9 @@ const History = () => {
                   shrink: true,
                 }}
                 sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.875rem",
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
                   },
                 }}
               />
@@ -389,9 +369,9 @@ const History = () => {
               <Typography
                 variant="body2"
                 sx={{
-                  fontSize: "0.875rem",
+                  fontSize: '0.875rem',
                   fontWeight: 600,
-                  color: "#374151",
+                  color: '#374151',
                   mb: 1,
                 }}
               >
@@ -407,9 +387,9 @@ const History = () => {
                   shrink: true,
                 }}
                 sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.875rem",
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
                   },
                 }}
               />
@@ -423,15 +403,15 @@ const History = () => {
                     checked={filterByPayer}
                     onChange={(e) => setFilterByPayer(e.target.checked)}
                     sx={{
-                      color: "#D1D5DB",
-                      "&.Mui-checked": {
-                        color: "#574D98",
+                      color: '#D1D5DB',
+                      '&.Mui-checked': {
+                        color: '#574D98',
                       },
                     }}
                   />
                 }
                 label={
-                  <Typography sx={{ fontSize: "0.875rem", color: "#374151" }}>
+                  <Typography sx={{ fontSize: '0.875rem', color: '#374151' }}>
                     Chỉ hiển thị hóa đơn tôi là người ứng tiền
                   </Typography>
                 }
@@ -439,16 +419,16 @@ const History = () => {
             </Box>
 
             {/* Action Buttons */}
-            <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button
                 onClick={handleResetFilters}
                 sx={{
-                  color: "#6B7280",
-                  textTransform: "none",
-                  fontSize: "0.875rem",
+                  color: '#6B7280',
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
                   fontWeight: 600,
-                  "&:hover": {
-                    backgroundColor: "#F3F4F6",
+                  '&:hover': {
+                    backgroundColor: '#F3F4F6',
                   },
                 }}
               >
@@ -459,13 +439,13 @@ const History = () => {
                 variant="contained"
                 sx={{
                   background: hoverGradient,
-                  textTransform: "none",
-                  fontSize: "0.875rem",
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
                   fontWeight: 600,
-                  borderRadius: "8px",
+                  borderRadius: '8px',
                   px: 3,
-                  "&:hover": {
-                    backgroundColor: "#463A7A",
+                  '&:hover': {
+                    backgroundColor: '#463A7A',
                   },
                 }}
               >
@@ -482,20 +462,20 @@ const History = () => {
               key={tab.id}
               onClick={() => handleStatusFilterChange(tab.id)}
               sx={{
-                background: statusFilter === tab.id ? hoverGradient : "#FFF",
-                color: statusFilter === tab.id ? "#FFF" : "#6B7280",
-                borderRadius: "20px",
-                padding: { xs: "6px 16px", sm: "8px 20px" },
-                textTransform: "none",
+                background: statusFilter === tab.id ? hoverGradient : '#FFF',
+                color: statusFilter === tab.id ? '#FFF' : '#6B7280',
+                borderRadius: '20px',
+                padding: { xs: '6px 16px', sm: '8px 20px' },
+                textTransform: 'none',
                 fontWeight: 600,
-                fontSize: { xs: "0.813rem", sm: "0.938rem" },
-                whiteSpace: "nowrap",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                "&:hover": {
-                  background: statusFilter === tab.id ? hoverGradient : "#F9FAFB",
+                fontSize: { xs: '0.813rem', sm: '0.938rem' },
+                whiteSpace: 'nowrap',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                '&:hover': {
+                  background: statusFilter === tab.id ? hoverGradient : '#F9FAFB',
                   opacity: statusFilter === tab.id ? 0.9 : 1,
                 },
-                transition: "all 0.2s ease",
+                transition: 'all 0.2s ease',
               }}
             >
               {tab.label}
@@ -514,21 +494,19 @@ const History = () => {
         {loading ? (
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "400px",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '400px',
             }}
           >
-            <CircularProgress sx={{ color: "#574D98" }} />
+            <CircularProgress sx={{ color: '#574D98' }} />
           </Box>
         ) : filteredHistoryData.length === 0 ? (
           <Box className="flex flex-col items-center justify-center py-16">
-            <SearchIcon sx={{ fontSize: 80, color: "#D1D5DB", mb: 2 }} />
+            <SearchIcon sx={{ fontSize: 80, color: '#D1D5DB', mb: 2 }} />
             <Typography variant="h6" className="text-gray-500 mb-2">
-              {debouncedSearch
-                ? `Không tìm thấy hóa đơn cho "${debouncedSearch}"`
-                : "Không có hóa đơn nào"}
+              {debouncedSearch ? `Không tìm thấy hóa đơn cho "${debouncedSearch}"` : 'Không có hóa đơn nào'}
             </Typography>
             {debouncedSearch && (
               <Typography variant="body2" className="text-gray-400">
@@ -544,12 +522,12 @@ const History = () => {
                 <Card
                   key={bill.id}
                   sx={{
-                    borderRadius: "16px",
-                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                      transform: "translateY(-2px)",
+                    borderRadius: '16px',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      transform: 'translateY(-2px)',
                     },
                   }}
                 >
@@ -562,7 +540,7 @@ const History = () => {
                             width: { xs: 48, sm: 56 },
                             height: { xs: 48, sm: 56 },
                             background: hoverGradient,
-                            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                            fontSize: { xs: '1.25rem', sm: '1.5rem' },
                             fontWeight: 700,
                           }}
                         >
@@ -576,9 +554,9 @@ const History = () => {
                         <Box className="flex flex-wrap items-center gap-2 mb-2">
                           <Typography
                             sx={{
-                              fontSize: { xs: "1rem", sm: "1.125rem" },
+                              fontSize: { xs: '1rem', sm: '1.125rem' },
                               fontWeight: 700,
-                              color: "#1F2937",
+                              color: '#1F2937',
                             }}
                           >
                             {bill.billName}
@@ -590,8 +568,8 @@ const History = () => {
                               backgroundColor: statusBadge.bgColor,
                               color: statusBadge.color,
                               fontWeight: 600,
-                              fontSize: "0.75rem",
-                              height: "24px",
+                              fontSize: '0.75rem',
+                              height: '24px',
                             }}
                           />
                         </Box>
@@ -600,17 +578,15 @@ const History = () => {
                         <Box className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600 mb-3">
                           {/* Date */}
                           <Box className="flex items-center gap-1">
-                            <CalendarIcon sx={{ fontSize: "1rem", color: "#9CA3AF" }} />
-                            <Typography sx={{ fontSize: "0.875rem" }}>
-                              {formatDate(bill.paymentDate)}
-                            </Typography>
+                            <CalendarIcon sx={{ fontSize: '1rem', color: '#9CA3AF' }} />
+                            <Typography sx={{ fontSize: '0.875rem' }}>{formatDate(bill.paymentDate)}</Typography>
                           </Box>
 
                           {/* Category */}
                           <Typography
                             sx={{
-                              fontSize: "0.875rem",
-                              color: "#6B7280",
+                              fontSize: '0.875rem',
+                              color: '#6B7280',
                             }}
                           >
                             • {getCategoryLabel(bill)}
@@ -621,24 +597,22 @@ const History = () => {
                             <AvatarGroup
                               max={4}
                               sx={{
-                                "& .MuiAvatar-root": {
+                                '& .MuiAvatar-root': {
                                   width: 24,
                                   height: 24,
-                                  fontSize: "0.75rem",
-                                  backgroundColor: "#D1D5DB",
-                                  color: "#6B7280",
-                                  border: "2px solid white",
+                                  fontSize: '0.75rem',
+                                  backgroundColor: '#D1D5DB',
+                                  color: '#6B7280',
+                                  border: '2px solid white',
                                 },
                               }}
                             >
                               {bill.participants.map((participant, idx) => (
-                                <Avatar key={idx}>
-                                  {participant.name.charAt(0)}
-                                </Avatar>
+                                <Avatar key={idx}>{participant.name.charAt(0)}</Avatar>
                               ))}
                             </AvatarGroup>
                             {bill.participants.length > 1 && (
-                              <Typography sx={{ fontSize: "0.875rem", color: "#9CA3AF" }}>
+                              <Typography sx={{ fontSize: '0.875rem', color: '#9CA3AF' }}>
                                 +{bill.participants.length - 1}
                               </Typography>
                             )}
@@ -650,9 +624,9 @@ const History = () => {
                       <Box className="flex flex-col items-end justify-between sm:min-w-[180px]">
                         <Typography
                           sx={{
-                            fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                            fontSize: { xs: '1.125rem', sm: '1.25rem' },
                             fontWeight: 700,
-                            color: "#1F2937",
+                            color: '#1F2937',
                           }}
                         >
                           {formatCurrency(bill.totalAmount)} đ
@@ -660,8 +634,8 @@ const History = () => {
                         <Box className="text-right">
                           <Typography
                             sx={{
-                              fontSize: "0.75rem",
-                              color: "#9CA3AF",
+                              fontSize: '0.75rem',
+                              color: '#9CA3AF',
                               mb: 0.5,
                             }}
                           >
@@ -669,9 +643,9 @@ const History = () => {
                           </Typography>
                           <Typography
                             sx={{
-                              fontSize: "0.875rem",
+                              fontSize: '0.875rem',
                               fontWeight: 600,
-                              color: "#6B7280",
+                              color: '#6B7280',
                             }}
                           >
                             {bill.payer.name}
@@ -699,19 +673,19 @@ const History = () => {
               siblingCount={{ xs: 0, sm: 1 }}
               boundaryCount={{ xs: 1, sm: 1 }}
               sx={{
-                "& .MuiPaginationItem-root": {
-                  color: "#6B7280",
+                '& .MuiPaginationItem-root': {
+                  color: '#6B7280',
                   fontWeight: 600,
-                  fontSize: { xs: "0.875rem", sm: "1rem" },
-                  "&.Mui-selected": {
-                    backgroundColor: "#574D98",
-                    color: "#FFF",
-                    "&:hover": {
-                      backgroundColor: "#463A7A",
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  '&.Mui-selected': {
+                    backgroundColor: '#574D98',
+                    color: '#FFF',
+                    '&:hover': {
+                      backgroundColor: '#463A7A',
                     },
                   },
-                  "&:hover": {
-                    backgroundColor: "#F3F4F6",
+                  '&:hover': {
+                    backgroundColor: '#F3F4F6',
                   },
                 },
               }}
