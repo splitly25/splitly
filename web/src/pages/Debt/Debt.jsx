@@ -2,192 +2,218 @@ import { useState } from 'react'
 import {
   Box,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   CircularProgress,
   Alert,
   useMediaQuery,
   useTheme,
-  IconButton,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper
+  Card,
+  CardContent,
+  Avatar,
+  Button,
+  Chip
 } from '@mui/material'
 import {
-  Forum as NotificationsActiveIcon,
-  Check as CheckCircleIcon
+  Send as SendIcon,
+  NotificationsActive as NotificationsActiveIcon,
+  CheckCircle as CheckCircleIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon
 } from '@mui/icons-material'
-import PaymentIcon from '~/assets/icons/PaymentIcon'
 import Layout from '~/components/Layout'
-import { CURRENT_USER_ID, VIEW_TYPES, COLORS } from './constants'
 import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 import PaymentDialog from './PaymentDialog'
 import { submitPaymentRequestAPI } from '~/apis'
 
-// Action Button Component
-const ActionButton = ({ icon: Icon, tooltip, onClick, color }) => (
-  <Tooltip title={tooltip}>
-    <IconButton size="small" sx={{ color, padding: '4px' }} onClick={onClick}>
-      <Icon fontSize="small" />
-    </IconButton>
-  </Tooltip>
-)
+const CURRENT_USER_ID = '69097a08cfc3fcbcfb0f5b72' // Replace with actual user ID from auth context
 
-// Debt Column Component
-const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgColor, cardBgColor, cardTextColor, columnType, onPaymentClick }) => {
-  const tableHeaders = columnType === VIEW_TYPES.I_OWE
-    ? ['Người bạn nợ', 'Số tiền', 'Thanh toán']
-    : ['Người nợ bạn', 'Số tiền', 'Nhắc nhở', 'Xác nhận thanh toán']
-
-  return (
-    <Box
-      sx={{
-        bgcolor: bgColor,
-        borderRadius: 3,
-        p: 3,
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ textAlign: 'center', mb: 3, flexShrink: 0 }}>
-        <Typography variant="h3" fontWeight="700" color={textColor} sx={{ mb: 1 }}>
-          {totalAmount < 0 ? '-' : ''}{formatCurrency(Math.abs(totalAmount))}
-        </Typography>
-        <Typography variant="body1" color={textColor}>
-          {title}
-        </Typography>
-      </Box>
-
-      {/* Table */}
-      {debts.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography color={textColor} sx={{ opacity: 0.7 }}>
-            Không có dữ liệu
+// Summary Card Component
+const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
+  <Card
+    sx={{
+      border: '1px solid',
+      borderColor: bgColor,
+      borderRadius: '20px',
+      boxShadow: 'none',
+      height: '100%',
+      bgcolor: cardBgColor,
+      '&:hover': {
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        transition: 'all 0.3s'
+      }
+    }}
+  >
+    <CardContent sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontSize: '14px' }}>
+            {title}
+          </Typography>
+          <Typography variant="h4" fontWeight="bold" sx={{ color: textColor, fontSize: '30px' }}>
+            {formatCurrency(amount)}
           </Typography>
         </Box>
-      ) : (
-        <TableContainer
-          component={Paper}
+        <Box
           sx={{
-            borderRadius: 2,
-            boxShadow: 'none',
-            flexGrow: 1,
-            overflow: 'auto',
-            backgroundColor: 'transparent'
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            bgcolor: iconBgColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          <Table sx={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: 'transparent' }}>
-                {tableHeaders.map((header, index) => (
-                  <TableCell
-                    key={header}
-                    align={index === 0 ? 'left' : 'center'}
-                    sx={{
-                      color: textColor,
-                      fontWeight: 600,
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      padding: { xs: '8px 12px', md: '12px 16px' },
-                      whiteSpace: 'nowrap',
-                      borderBottom: 'none',
-                      backgroundColor: 'transparent'
-                    }}
-                  >
-                    {header}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {debts.map((debt, index) => {
-                const actions = columnType === VIEW_TYPES.I_OWE 
-                  ? [{ icon: PaymentIcon, tooltip: 'Thanh toán', action: 'payment', onClick: () => onPaymentClick(debt) }]
-                  : [
-                      { icon: NotificationsActiveIcon, tooltip: 'Nhắc nhở', action: 'remind', onClick: () => console.log('remind', debt) },
-                      { icon: CheckCircleIcon, tooltip: 'Xác nhận thanh toán', action: 'confirm', onClick: () => console.log('confirm', debt) }
-                    ]
+          <Icon sx={{ fontSize: 32, color: textColor }} />
+        </Box>
+      </Box>
+    </CardContent>
+  </Card>
+)
 
-                return (
-                  <TableRow
-                    key={debt.userId}
+// Person Debt Card Component
+const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirmPayment }) => {
+  const isIOwe = type === 'iOwe'
+  const bgColor = isIOwe ? 'rgba(255, 214, 167, 0.3)' : 'rgba(185, 248, 207, 0.3)'
+  const amountColor = isIOwe ? '#ca3500' : '#008236'
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
+  }
+
+  return (
+    <Card
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '20px',
+        boxShadow: 'none',
+        bgcolor: bgColor,
+        '&:hover': {
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          transition: 'all 0.3s'
+        }
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+              fontSize: '18px',
+              fontWeight: 500
+            }}
+          >
+            {getInitials(person.userName)}
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" fontWeight="600" sx={{ mb: 0.5, fontSize: '24px' }}>
+              {person.userName}
+            </Typography>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: amountColor, mb: 2, fontSize: '24px' }}>
+              {formatCurrency(person.totalAmount)}
+            </Typography>
+            
+            {/* Bill items */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+              {person.bills?.map((bill, idx) => (
+                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+                    {bill.billName}
+                  </Typography>
+                  <Chip
+                    label={formatCurrency(bill.remainingAmount || bill.amountOwed)}
+                    size="small"
                     sx={{
-                      backgroundColor: cardBgColor,
-                      borderRadius: '16px',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                      overflow: 'hidden',
-                      '&:hover': {
-                        opacity: 0.9,
-                        transition: 'all 0.2s'
-                      },
-                      '& td:first-of-type': {
-                        borderTopLeftRadius: '16px',
-                        borderBottomLeftRadius: '16px'
-                      },
-                      '& td:last-of-type': {
-                        borderTopRightRadius: '16px',
-                        borderBottomRightRadius: '16px'
-                      }
+                      bgcolor: 'white',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      fontSize: '12px',
+                      fontWeight: 500
                     }}
-                  >
-                    <TableCell
-                      align="left"
-                      sx={{
-                        color: cardTextColor,
-                        fontWeight: 600,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-                        padding: { xs: '8px 12px', md: '12px 16px' },
-                        border: 'none'
-                      }}
-                    >
-                      {debt.userName}
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        color: cardTextColor,
-                        fontWeight: 700,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-                        padding: { xs: '8px 12px', md: '12px 16px' },
-                        border: 'none'
-                      }}
-                    >
-                      {formatCurrency(debt.totalAmount)}
-                    </TableCell>
-                    {actions.map(({ icon, tooltip, action, onClick }, idx) => (
-                      <TableCell
-                        key={action}
-                        align="center"
-                        sx={{
-                          padding: { xs: '8px 12px', md: '12px 16px' },
-                          border: 'none'
-                        }}
-                      >
-                        <ActionButton
-                          icon={icon}
-                          tooltip={tooltip}
-                          color={cardTextColor}
-                          onClick={onClick}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Box>
+                  />
+                </Box>
+              ))}
+            </Box>
+
+            {/* Action buttons */}
+            {isIOwe ? (
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<SendIcon />}
+                onClick={() => onPaymentClick(person)}
+                sx={{
+                  background: 'linear-gradient(90deg, #ff6900 0%, #f54900 100%)',
+                  color: 'white',
+                  borderRadius: '18px',
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  py: 1,
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #f54900 0%, #e03d00 100%)',
+                  }
+                }}
+              >
+                Thanh toán
+              </Button>
+            ) : (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<NotificationsActiveIcon />}
+                  onClick={() => onRemindClick(person)}
+                  sx={{
+                    borderColor: 'divider',
+                    color: 'text.primary',
+                    borderRadius: '18px',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    py: 1,
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      bgcolor: 'rgba(0,0,0,0.02)'
+                    }
+                  }}
+                >
+                  Nhắc nhở
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() => onConfirmPayment(person)}
+                  sx={{
+                    background: 'linear-gradient(90deg, #00c950 0%, #00a63e 100%)',
+                    color: 'white',
+                    borderRadius: '18px',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    py: 1,
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #00a63e 0%, #008e34 100%)',
+                    }
+                  }}
+                >
+                  Đã thanh toán
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -195,50 +221,34 @@ const DebtColumn = ({ title, totalAmount, debts, bgColor, textColor, headerBgCol
 const Debt = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [activeView, setActiveView] = useState(VIEW_TYPES.OWED_TO_ME)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedCreditor, setSelectedCreditor] = useState(null)
   const { loading, error, debtData } = useDebt(CURRENT_USER_ID)
-
-  const handleViewChange = (event, newView) => {
-    if (newView) setActiveView(newView)
-  }
 
   const handlePaymentClick = (creditor) => {
     setSelectedCreditor(creditor)
     setPaymentDialogOpen(true)
   }
 
+  const handleRemindClick = (debtor) => {
+    console.log('Remind:', debtor)
+    // TODO: Implement remind functionality
+  }
+
+  const handleConfirmPayment = (debtor) => {
+    console.log('Confirm payment:', debtor)
+    // TODO: Implement confirm payment functionality
+  }
+
   const handlePaymentSubmit = async (paymentData) => {
     try {
       await submitPaymentRequestAPI(CURRENT_USER_ID, paymentData)
       // Optionally refresh debt data here
-      // window.location.reload() // Simple approach
+      window.location.reload() // Simple approach
     } catch (error) {
       console.error('Payment submission failed:', error)
       throw error
     }
-  }
-
-  const renderColumn = (type) => {
-    const isIOwe = type === VIEW_TYPES.I_OWE
-    const config = isIOwe ? COLORS.iOwe : COLORS.owedToMe
-    const data = isIOwe ? debtData.iOwe : debtData.owedToMe
-    
-    return (
-      <DebtColumn
-        title={isIOwe ? 'là số tiền bạn còn nợ' : 'là số tiền bạn chưa thu hồi'}
-        totalAmount={isIOwe ? -data.total : data.total}
-        debts={data.debts}
-        bgColor={config.bg}
-        textColor={config.text}
-        headerBgColor={config.headerBg}
-        cardBgColor={config.cardBg}
-        cardTextColor={config.cardText}
-        columnType={type}
-        onPaymentClick={handlePaymentClick}
-      />
-    )
   }
 
   if (loading) {
@@ -263,57 +273,103 @@ const Debt = () => {
 
   return (
     <Layout>
-      <div className="w-full h-screen overflow-hidden flex flex-col py-8 px-4 md:px-8">
-        {/* Mobile Toggle */}
-        {isMobile && (
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-            <ToggleButtonGroup
-              value={activeView}
-              exclusive
-              onChange={handleViewChange}
-              fullWidth
-              sx={{ maxWidth: '500px' }}
-            >
-              <ToggleButton
-                value={VIEW_TYPES.OWED_TO_ME}
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: '#574D98',
-                    color: 'white',
-                    '&:hover': { bgcolor: '#4a4080' }
-                  }
-                }}
-              >
-                Bạn chưa thu hồi
-              </ToggleButton>
-              <ToggleButton
-                value={VIEW_TYPES.I_OWE}
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: '#fee2e2',
-                    color: '#574D98',
-                    '&:hover': { bgcolor: '#fecaca' }
-                  }
-                }}
-              >
-                Bạn còn nợ
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-        )}
+      <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, height: '100%', overflow: 'auto' }}>
+        {/* Header */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: 0.5, fontFamily: "'Nunito Sans', sans-serif" }}>
+            Sổ tay nợ
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Theo dõi công nợ với bạn bè
+          </Typography>
+        </Box>
 
-        {/* Content */}
-        {!isMobile ? (
-          <div className="grid grid-cols-2 gap-6 flex-1 overflow-hidden">
-            <div className="h-full overflow-hidden">{renderColumn(VIEW_TYPES.I_OWE)}</div>
-            <div className="h-full overflow-hidden">{renderColumn(VIEW_TYPES.OWED_TO_ME)}</div>
-          </div>
-        ) : (
-          <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            {renderColumn(activeView)}
+        {/* Summary Cards */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: 3,
+            mb: 3
+          }}
+        >
+          <SummaryCard
+            title="Tổng mình nợ"
+            amount={debtData.iOwe.total}
+            icon={TrendingDownIcon}
+            bgColor="#ffd6a7"
+            textColor="#ca3500"
+            iconBgColor="#ffd6a8"
+            cardBgColor="rgba(255, 214, 167, 0.2)"
+          />
+          <SummaryCard
+            title="Tổng người khác nợ"
+            amount={debtData.owedToMe.total}
+            icon={TrendingUpIcon}
+            bgColor="#b9f8cf"
+            textColor="#008236"
+            iconBgColor="#b9f8cf"
+            cardBgColor="rgba(185, 248, 207, 0.2)"
+          />
+        </Box>
+
+        {/* Debt Lists */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: 3,
+            alignItems: 'start'
+          }}
+        >
+          {/* I Owe Section */}
+          <Box>
+            <Typography variant="h6" fontWeight="600" sx={{ mb: 2, fontFamily: "'Nunito Sans', sans-serif" }}>
+              Mình nợ người khác
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {debtData.iOwe.debts.length === 0 ? (
+                <Card sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: '20px' }}>
+                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                </Card>
+              ) : (
+                debtData.iOwe.debts.map((person) => (
+                  <PersonDebtCard
+                    key={person.userId}
+                    person={person}
+                    type="iOwe"
+                    onPaymentClick={handlePaymentClick}
+                  />
+                ))
+              )}
+            </Box>
           </Box>
-        )}
-      </div>
+
+          {/* Owed To Me Section */}
+          <Box>
+            <Typography variant="h6" fontWeight="600" sx={{ mb: 2, fontFamily: "'Nunito Sans', sans-serif" }}>
+              Người khác nợ mình
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {debtData.owedToMe.debts.length === 0 ? (
+                <Card sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: '20px' }}>
+                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                </Card>
+              ) : (
+                debtData.owedToMe.debts.map((person) => (
+                  <PersonDebtCard
+                    key={person.userId}
+                    person={person}
+                    type="owedToMe"
+                    onRemindClick={handleRemindClick}
+                    onConfirmPayment={handleConfirmPayment}
+                  />
+                ))
+              )}
+            </Box>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Payment Dialog */}
       <PaymentDialog
