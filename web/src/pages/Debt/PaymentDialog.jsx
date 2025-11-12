@@ -7,7 +7,8 @@ import {
   Box,
   Typography,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  CircularProgress
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
@@ -17,6 +18,8 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [qrLoading, setQrLoading] = useState(false)
 
   // Set amount when dialog opens or creditor changes
   useEffect(() => {
@@ -24,6 +27,24 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
       setAmount(creditor.totalAmount.toString())
     }
   }, [open, creditor])
+
+  // Generate QR code URL when amount or creditor changes
+  useEffect(() => {
+    if (creditor?.bankName && creditor?.bankAccount && amount) {
+      const amountValue = parseFloat(amount) || 0
+      if (amountValue > 0) {
+        setQrLoading(true)
+        const qrUrl = `https://img.vietqr.io/image/${creditor.bankName}-${creditor.bankAccount}-qr_only.png?amount=${amountValue}`
+        setQrCodeUrl(qrUrl)
+      } else {
+        setQrCodeUrl('')
+        setQrLoading(false)
+      }
+    } else {
+      setQrCodeUrl('')
+      setQrLoading(false)
+    }
+  }, [amount, creditor?.bankName, creditor?.bankAccount])
 
   const handleAmountChange = (e) => {
     // Remove all non-digit characters
@@ -206,7 +227,7 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
                 {creditor.bankAccount}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: qrCodeUrl ? 2 : 0 }}>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '16px' }}>
                 Tên:
               </Typography>
@@ -214,6 +235,52 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
                 {creditor.userName}
               </Typography>
             </Box>
+
+            {/* QR Code */}
+            {qrCodeUrl && (
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  mt: 2,
+                  pt: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  minHeight: '220px'
+                }}
+              >
+                {qrLoading && (
+                  <CircularProgress 
+                    size={40} 
+                    sx={{ 
+                      color: 'primary.main',
+                      position: 'absolute'
+                    }} 
+                  />
+                )}
+                <Box
+                  component="img"
+                  src={qrCodeUrl}
+                  alt="QR Code thanh toán"
+                  sx={{
+                    width: '200px',
+                    height: '200px',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    bgcolor: 'white',
+                    p: 1,
+                    display: qrLoading ? 'none' : 'block'
+                  }}
+                  onLoad={() => setQrLoading(false)}
+                  onError={(e) => {
+                    console.error('Failed to load QR code')
+                    setQrLoading(false)
+                    e.target.style.display = 'none'
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         )}
 
