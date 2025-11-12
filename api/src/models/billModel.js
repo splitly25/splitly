@@ -28,7 +28,7 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
       Joi.object({
         userId: Joi.string().required(),
         amountOwed: Joi.number().required(),
-        isPaid: Joi.boolean().required(),
+        amountPaid: Joi.number().default(0),
         paidDate: Joi.date().optional(),
       })
     )
@@ -237,8 +237,21 @@ const getBillsByCreator = async (creatorId) => {
   }
 };
 
-const markAsPaid = async (billId, userId) => {
+const markAsPaid = async (billId, userId, amountPaid) => {
   try {
+    const bill = await findOneById(billId);
+    if (!bill) {
+      throw new Error('Bill not found');
+    }
+    
+    const paymentStatusIndex = bill.paymentStatus.findIndex(ps => ps.userId === userId);
+    if (paymentStatusIndex === -1) {
+      throw new Error('User not found in payment status');
+    }
+    
+    const currentAmountPaid = bill.paymentStatus[paymentStatusIndex].amountPaid || 0;
+    const newAmountPaid = currentAmountPaid + amountPaid;
+    
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .findOneAndUpdate(
@@ -248,7 +261,7 @@ const markAsPaid = async (billId, userId) => {
         },
         {
           $set: {
-            'paymentStatus.$.isPaid': true,
+            'paymentStatus.$.amountPaid': newAmountPaid,
             'paymentStatus.$.paidDate': Date.now(),
             updatedAt: Date.now()
           }
