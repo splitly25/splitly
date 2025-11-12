@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   TextField,
   Box,
@@ -11,7 +9,7 @@ import {
   IconButton,
   InputAdornment
 } from '@mui/material'
-import { Close as CloseIcon } from '@mui/icons-material'
+import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
 
 const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
@@ -96,141 +94,128 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(87, 77, 152, 0.2)'
+          borderRadius: '24px',
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: 'none'
         }
       }}
     >
-      <DialogTitle
-        sx={{
-          color: '#574D98',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          py: 2.5,
-          px: 3,
-          position: 'relative'
-        }}
-      >
-        <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-          Xác nhận số tiền thanh toán
-        </Typography>
+      <DialogContent sx={{ p: 3, position: 'relative' }}>
+        {/* Close Button */}
         <IconButton
           onClick={handleClose}
           disabled={loading}
           sx={{
-            color: '#574D98',
             position: 'absolute',
             right: 16,
-            '&:hover': { backgroundColor: 'rgba(87, 77, 152, 0.1)' }
+            top: 16,
+            color: 'text.secondary',
+            opacity: 0.7,
+            '&:hover': { 
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              opacity: 1
+            }
           }}
           size="small"
         >
-          <CloseIcon />
+          <CloseIcon fontSize="small" />
         </IconButton>
-      </DialogTitle>
 
-      <DialogContent sx={{ pt: 3, pb: 2, px: 3 }}>
-        {/* Creditor Info */}
+        {/* Header */}
         <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="body2"
-            sx={{ color: '#574D98', fontWeight: 600, mb: 1 }}
-          >
-            Người nhận
-          </Typography>
-          <TextField
-            fullWidth
-            value={creditor?.userName || ''}
-            InputProps={{
-              readOnly: true,
-              sx: {
-                borderRadius: 2,
-                backgroundColor: '#e0e0e0', // Gray background to indicate read-only
-                '& input': {
-                  fontWeight: 600,
-                  fontSize: '1.1rem',
-                  color: '#574D98'
-                }
-              }
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600, 
+              fontSize: '18px',
+              fontFamily: "'Nunito Sans', sans-serif",
+              mb: 0.5
             }}
-          />
+          >
+            Thông tin chuyển khoản
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+            Chuyển khoản cho {creditor?.userName || ''}
+          </Typography>
         </Box>
 
         {/* Amount Input */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2 }}>
           <Typography
             variant="body2"
-            sx={{ color: '#574D98', fontWeight: 600, mb: 1 }}
+            sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
           >
-            Số tiền <span style={{ color: '#d32f2f' }}>*</span>
+            Số tiền thanh toán
           </Typography>
           <TextField
             fullWidth
             value={formatAmountDisplay(amount)}
             onChange={handleAmountChange}
-            placeholder={formatAmountDisplay(creditor?.totalAmount?.toString() || '0')}
+            placeholder="0"
             error={!!errors.amount}
-            helperText={errors.amount}
             disabled={loading}
             InputProps={{
-              endAdornment: <InputAdornment position="end">₫</InputAdornment>,
+              endAdornment: <InputAdornment position="end" sx={{ color: 'text.secondary' }}>₫</InputAdornment>,
               sx: {
-                borderRadius: 2,
-                backgroundColor: '#f8f9fa',
+                borderRadius: '18px',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#574D98',
-                  borderWidth: 2
+                  borderColor: 'divider'
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#6b5fa8'
+                  borderColor: 'divider'
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#574D98'
+                  borderColor: 'primary.main'
                 },
                 '& input': {
-                  fontWeight: 600,
-                  fontSize: '1.1rem',
-                  color: '#574D98'
+                  fontSize: '14px',
+                  py: 1
                 }
               }
             }}
           />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '12px' }}>
+            Tổng nợ: {formatCurrency(creditor?.totalAmount || 0)}
+          </Typography>
         </Box>
 
-        {/* Note Input */}
-        <Box sx={{ mb: 2 }}>
-          <Typography
-            variant="body2"
-            sx={{ color: '#574D98', fontWeight: 600, mb: 1 }}
-          >
-            Ghi chú
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Thêm ghi chú (không bắt buộc)"
-            disabled={loading}
-            InputProps={{
-              sx: {
-                borderRadius: 2,
-                backgroundColor: '#f8f9fa',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#e0e0e0'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#574D98'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#574D98'
-                }
-              }
+        {/* Bank Information Section - Conditionally Rendered */}
+        {creditor?.bankName && creditor?.bankAccount && (
+          <Box 
+            sx={{ 
+              bgcolor: '#f5f5f5',
+              borderRadius: '18px',
+              p: 2,
+              mb: 2
             }}
-          />
-        </Box>
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '16px' }}>
+                Ngân hàng:
+              </Typography>
+              <Typography variant="body2" fontWeight="600" sx={{ fontSize: '16px' }}>
+                {creditor.bankName}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '16px' }}>
+                Số tài khoản:
+              </Typography>
+              <Typography variant="body2" fontWeight="600" sx={{ fontSize: '16px' }}>
+                {creditor.bankAccount}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '16px' }}>
+                Tên:
+              </Typography>
+              <Typography variant="body2" fontWeight="600" sx={{ fontSize: '16px' }}>
+                {creditor.userName}
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         {/* Error Message */}
         {errors.submit && (
@@ -239,67 +224,78 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
             sx={{
               color: '#d32f2f',
               textAlign: 'center',
-              mt: 2,
+              mb: 2,
               p: 1.5,
               bgcolor: '#ffebee',
-              borderRadius: 1
+              borderRadius: 2
             }}
           >
             {errors.submit}
           </Typography>
         )}
-      </DialogContent>
+        {errors.amount && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: '#d32f2f',
+              display: 'block',
+              mb: 2
+            }}
+          >
+            {errors.amount}
+          </Typography>
+        )}
 
-      <DialogActions
-        sx={{
-          px: 3,
-          pb: 3,
-          pt: 1,
-          display: 'flex',
-          gap: 1.5
-        }}
-      >
-        <Button
-          onClick={handleClose}
-          disabled={loading}
-          sx={{
-            flex: 1,
-            py: 1.5,
-            borderRadius: 2,
-            textTransform: 'none',
-            fontSize: '1rem',
-            fontWeight: 600,
-            color: '#574D98',
-            borderColor: '#574D98',
-            '&:hover': {
-              borderColor: '#6b5fa8',
-              backgroundColor: 'rgba(87, 77, 152, 0.05)'
-            }
-          }}
-          variant="outlined"
-        >
-          Quay lại
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          sx={{
-            flex: 1,
-            py: 1.5,
-            borderRadius: 2,
-            textTransform: 'none',
-            fontSize: '1rem',
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #574D98 0%, #6b5fa8 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #6b5fa8 0%, #7a6eb8 100%)'
-            }
-          }}
-          variant="contained"
-        >
-          {loading ? 'Đang xử lý...' : 'Xác nhận'}
-        </Button>
-      </DialogActions>
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            onClick={handleClose}
+            disabled={loading}
+            fullWidth
+            sx={{
+              py: 1,
+              borderRadius: '18px',
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: 'text.primary',
+              borderColor: 'divider',
+              '&:hover': {
+                borderColor: 'divider',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              }
+            }}
+            variant="outlined"
+          >
+            Để sau
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            fullWidth
+            startIcon={<CheckCircleIcon />}
+            sx={{
+              py: 1,
+              borderRadius: '18px',
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+              },
+              '&:disabled': {
+                background: 'rgba(0, 0, 0, 0.12)',
+                color: 'rgba(0, 0, 0, 0.26)'
+              }
+            }}
+            variant="contained"
+          >
+            {loading ? 'Đang xử lý...' : 'Đã thanh toán'}
+          </Button>
+        </Box>
+      </DialogContent>
     </Dialog>
   )
 }
