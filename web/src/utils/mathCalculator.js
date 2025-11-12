@@ -12,12 +12,12 @@ export const evaluateMathExpression = (expression) => {
   // Remove spaces
   const cleanExpression = expression.trim().replace(/\s+/g, '')
 
-  // Check if it's already a plain number
-  if (/^\d+(\.\d+)?$/.test(cleanExpression)) {
+  // Check if it's already a plain number (including those with leading zeros like 0.5 or 012)
+  if (/^0*\d+(\.\d+)?$/.test(cleanExpression)) {
     return parseFloat(cleanExpression)
   }
 
-  // Check if expression contains valid math operators
+  // Check if expression contains valid math operators (including decimals starting with 0)
   if (!/^[\d+\-*/.()]+$/.test(cleanExpression)) {
     return null
   }

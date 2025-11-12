@@ -12,6 +12,8 @@ let authorizedAxiosInstance = axios.create()
 authorizedAxiosInstance.defaults.timeout = 10 * 60 * 1000
 authorizedAxiosInstance.defaults.withCredentials = true
 
+let isLoggingout = false
+
 // Add a request interceptor
 authorizedAxiosInstance.interceptors.request.use(
   (config) => {
@@ -34,8 +36,10 @@ authorizedAxiosInstance.interceptors.response.use(
   (error) => {
     interceptorLoadingElements(false)
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isLoggingout) {
+      isLoggingout = true
       axiosReduxStore.dispatch(logoutUserAPI(false))
+      isLoggingout = false
     }
 
     // Global error handling for all over the app

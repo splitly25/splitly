@@ -15,7 +15,6 @@ import { styled } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import SearchIcon from '@mui/icons-material/Search'
 import GroupIcon from '@mui/icons-material/Group'
-import EmailIcon from '@mui/icons-material/Email'
 import CloseIcon from '@mui/icons-material/Close'
 import PeopleIcon from '@mui/icons-material/People'
 
@@ -114,32 +113,6 @@ const StyledInput = styled(TextField)(({ theme }) => ({
   },
 }))
 
-const SelectedMembersContainer = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F4F5F7',
-  border: `0.8px solid ${theme.palette.divider}`,
-  borderRadius: '8px',
-  padding: '12px',
-  minHeight: '100px',
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '8px',
-  alignContent: 'start',
-  [theme.breakpoints.down('sm')]: {
-    gridTemplateColumns: '1fr',
-  },
-}))
-
-const MemberChip = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  backgroundColor: theme.palette.background.default,
-  border: `0.8px solid ${theme.palette.divider}`,
-  borderRadius: '4px',
-  padding: '8px',
-  height: '41.6px',
-}))
-
 const UserAvatar = styled(Avatar)(({ theme }) => ({
   width: 24,
   height: 24,
@@ -208,22 +181,6 @@ const AddButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const AddGroupButton = styled(Button)({
-  background: '#2970FF',
-  color: '#FFFFFF',
-  borderRadius: '99px',
-  textTransform: 'none',
-  fontSize: '16px',
-  fontWeight: 600,
-  padding: '6px 24px',
-  height: '37px',
-  minWidth: '127px',
-  '&:hover': {
-    background: '#2970FF',
-    opacity: 0.9,
-  },
-})
-
 const AddByEmailButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   border: `0.8px solid ${theme.palette.divider}`,
@@ -241,12 +198,19 @@ const AddByEmailButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], availableGroups = [], isLoading = false }) => {
+const AddParticipantDialog = ({
+  open,
+  onClose,
+  onAdd,
+  onRemove,
+  currentParticipants = [],
+  availablePeople = [],
+  availableGroups = [],
+  isLoading = false,
+}) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPeople, setSelectedPeople] = useState([])
   const [selectedGroups, setSelectedGroups] = useState([])
-  const [emailInput, setEmailInput] = useState('')
-  const [emailPeople, setEmailPeople] = useState([])
 
   const getInitials = (name) => {
     if (!name) return '?'
@@ -268,30 +232,6 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
     })
   }
 
-  const handleRemovePerson = (personId, source) => {
-    if (source === 'email') {
-      setEmailPeople((prev) => prev.filter((p) => p.id !== personId))
-    } else if (source === 'individual') {
-      setSelectedPeople((prev) => prev.filter((p) => p.id !== personId))
-    }
-  }
-
-  const handleRemoveGroupMember = (groupId, memberId) => {
-    setSelectedGroups((prev) =>
-      prev.map((group) => {
-        if (group.id === groupId) {
-          const updatedMembers = group.members.filter((m) => m.id !== memberId)
-          // If no members left, remove the group entirely
-          if (updatedMembers.length === 0) {
-            return null
-          }
-          return { ...group, members: updatedMembers }
-        }
-        return group
-      }).filter(Boolean) // Remove null entries
-    )
-  }
-
   const handleToggleGroup = (group) => {
     setSelectedGroups((prev) => {
       const exists = prev.find((g) => g.id === group.id)
@@ -303,27 +243,9 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
     })
   }
 
-  const handleRemoveGroup = (groupId) => {
-    setSelectedGroups((prev) => prev.filter((g) => g.id !== groupId))
-  }
-
-  const handleAddByEmail = () => {
-    if (emailInput.trim() && emailInput.includes('@')) {
-      const newPerson = {
-        id: `email-${Date.now()}`,
-        name: emailInput.split('@')[0],
-        email: emailInput.trim(),
-        isFromEmail: true,
-      }
-      setEmailPeople([...emailPeople, newPerson])
-      setEmailInput('')
-    }
-  }
-
   const handleConfirm = () => {
     // Combine all selections
     const allParticipants = [
-      ...emailPeople,
       ...selectedPeople,
       ...selectedGroups.flatMap((group) =>
         group.members.map((member) => ({
@@ -333,9 +255,9 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
       ),
     ]
 
-    // Remove duplicates based on email
+    // Remove duplicates based on id and filter out people who are already participants
     const uniqueParticipants = allParticipants.reduce((acc, person) => {
-      if (!acc.find((p) => p.email === person.email)) {
+      if (!acc.find((p) => p.id === person.id) && !currentParticipantIds.has(person.id)) {
         acc.push(person)
       }
       return acc
@@ -348,9 +270,7 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
   const handleCancel = () => {
     setSelectedPeople([])
     setSelectedGroups([])
-    setEmailPeople([])
     setSearchQuery('')
-    setEmailInput('')
     onClose()
   }
 
@@ -358,151 +278,93 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
   const peopleList = availablePeople
   const groupsList = availableGroups
 
-  // Get all selected person IDs (from individual selections, email additions, and groups)
+  // Get all current participant IDs and selected person IDs
+  const currentParticipantIds = new Set(currentParticipants.map((p) => p.id))
   const selectedPersonIds = new Set([
-    ...selectedPeople.map(p => p.id),
-    ...emailPeople.map(p => p.id),
-    ...selectedGroups.flatMap(g => g.members.map(m => m.id))
+    ...selectedPeople.map((p) => p.id),
+    ...selectedGroups.flatMap((g) => g.members.map((m) => m.id)),
   ])
 
-  // Filter out already selected people
+  // Filter out current participants and already selected people
   const filteredPeople = peopleList.filter(
     (person) =>
+      !currentParticipantIds.has(person.id) &&
       !selectedPersonIds.has(person.id) &&
       (person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.email.toLowerCase().includes(searchQuery.toLowerCase()))
+        person.email.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   // Filter out already selected groups
-  const filteredGroups = groupsList.filter((group) =>
-    !selectedGroups.find(g => g.id === group.id) &&
-    group.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredGroups = groupsList.filter(
+    (group) =>
+      !selectedGroups.find((g) => g.id === group.id) && group.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const getTotalSelected = () => {
-    const emailCount = emailPeople.length
-    const individualCount = selectedPeople.length
-    const groupMembersCount = selectedGroups.reduce((sum, group) => sum + group.members.length, 0)
-    return emailCount + individualCount + groupMembersCount
+    // Filter out people who are already current participants
+    const newIndividualCount = selectedPeople.filter((p) => !currentParticipantIds.has(p.id)).length
+    const newGroupMembersCount = selectedGroups.reduce((sum, group) => {
+      const newMembers = group.members.filter((m) => !currentParticipantIds.has(m.id))
+      return sum + newMembers.length
+    }, 0)
+    return newIndividualCount + newGroupMembersCount
   }
 
   return (
     <DialogContainer open={open} onClose={handleCancel} maxWidth="lg">
       <DialogContent>
-        {/* Left Panel - Selected Members */}
+        {/* Left Panel - Current Participants */}
         <LeftPanel>
           <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <PeopleIcon sx={{ width: '16px', height: '16px', color: 'text.primary' }} />
-              <Label>Selected Members ({getTotalSelected()})</Label>
+              <Label>Thành viên đã thêm ({currentParticipants.length})</Label>
             </Box>
 
-            {/* Email People Section */}
-            {emailPeople.length > 0 && (
+            {/* Current Participants - Displayed as list */}
+            {currentParticipants.length > 0 ? (
               <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <EmailIcon sx={{ width: '14px', height: '14px', color: 'text.secondary' }} />
-                  <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>Added by Email</Typography>
-                </Box>
-                <SelectedMembersContainer>
-                  {emailPeople.map((person) => (
-                    <MemberChip key={person.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <UserAvatar>{getInitials(person.name)}</UserAvatar>
-                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                          {person.name}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemovePerson(person.id, 'email')}
-                        sx={{ width: '16px', height: '16px', padding: 0 }}
-                      >
-                        <CloseIcon sx={{ width: '12px', height: '12px' }} />
-                      </IconButton>
-                    </MemberChip>
-                  ))}
-                </SelectedMembersContainer>
+                {currentParticipants.map((participant) => (
+                  <PersonRow key={participant.id}>
+                    <UserAvatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        fontSize: '16px',
+                      }}
+                    >
+                      {getInitials(participant.name)}
+                    </UserAvatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                        {participant.name}
+                      </Typography>
+                      <Typography sx={{ fontSize: '16px', color: 'text.secondary', fontWeight: 400 }}>
+                        {participant.email}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => onRemove(participant.id)}
+                      sx={{
+                        width: '32px',
+                        height: '32px',
+                        color: 'error.main',
+                        '&:hover': {
+                          backgroundColor: 'error.light',
+                        },
+                      }}
+                    >
+                      <CloseIcon sx={{ width: '16px', height: '16px' }} />
+                    </IconButton>
+                  </PersonRow>
+                ))}
               </Box>
-            )}
-
-            {/* Selected Individual People */}
-            {selectedPeople.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <PeopleIcon sx={{ width: '14px', height: '14px', color: 'text.secondary' }} />
-                  <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>Selected Individuals</Typography>
-                </Box>
-                <SelectedMembersContainer>
-                  {selectedPeople.map((person) => (
-                    <MemberChip key={person.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <UserAvatar>{getInitials(person.name)}</UserAvatar>
-                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                          {person.name}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemovePerson(person.id, 'individual')}
-                        sx={{ width: '16px', height: '16px', padding: 0 }}
-                      >
-                        <CloseIcon sx={{ width: '12px', height: '12px' }} />
-                      </IconButton>
-                    </MemberChip>
-                  ))}
-                </SelectedMembersContainer>
-              </Box>
-            )}
-
-            {/* Selected Groups */}
-            {selectedGroups.map((group) => (
-              <Box key={group.id} sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <GroupIcon sx={{ width: '14px', height: '14px', color: 'text.secondary' }} />
-                    <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>From Group: {group.name}</Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    onClick={() => handleRemoveGroup(group.id)}
-                    sx={{
-                      fontSize: '12px',
-                      color: 'error.main',
-                      textTransform: 'none',
-                      minWidth: 'auto',
-                      p: 0.5,
-                    }}
-                  >
-                    Remove Group
-                  </Button>
-                </Box>
-                <SelectedMembersContainer>
-                  {group.members.map((member) => (
-                    <MemberChip key={member.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <UserAvatar>{getInitials(member.name)}</UserAvatar>
-                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                          {member.name}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveGroupMember(group.id, member.id)}
-                        sx={{ width: '16px', height: '16px', padding: 0 }}
-                      >
-                        <CloseIcon sx={{ width: '12px', height: '12px' }} />
-                      </IconButton>
-                    </MemberChip>
-                  ))}
-                </SelectedMembersContainer>
-              </Box>
-            ))}
-
-            {getTotalSelected() === 0 && (
+            ) : (
               <Box
                 sx={{
-                  backgroundColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F4F5F7',
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F4F5F7',
                   border: (theme) => `0.8px solid ${theme.palette.divider}`,
                   borderRadius: '8px',
                   padding: '40px 20px',
@@ -510,8 +372,105 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                 }}
               >
                 <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                  Chưa có thành viên nào được chọn
+                  Chưa có thành viên nào được thêm
                 </Typography>
+              </Box>
+            )}
+
+            {/* Newly Selected People - To be added */}
+            {getTotalSelected() > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Box
+                  sx={{
+                    borderTop: (theme) => `1px dashed ${theme.palette.divider}`,
+                    pt: 2,
+                    mb: 2,
+                  }}
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <PeopleIcon sx={{ width: '16px', height: '16px', color: 'primary.main' }} />
+                  <Typography sx={{ fontSize: '14px', fontWeight: 500, color: 'primary.main' }}>
+                    Sẽ được thêm ({getTotalSelected()})
+                  </Typography>
+                </Box>
+
+                {/* Combine and deduplicate all selected people */}
+                {(() => {
+                  // Get all group member IDs
+                  const groupMemberIds = new Set(selectedGroups.flatMap((g) => g.members.map((m) => m.id)))
+
+                  // Create a unified list: individual people + group members
+                  const allSelectedPeople = []
+
+                  // Add individual people (only if not in a group)
+                  selectedPeople
+                    .filter((person) => !currentParticipantIds.has(person.id) && !groupMemberIds.has(person.id))
+                    .forEach((person) => {
+                      allSelectedPeople.push({
+                        ...person,
+                        source: 'individual',
+                      })
+                    })
+
+                  // Add group members
+                  selectedGroups.forEach((group) => {
+                    group.members
+                      .filter((member) => !currentParticipantIds.has(member.id))
+                      .forEach((member) => {
+                        // Check if this member is already in the list
+                        if (!allSelectedPeople.find((p) => p.id === member.id)) {
+                          allSelectedPeople.push({
+                            ...member,
+                            source: 'group',
+                            groupName: group.name,
+                            groupId: group.id,
+                          })
+                        }
+                      })
+                  })
+
+                  return allSelectedPeople.map((person) => (
+                    <PersonRow key={person.id}>
+                      <UserAvatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '16px',
+                        }}
+                      >
+                        {getInitials(person.name)}
+                      </UserAvatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                          {person.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
+                          {person.email}
+                          {person.source === 'group' && ` • từ ${person.groupName}`}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          person.source === 'individual'
+                            ? handleTogglePerson(person)
+                            : handleToggleGroup(selectedGroups.find((g) => g.id === person.groupId))
+                        }
+                        sx={{
+                          width: '32px',
+                          height: '32px',
+                          color: 'error.main',
+                          '&:hover': {
+                            backgroundColor: 'error.light',
+                          },
+                        }}
+                        title={person.source === 'group' ? 'Xóa toàn bộ nhóm' : 'Xóa người này'}
+                      >
+                        <CloseIcon sx={{ width: '16px', height: '16px' }} />
+                      </IconButton>
+                    </PersonRow>
+                  ))
+                })()}
               </Box>
             )}
           </Box>
@@ -538,7 +497,7 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                 fontSize: '14px',
                 color: 'text.primary',
                 minHeight: '36px',
-                px: 3
+                px: 3,
               }}
             >
               Hủy
@@ -546,6 +505,7 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
             <Button
               onClick={handleConfirm}
               variant="contained"
+              disabled={getTotalSelected() === 0}
               sx={{
                 background: COLORS.gradientPrimary,
                 borderRadius: '16px',
@@ -559,36 +519,13 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                 },
               }}
             >
-              Xác nhận ({getTotalSelected()})
+              Thêm {getTotalSelected() > 0 ? `(${getTotalSelected()})` : ''}
             </Button>
           </Box>
         </LeftPanel>
 
         {/* Right Panel - Add Options */}
         <RightPanel>
-          {/* Add by Email Section */}
-          <Box sx={{ borderBottom: (theme) => `0.8px solid ${theme.palette.divider}`, pb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <EmailIcon sx={{ width: '16px', height: '16px', color: 'text.primary' }} />
-              <Label>Add by email</Label>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <StyledInput
-                fullWidth
-                placeholder="Enter email address..."
-                variant="outlined"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddByEmail()
-                  }
-                }}
-              />
-              <AddByEmailButton onClick={handleAddByEmail}>Add</AddByEmailButton>
-            </Box>
-          </Box>
-
           {/* Search Section */}
           <Box>
             <Label sx={{ mb: 1.5 }}>Search</Label>
@@ -620,45 +557,33 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                 </Box>
               ) : filteredPeople.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                    Không tìm thấy người nào
-                  </Typography>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>Không tìm thấy người nào</Typography>
                 </Box>
               ) : (
                 filteredPeople.map((person) => {
-                const isSelected = selectedPeople.find((p) => p.id === person.id)
-                return (
-                  <PersonRow key={person.id}>
-                    <Checkbox
-                      checked={!!isSelected}
-                      onChange={() => handleTogglePerson(person)}
-                      size="small"
-                      sx={{
-                        padding: 0,
-                        '& .MuiSvgIcon-root': { fontSize: 16 },
-                      }}
-                    />
-                    <UserAvatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        fontSize: '16px',
-                      }}
-                    >
-                      {getInitials(person.name)}
-                    </UserAvatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                        {person.name}
-                      </Typography>
-                      <Typography sx={{ fontSize: '16px', color: 'text.secondary', fontWeight: 400 }}>
-                        {person.email}
-                      </Typography>
-                    </Box>
-                    <AddButton onClick={() => handleTogglePerson(person)}>Add</AddButton>
-                  </PersonRow>
-                )
-              })
+                  return (
+                    <PersonRow key={person.id}>
+                      <UserAvatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '16px',
+                        }}
+                      >
+                        {getInitials(person.name)}
+                      </UserAvatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                          {person.name}
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px', color: 'text.secondary', fontWeight: 400 }}>
+                          {person.email}
+                        </Typography>
+                      </Box>
+                      <AddButton onClick={() => handleTogglePerson(person)}>Add</AddButton>
+                    </PersonRow>
+                  )
+                })
               )}
             </Box>
           </Box>
@@ -678,50 +603,43 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                 </Box>
               ) : filteredGroups.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                    Không tìm thấy nhóm nào
-                  </Typography>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>Không tìm thấy nhóm nào</Typography>
                 </Box>
               ) : (
                 filteredGroups.map((group) => {
-                const isSelected = selectedGroups.find((g) => g.id === group.id)
-                const displayMembers = group.members.slice(0, 3)
-                const remainingCount = group.members.length - 3
+                  const isSelected = selectedGroups.find((g) => g.id === group.id)
+                  const displayMembers = group.members.slice(0, 3)
+                  const remainingCount = group.members.length - 3
 
-                return (
-                  <GroupCard key={group.id}>
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <GroupIcon sx={{ width: '18px', height: '18px', color: 'text.primary' }} />
-                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                          {group.name}
-                        </Typography>
-                        <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                          ({group.members.length} members)
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 3 }}>
-                        {displayMembers.map((member) => (
-                          <UserAvatar
-                            key={member.id}
-                            sx={{ width: 24, height: 24, fontSize: '11px' }}
-                          >
-                            {getInitials(member.name)}
-                          </UserAvatar>
-                        ))}
-                        {remainingCount > 0 && (
-                          <Typography sx={{ fontSize: '12px', color: 'text.secondary', ml: 0.5 }}>
-                            +{remainingCount} more
+                  return (
+                    <GroupCard key={group.id}>
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <GroupIcon sx={{ width: '18px', height: '18px', color: 'text.primary' }} />
+                          <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                            {group.name}
                           </Typography>
-                        )}
+                          <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                            ({group.members.length} members)
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 3 }}>
+                          {displayMembers.map((member) => (
+                            <UserAvatar key={member.id} sx={{ width: 24, height: 24, fontSize: '11px' }}>
+                              {getInitials(member.name)}
+                            </UserAvatar>
+                          ))}
+                          {remainingCount > 0 && (
+                            <Typography sx={{ fontSize: '12px', color: 'text.secondary', ml: 0.5 }}>
+                              +{remainingCount} more
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
-                    <AddGroupButton onClick={() => handleToggleGroup(group)}>
-                      {isSelected ? 'Remove' : 'Add Group'}
-                    </AddGroupButton>
-                  </GroupCard>
-                )
-              })
+                      <AddButton onClick={() => handleToggleGroup(group)}>{isSelected ? 'Remove' : 'Add'}</AddButton>
+                    </GroupCard>
+                  )
+                })
               )}
             </Box>
           </Box>

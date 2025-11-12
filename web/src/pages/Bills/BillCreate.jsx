@@ -10,10 +10,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import GroupAddIcon from '@mui/icons-material/GroupAdd'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
-import NotificationsIcon from '@mui/icons-material/Notifications'
 import CustomTextField from '~/components/Form/CustomTextField'
 import CustomSelect from '~/components/Form/CustomSelect'
 import CustomDatePicker from '~/components/Form/CustomDatePicker'
@@ -22,7 +20,7 @@ import ParticipantCard from '~/components/Form/ParticipantCard'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
-import { createBillAPI, getGroupsByUserIdAPI, getAllGroupsAndMembersAPI } from '~/apis'
+import { createBillAPI,  getAllGroupsAndMembersAPI } from '~/apis'
 import { categoryOptions } from '~/apis/mock-data'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -238,6 +236,12 @@ function BillCreate() {
     }
   }
 
+  // Auto-calculate when relevant data changes
+  useEffect(() => {
+    handleCalculate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splitType, totalAmount, participants.length])
+
   const handleSubmit = async (formData) => {
     try {
       setIsLoading(true)
@@ -297,25 +301,6 @@ function BillCreate() {
         backgroundColor: theme.palette.background.default,
       })}
     >
-      <IconButton
-        sx={(theme) => ({
-          position: 'fixed',
-          right: '24px',
-          top: '16px',
-          width: '40px',
-          height: '40px',
-          backgroundColor: theme.palette.background.default,
-          border: `0.8px solid ${theme.palette.divider}`,
-          borderRadius: '50%',
-          '&:hover': {
-            backgroundColor:
-              theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.background.default,
-          },
-        })}
-      >
-        <NotificationsIcon sx={{ width: '16px', height: '16px', color: 'text.primary' }} />
-      </IconButton>
-
       <Box
         sx={{
           padding: '32px',
@@ -455,9 +440,8 @@ function BillCreate() {
                     fullWidth
                     onClick={() => setOpenPayerDialog(true)}
                     sx={(theme) => ({
-                      marginTop: '8px',
                       fontSize: '14px',
-                      borderRadius: '8px',
+                      borderRadius: '16px',
                       backgroundColor: theme.palette.background.default,
                       border: `0.8px solid ${error ? theme.palette.error.main : theme.palette.divider}`,
                       color: field.value ? theme.palette.text.primary : theme.palette.text.secondary,
@@ -596,24 +580,6 @@ function BillCreate() {
             >
               Tự động tính toán
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleCalculate}
-              sx={{
-                borderRadius: '16px',
-                textTransform: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-                border: (theme) => `0.8px solid ${theme.palette.divider}`,
-                color: 'text.primary',
-                '&:hover': {
-                  border: (theme) => `0.8px solid ${theme.palette.divider}`,
-                },
-              }}
-            >
-              Tính lại
-            </Button>
           </Box>
 
           {/* Calculated Amounts - All Participants */}
@@ -747,6 +713,8 @@ function BillCreate() {
         open={openParticipantDialog}
         onClose={() => setOpenParticipantDialog(false)}
         onAdd={handleAddParticipants}
+        onRemove={handleDeleteParticipant}
+        currentParticipants={participants}
         availablePeople={availablePeople}
         availableGroups={availableGroups}
         isLoading={isLoadingData}
