@@ -51,10 +51,21 @@ const getAllGroupAndMembers = async (req, res, next) => {
   }
 }
 
+const getGroupsByUserId = async (req, res, next) => {
+  try {
+    const userId = req.params.userId
+    const groups = await groupService.getGroupsByUserId(userId)
+    res.status(StatusCodes.OK).json(groups)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const groupController = {
   createNew,
   getGroupById,
   getAllGroups,
   getGroupAndMembers,
   getAllGroupAndMembers,
+  getGroupsByUserId,
 }

@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Dialog, Box, Typography, TextField, Button, Avatar, IconButton, InputAdornment } from '@mui/material'
+import { Dialog, Box, Typography, TextField, Button, Avatar, IconButton, InputAdornment, CircularProgress } from '@mui/material'
 import { styled } from '@mui/material/styles'
-import { mockPeople } from '~/apis/mock-data'
 import SearchIcon from '@mui/icons-material/Search'
 import EmailIcon from '@mui/icons-material/Email'
 import CloseIcon from '@mui/icons-material/Close'
@@ -28,7 +27,7 @@ const StyledInput = styled(TextField)(({ theme }) => ({
   },
 }))
 
-const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [] }) => {
+const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], currentUser = null, isLoading = false }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [emailInput, setEmailInput] = useState('')
 
@@ -65,11 +64,11 @@ const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [] }) =>
     onClose()
   }
 
-  // Use imported mock data if no available people provided
-  const peopleList = availablePeople.length > 0 ? availablePeople : mockPeople
+  // Combine current user with available people
+  const allPeople = currentUser ? [currentUser, ...availablePeople] : availablePeople
 
   // Filter people based on search query
-  const filteredPeople = peopleList.filter(
+  const filteredPeople = allPeople.filter(
     (person) =>
       person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       person.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -208,7 +207,11 @@ const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [] }) =>
             pt: 2,
           }}
         >
-          {filteredPeople.length > 0 ? (
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : filteredPeople.length > 0 ? (
             filteredPeople.map((person) => (
               <Box
                 sx={(theme) => ({

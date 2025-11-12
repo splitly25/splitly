@@ -21,7 +21,6 @@ function App() {
   const currentUser = useSelector(selectCurrentUser)
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/groups" element={<Groups />} />
       <Route path="/history" element={<History />} />
@@ -37,7 +36,7 @@ function App() {
       <Route path="/login" element={<Auth />} />
       <Route path="/register" element={<Auth />} />
       <Route path="/account/verification" element={<AccountVerification />} />
-
+      <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

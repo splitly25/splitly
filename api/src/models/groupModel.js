@@ -72,15 +72,42 @@ const getAll = async () => {
   }
 }
 
+// find all group user is member of and join member details
 const getGroupsByUser = async (userId) => {
   try {
     const result = await GET_DB()
       .collection(GROUP_COLLECTION_NAME)
-      .find({
-        members: userId,
-        _destroy: false,
-      })
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $match: {
+            members: new ObjectId(userId),
+            _destroy: false,
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+          },
+        },
+        {
+          $addFields: {
+            members: '$memberDetails',
+          },
+        },
+        {
+          $project: {
+            memberDetails: 0,
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ])
       .toArray()
     return result
   } catch (error) {

@@ -17,4 +17,6 @@ Router.route('/logout').delete(authMiddleware.isAuthorized, userController.logou
 
 Router.route('/:userId').get(authMiddleware.isAuthorized, userController.getUserById)
 
+Router.route('/email/:email').get(authMiddleware.isAuthorized, userController.getUserByEmail)
+
 export const userRoute = Router

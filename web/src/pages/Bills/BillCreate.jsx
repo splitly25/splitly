@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
@@ -22,8 +22,8 @@ import ParticipantCard from '~/components/Form/ParticipantCard'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
-// import { createBillAPI } from '~/apis'
-import { categoryOptions, mockGroups, mockPeople } from '~/apis/mock-data'
+import { createBillAPI, getGroupsByUserIdAPI, getAllGroupsAndMembersAPI } from '~/apis'
+import { categoryOptions } from '~/apis/mock-data'
 import { useForm, Controller } from 'react-hook-form'
 
 const SectionCard = styled(Card)(({ theme }) => ({
@@ -111,7 +111,62 @@ function BillCreate() {
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState(null)
 
-  const payerOptions = participants.map((p) => ({ value: p.id, label: p.name }))
+  // Real data states
+  const [availableGroups, setAvailableGroups] = useState([])
+  const [availablePeople, setAvailablePeople] = useState([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // Fetch groups and extract all unique members
+  useEffect(() => {
+    const fetchGroupsAndMembers = async () => {
+      if (!currentUser?._id) return
+
+      try {
+        setIsLoadingData(true)
+        // Fetch all groups and their members
+        const groupsData = await getAllGroupsAndMembersAPI()
+
+        // Transform groups data to match the expected format
+        const transformedGroups = groupsData.map(group => ({
+          id: group._id,
+          name: group.groupName,
+          members: group.members.map(member => ({
+            id: member._id,
+            name: member.name,
+            email: member.email,
+            avatar: member.avatar
+          }))
+        }))
+
+        // Extract all unique members from all groups
+        const allMembersMap = new Map()
+        groupsData.forEach(group => {
+          group.members.forEach(member => {
+            if (!allMembersMap.has(member._id)) {
+              allMembersMap.set(member._id, {
+                id: member._id,
+                name: member.name,
+                email: member.email,
+                avatar: member.avatar
+              })
+            }
+          })
+        })
+
+        const uniqueMembers = Array.from(allMembersMap.values())
+
+        setAvailableGroups(transformedGroups)
+        setAvailablePeople(uniqueMembers)
+      } catch (error) {
+        console.error('Error fetching groups and members:', error)
+        setSubmitError('Không thể tải danh sách nhóm và thành viên')
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    fetchGroupsAndMembers()
+  }, [currentUser?._id])
 
   const handleAddParticipants = (newParticipants) => {
     const participantsToAdd = newParticipants.map((p) => ({
@@ -211,7 +266,7 @@ function BillCreate() {
       }
 
       console.log('Submitting bill data:', billData)
-      //await createBillAPI(billData)
+      await createBillAPI(billData)
       navigate('/history')
     } catch (error) {
       console.error('Error creating bill:', error)
@@ -692,8 +747,9 @@ function BillCreate() {
         open={openParticipantDialog}
         onClose={() => setOpenParticipantDialog(false)}
         onAdd={handleAddParticipants}
-        availablePeople={mockPeople}
-        availableGroups={mockGroups}
+        availablePeople={availablePeople}
+        availableGroups={availableGroups}
+        isLoading={isLoadingData}
       />
 
       {/* Select Payer Dialog */}
@@ -701,7 +757,9 @@ function BillCreate() {
         open={openPayerDialog}
         onClose={() => setOpenPayerDialog(false)}
         onSelect={handleSelectPayer}
-        availablePeople={[currentUser, ...mockPeople]}
+        availablePeople={availablePeople}
+        currentUser={currentUser}
+        isLoading={isLoadingData}
       />
     </Box>
   )

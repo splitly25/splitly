@@ -63,6 +63,16 @@ const getUserById = async (req, res, next) => {
   }
 }
 
+const getUserByEmail = async (req, res, next) => {
+  try {
+    const email = req.params.email
+    const user = await userService.findOneByEmail(email)
+    res.status(StatusCodes.OK).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -70,4 +80,5 @@ export const userController = {
   logout,
   getAllUsers,
   getUserById,
+  getUserByEmail,
 }
