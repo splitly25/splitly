@@ -213,13 +213,7 @@ const update = async (billId, updateData, updatedBy) => {
 const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
   try {
     const bill = await billModel.findOneById(billId)
-    
     const result = await billModel.markAsPaid(billId, userId, amountPaid)
-    
-    const bill = await billModel.findOneById(billId);
-
-    const result = await billModel.markAsPaid(billId, userId);
-
     // Log payment activity
     if (paidBy) {
       try {
@@ -244,11 +238,6 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
       }
     }
     
-    // Check if all participants have paid fully
-    const updatedBill = await billModel.findOneById(billId)
-    const allPaid = updatedBill.paymentStatus.every(status => 
-      (status.amountPaid || 0) >= status.amountOwed
-    )
     
 
     // Check if all participants have paid
