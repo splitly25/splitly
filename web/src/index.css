@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+.main-container {
+    @apply p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-gray-50;
+}

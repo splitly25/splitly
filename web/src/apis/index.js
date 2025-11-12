@@ -14,6 +14,26 @@ export const fetchHistoryDataAPI = async (userId, numPage, limit, search, settle
   return response.data
 }
 
+export const fetchHistorySearchingAPI = async(userId, numPage, limit, search, settled) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/search/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`)
+  return response.data
+
+}
+
+export const fetchHistoryFilterAPI = async(userId, numPage, limit, fromDate, toDate, payer) => {
+  const params = new URLSearchParams({
+    page: numPage,
+    limit: limit
+  })
+  
+  if (fromDate) params.append('fromDate', fromDate)
+  if (toDate) params.append('toDate', toDate)
+  if (payer) params.append('payer', payer)
+  
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/filter/${userId}?${params.toString()}`)
+  return response.data
+}
+
 export const fetchDebtsOwedToMeAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/owed-to-me`)
   return response.data
@@ -93,5 +113,15 @@ export const getGroupsByUserIdAPI = async (userId) => {
 
 export const getGroupByIdAPI = async (groupId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/${groupId}`)
+  return response.data
+}
+
+
+// OCR Bill
+export const sendOcrBillAPI = async(imageData, userId) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills/scan`, {
+    userId: userId, 
+    imageData: imageData
+  })
   return response.data
 }

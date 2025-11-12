@@ -17,6 +17,13 @@ const ProtectedRoute = ({ user }) => {
   return <Outlet />
 }
 
+import NotFound from "./pages/404/NotFound"
+import Auth from "./pages/Auth/Auth"
+import Dashboard from "./pages/Dashboard"
+import Groups from "./pages/Groups"
+import History from "./pages/History"
+import Debt from "./pages/Debt"
+import Ocr from "./pages/Bill"
 function App() {
   const currentUser = useSelector(selectCurrentUser)
   return (
@@ -38,6 +45,21 @@ function App() {
       <Route path="/account/verification" element={<AccountVerification />} />
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="*" element={<NotFound />} />
+      <Route path='/' element={
+        <Navigate
+          to='/dashboard'
+          replace={true}
+        />}
+      />
+      <Route path='/dashboard' element={<Dashboard />} />
+      <Route path='/groups' element={<Groups />} />
+      <Route path='/history' element={<History />} />
+      <Route path='/debt' element={<Debt />} />
+      <Route path='ocr' element={<Ocr/>} />
+      <Route path='/login' element={<Auth />} />
+      <Route path='/register' element={<Auth />} />
+      
+      <Route path='*' element={<NotFound />} />
     </Routes>
   )
 }

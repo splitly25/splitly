@@ -22,7 +22,7 @@ const START_SERVER = () => {
   app.use(cookieParser())
   // Middleware to enable CORS with proper configuration
   app.use(cors(corsOptions))
-  app.use(express.json())
+  app.use(express.json({limit: '20mb'}))
   app.use('/v1', APIs_V1)
   app.use(errorHandlingMiddleware)
 

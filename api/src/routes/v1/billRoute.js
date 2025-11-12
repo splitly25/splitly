@@ -8,4 +8,9 @@ const Router = express.Router()
 Router.route('/').post(authMiddleware.isAuthorized, billValidation.createNew, billController.createNew)
 Router.route('/user/:userId').get(authMiddleware.isAuthorized, billController.getBillsByUserId)
 
+Router.route('/')
+  .post(billValidation.createNew, billController.createNew)
+
+Router.route('/scan')
+  .post(billValidation.scan, billController.scan)
 export const billRoute = Router
