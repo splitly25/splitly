@@ -15,6 +15,11 @@ const getDashboardData = async (req, res, next) => {
   try {
     const { userId } = req.params
     
+    // Security check: Verify that the authenticated user is requesting their own data
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own dashboard data')
+    }
+    
     // Validate user exists
     const user = await userModel.findOneById(userId)
     if (!user) {
