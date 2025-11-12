@@ -22,8 +22,14 @@ const getDebtsOwedToMe = async (userId) => {
     
     billsAsPayer.forEach(bill => {
       bill.paymentStatus?.forEach(payment => {
-        // Skip if it's the current user or if already paid
-        if (payment.userId === userId || payment.isPaid) return
+        // Skip if it's the current user
+        if (payment.userId === userId) return
+        
+        const amountPaid = payment.amountPaid || 0
+        const remainingAmount = payment.amountOwed - amountPaid
+        
+        // Skip if fully paid
+        if (remainingAmount <= 0) return
         
         // Add to debt total for this user
         if (!debtsByUser[payment.userId]) {
@@ -34,12 +40,13 @@ const getDebtsOwedToMe = async (userId) => {
           }
         }
         
-        debtsByUser[payment.userId].totalAmount += payment.amountOwed
+        debtsByUser[payment.userId].totalAmount += remainingAmount
         debtsByUser[payment.userId].bills.push({
           billId: bill._id.toString(),
           billName: bill.billName,
           amountOwed: payment.amountOwed,
-          isPaid: payment.isPaid
+          amountPaid: amountPaid,
+          remainingAmount: remainingAmount
         })
       })
     })
@@ -60,6 +67,8 @@ const getDebtsOwedToMe = async (userId) => {
         userName: user?.name || 'Unknown User',
         userAvatar: user?.avatar || null,
         userEmail: user?.email || null,
+        bankName: user?.bankName || null,
+        bankAccount: user?.bankAccount || null,
         totalAmount: Math.round(debtsByUser[debtorId].totalAmount),
         bills: debtsByUser[debtorId].bills
       }
@@ -89,8 +98,14 @@ const getDebtsIOwe = async (userId) => {
       // Find current user's payment status
       const myPayment = bill.paymentStatus?.find(payment => payment.userId === userId)
       
-      // Skip if not found, already paid, or user is the payer
-      if (!myPayment || myPayment.isPaid || bill.payerId === userId) return
+      // Skip if not found or user is the payer
+      if (!myPayment || bill.payerId === userId) return
+      
+      const amountPaid = myPayment.amountPaid || 0
+      const remainingAmount = myPayment.amountOwed - amountPaid
+      
+      // Skip if fully paid
+      if (remainingAmount <= 0) return
       
       // Add to debt total for this payer
       if (!debtsByPayer[bill.payerId]) {
@@ -101,12 +116,13 @@ const getDebtsIOwe = async (userId) => {
         }
       }
       
-      debtsByPayer[bill.payerId].totalAmount += myPayment.amountOwed
+      debtsByPayer[bill.payerId].totalAmount += remainingAmount
       debtsByPayer[bill.payerId].bills.push({
         billId: bill._id.toString(),
         billName: bill.billName,
         amountOwed: myPayment.amountOwed,
-        isPaid: myPayment.isPaid
+        amountPaid: amountPaid,
+        remainingAmount: remainingAmount
       })
     })
     
@@ -126,6 +142,8 @@ const getDebtsIOwe = async (userId) => {
         userName: user?.name || 'Unknown User',
         userAvatar: user?.avatar || null,
         userEmail: user?.email || null,
+        bankName: user?.bankName || null,
+        bankAccount: user?.bankAccount || null,
         totalAmount: Math.round(debtsByPayer[payerId].totalAmount),
         bills: debtsByPayer[payerId].bills
       }
