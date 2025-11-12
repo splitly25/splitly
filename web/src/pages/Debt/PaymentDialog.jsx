@@ -7,7 +7,8 @@ import {
   Box,
   Typography,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  CircularProgress
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
@@ -18,6 +19,7 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [qrLoading, setQrLoading] = useState(false)
 
   // Set amount when dialog opens or creditor changes
   useEffect(() => {
@@ -31,13 +33,16 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
     if (creditor?.bankName && creditor?.bankAccount && amount) {
       const amountValue = parseFloat(amount) || 0
       if (amountValue > 0) {
+        setQrLoading(true)
         const qrUrl = `https://img.vietqr.io/image/${creditor.bankName}-${creditor.bankAccount}-qr_only.png?amount=${amountValue}`
         setQrCodeUrl(qrUrl)
       } else {
         setQrCodeUrl('')
+        setQrLoading(false)
       }
     } else {
       setQrCodeUrl('')
+      setQrLoading(false)
     }
   }, [amount, creditor?.bankName, creditor?.bankAccount])
 
@@ -241,9 +246,19 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
                   mt: 2,
                   pt: 2,
                   borderTop: '1px solid',
-                  borderColor: 'divider'
+                  borderColor: 'divider',
+                  minHeight: '220px'
                 }}
               >
+                {qrLoading && (
+                  <CircularProgress 
+                    size={40} 
+                    sx={{ 
+                      color: 'primary.main',
+                      position: 'absolute'
+                    }} 
+                  />
+                )}
                 <Box
                   component="img"
                   src={qrCodeUrl}
@@ -254,10 +269,13 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
                     objectFit: 'contain',
                     borderRadius: '8px',
                     bgcolor: 'white',
-                    p: 1
+                    p: 1,
+                    display: qrLoading ? 'none' : 'block'
                   }}
+                  onLoad={() => setQrLoading(false)}
                   onError={(e) => {
                     console.error('Failed to load QR code')
+                    setQrLoading(false)
                     e.target.style.display = 'none'
                   }}
                 />
