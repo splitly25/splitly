@@ -15,4 +15,6 @@ Router.route('/')
 
 Router.route('/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupById)
 
+Router.route('/user/:userId').get(authMiddleware.isAuthorized, groupController.getGroupsByUserId)
+
 export const groupRoute = Router

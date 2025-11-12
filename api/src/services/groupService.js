@@ -296,6 +296,20 @@ const getAllGroupsAndMembers = async () => {
   }
 }
 
+const getGroupsByUserId = async (userId) => {
+  try {
+    const groups = await groupModel.getGroupsByUser(userId)
+    return groups.map((group) => {
+      if (group.members && Array.isArray(group.members)) {
+        group.members = group.members.map((member) => pickUser(member))
+      }
+      return group
+    })
+  } catch (error) {
+    throw error
+  }
+}
+
 export const groupService = {
   createNew,
   getAll,
@@ -308,4 +322,5 @@ export const groupService = {
   deleteOneById,
   getGroupAndMembers,
   getAllGroupsAndMembers,
+  getGroupsByUserId
 }

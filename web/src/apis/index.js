@@ -2,38 +2,42 @@ import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
 import { toast } from 'react-toastify'
 
-export const fetchDashboardDataAPI = async(userId) => {
+export const fetchDashboardDataAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboard/${userId}`)
   return response.data
 }
 
-export const fetchHistoryDataAPI = async(userId, numPage, limit, search, settled) => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`)
+export const fetchHistoryDataAPI = async (userId, numPage, limit, search, settled) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/history/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`
+  )
   return response.data
 }
 
-export const fetchDebtsOwedToMeAPI = async(userId) => {
+export const fetchDebtsOwedToMeAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/owed-to-me`)
   return response.data
 }
 
-export const fetchDebtsIOweAPI = async(userId) => {
+export const fetchDebtsIOweAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/i-owe`)
   return response.data
 }
 
-export const fetchDebtSummaryAPI = async(userId) => {
+export const fetchDebtSummaryAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/debts/${userId}/summary`)
   return response.data
 }
 
-export const submitPaymentRequestAPI = async(userId, paymentData) => {
+export const submitPaymentRequestAPI = async (userId, paymentData) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/payment`, paymentData)
   toast.success('Yêu cầu thanh toán đã được gửi thành công!', { theme: 'colored' })
   return response.data
 }
 
-// User APIs
+// ============================================
+// USERS APIs
+// ============================================
 export const registerUserAPI = async (userData) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/register`, userData)
   toast.success('Registration successful! Please check your email to verify your account.', { theme: 'colored' })
@@ -43,6 +47,16 @@ export const registerUserAPI = async (userData) => {
 export const verifyUserAccountAPI = async (data) => {
   const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/verify_account`, data)
   toast.success('Account verified successfully! Now you can log in.', { theme: 'colored' })
+  return response.data
+}
+
+export const getUserByEmailAPI = async (email) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users/email/${email}`)
+  return response.data
+}
+
+export const getUserByIdAPI = async (userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users/${userId}`)
   return response.data
 }
 
@@ -60,5 +74,24 @@ export const createBillAPI = async (billData) => {
 // Get all bills for a user
 export const fetchUserBillsAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/bills/user/${userId}`)
+  return response.data
+}
+
+// ============================================
+// GROUP APIs
+// ============================================
+
+export const getAllGroupsAndMembersAPI = async () => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/getAllGroupAndMembers`)
+  return response.data
+}
+
+export const getGroupsByUserIdAPI = async (userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/user/${userId}`)
+  return response.data
+}
+
+export const getGroupByIdAPI = async (groupId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/${groupId}`)
   return response.data
 }

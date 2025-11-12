@@ -9,10 +9,10 @@ import {
   Checkbox,
   IconButton,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { COLORS } from '~/theme'
-import { mockPeople, mockGroups } from '~/apis/mock-data'
 import SearchIcon from '@mui/icons-material/Search'
 import GroupIcon from '@mui/icons-material/Group'
 import EmailIcon from '@mui/icons-material/Email'
@@ -241,7 +241,7 @@ const AddByEmailButton = styled(Button)(({ theme }) => ({
   },
 }))
 
-const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], availableGroups = [] }) => {
+const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], availableGroups = [], isLoading = false }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPeople, setSelectedPeople] = useState([])
   const [selectedGroups, setSelectedGroups] = useState([])
@@ -354,9 +354,9 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
     onClose()
   }
 
-  // Use imported mock data if no available people/groups provided
-  const peopleList = availablePeople.length > 0 ? availablePeople : mockPeople
-  const groupsList = availableGroups.length > 0 ? availableGroups : mockGroups
+  // Use provided available people and groups
+  const peopleList = availablePeople
+  const groupsList = availableGroups
 
   // Get all selected person IDs (from individual selections, email additions, and groups)
   const selectedPersonIds = new Set([
@@ -614,7 +614,18 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
               <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>Available People</Typography>
             </SectionHeader>
             <Box sx={{ maxHeight: '300px', overflowY: 'auto', mb: 2 }}>
-              {filteredPeople.map((person) => {
+              {isLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : filteredPeople.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                    Không tìm thấy người nào
+                  </Typography>
+                </Box>
+              ) : (
+                filteredPeople.map((person) => {
                 const isSelected = selectedPeople.find((p) => p.id === person.id)
                 return (
                   <PersonRow key={person.id}>
@@ -647,7 +658,8 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                     <AddButton onClick={() => handleTogglePerson(person)}>Add</AddButton>
                   </PersonRow>
                 )
-              })}
+              })
+              )}
             </Box>
           </Box>
 
@@ -660,7 +672,18 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
               </Box>
             </SectionHeader>
             <Box sx={{ mt: 2 }}>
-              {filteredGroups.map((group) => {
+              {isLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : filteredGroups.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                    Không tìm thấy nhóm nào
+                  </Typography>
+                </Box>
+              ) : (
+                filteredGroups.map((group) => {
                 const isSelected = selectedGroups.find((g) => g.id === group.id)
                 const displayMembers = group.members.slice(0, 3)
                 const remainingCount = group.members.length - 3
@@ -698,7 +721,8 @@ const AddParticipantDialog = ({ open, onClose, onAdd, availablePeople = [], avai
                     </AddGroupButton>
                   </GroupCard>
                 )
-              })}
+              })
+              )}
             </Box>
           </Box>
         </RightPanel>

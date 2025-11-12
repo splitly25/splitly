@@ -236,14 +236,13 @@ const findOneById = async (userId) => {
   }
 }
 
-/**
- * Get user by email
- * @param {string} email - User email
- * @returns {Promise<Object>} User object
- */
 const findOneByEmail = async (email) => {
   try {
-    return await userModel.findOneByEmail(email)
+    const user = await userModel.findOneByEmail(email)
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+    return pickUser(user)
   } catch (error) {
     throw error
   }
