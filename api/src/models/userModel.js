@@ -18,6 +18,8 @@ const USER_COLLECTION_SCHEMA = Joi.object({
     .optional()
     .pattern(/^[0-9]{10,11}$/)
     .default(null),
+  bankName: Joi.string().optional().default(null),
+  bankAccount: Joi.string().optional().default(null),
   password: Joi.string().required(),
   isVerified: Joi.boolean().default(false),
   userType: Joi.string()

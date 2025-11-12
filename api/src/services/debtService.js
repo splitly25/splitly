@@ -67,6 +67,8 @@ const getDebtsOwedToMe = async (userId) => {
         userName: user?.name || 'Unknown User',
         userAvatar: user?.avatar || null,
         userEmail: user?.email || null,
+        bankName: user?.bankName || null,
+        bankAccount: user?.bankAccount || null,
         totalAmount: Math.round(debtsByUser[debtorId].totalAmount),
         bills: debtsByUser[debtorId].bills
       }
@@ -140,6 +142,8 @@ const getDebtsIOwe = async (userId) => {
         userName: user?.name || 'Unknown User',
         userAvatar: user?.avatar || null,
         userEmail: user?.email || null,
+        bankName: user?.bankName || null,
+        bankAccount: user?.bankAccount || null,
         totalAmount: Math.round(debtsByPayer[payerId].totalAmount),
         bills: debtsByPayer[payerId].bills
       }
