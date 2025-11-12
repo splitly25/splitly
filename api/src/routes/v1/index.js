@@ -6,6 +6,7 @@ import { historyRoute } from '~/routes/v1/historyRoute'
 import { billRoute } from '~/routes/v1/billRoute'
 import { userRoute } from './userRoute'
 import { debtRoute } from './debtRoute'
+import { assistantRoute } from './assistantRoute'
 import { groupRoute } from './groupRoute'
 
 const Router = express.Router()
@@ -29,6 +30,9 @@ Router.use('/users', userRoute)
 
 // Debt API routes
 Router.use('/debts', debtRoute)
+
+// AI API routes
+Router.use('/assistant', assistantRoute)
 
 // Group all V1 APIs
 Router.use('/groups', groupRoute)
