@@ -21,38 +21,26 @@ function App() {
   const currentUser = useSelector(selectCurrentUser)
   return (
     <Routes>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/groups" element={<Groups />} />
-      <Route path="/history" element={<History />} />
-      <Route path="/debt" element={<Debt />} />
 
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/groups" element={<Groups />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/debt" element={<Debt />} />
         <Route path="/boards/:boardId" element={<Board />} />
         <Route path="/create" element={<Bills />} />
+        <Route path="/ocr" element={<Ocr />} />
       </Route>
 
-      {/* AuthenticationRoutes */}
+      {/* Authentication Routes */}
       <Route path="/login" element={<Auth />} />
       <Route path="/register" element={<Auth />} />
       <Route path="/account/verification" element={<AccountVerification />} />
+      
+      {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="*" element={<NotFound />} />
-      <Route path='/' element={
-        <Navigate
-          to='/dashboard'
-          replace={true}
-        />}
-      />
-      <Route path='/dashboard' element={<Dashboard />} />
-      <Route path='/groups' element={<Groups />} />
-      <Route path='/history' element={<History />} />
-      <Route path='/debt' element={<Debt />} />
-      <Route path='ocr' element={<Ocr/>} />
-      <Route path='/login' element={<Auth />} />
-      <Route path='/register' element={<Auth />} />
-      
-      <Route path='*' element={<NotFound />} />
     </Routes>
   )
 }
