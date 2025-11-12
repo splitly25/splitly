@@ -8,22 +8,15 @@ import History from './pages/History'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from './redux/user/userSlice'
 import { Outlet } from 'react-router-dom'
-import Bills from './pages/Bills/Bills'
 import Debt from './pages/Debt'
 import AccountVerification from './pages/Auth/AccountVerification'
+import { Ocr, Bills } from "./pages/Bills"
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
   return <Outlet />
 }
 
-import NotFound from "./pages/404/NotFound"
-import Auth from "./pages/Auth/Auth"
-import Dashboard from "./pages/Dashboard"
-import Groups from "./pages/Groups"
-import History from "./pages/History"
-import Debt from "./pages/Debt"
-import Ocr from "./pages/Bill"
 function App() {
   const currentUser = useSelector(selectCurrentUser)
   return (
