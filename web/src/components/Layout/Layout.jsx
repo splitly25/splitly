@@ -40,6 +40,7 @@ import { useDispatch } from 'react-redux'
 import { logoutUserAPI } from '~/redux/user/userSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
+import NotificationsIcon from '@mui/icons-material/Notifications'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
 const SIDEBAR_WIDTH_COLLAPSED = 80
@@ -67,7 +68,7 @@ const Layout = ({ children }) => {
   const [chatbotWindowOpen, setChatbotWindowOpen] = useState(false)
   // eslint-disable-next-line no-unused-vars
   const [numberOfNotifications, setNumberOfNotifications] = useState(2)
-  const [newMessage, setNewMessage] = useState("You have a new message from TingTing Bot!")
+  const [newMessage, setNewMessage] = useState('You have a new message from TingTing Bot!')
 
   // Dynamic chatbot width based on screen size
   const chatbotWidth = isMobile ? '100vw' : isSmallScreen ? '45vw' : '30vw'
@@ -209,12 +210,7 @@ const Layout = ({ children }) => {
         {menuItems.map((item, index) => {
           const isActive = isActivePath(item.path)
           return (
-            <Tooltip
-              key={index}
-              title={!isExpanded ? item.label : ''}
-              placement="right"
-              arrow
-            >
+            <Tooltip key={index} title={!isExpanded ? item.label : ''} placement="right" arrow>
               <Button
                 onClick={() => handleNavigate(item.path)}
                 sx={{
@@ -226,11 +222,7 @@ const Layout = ({ children }) => {
                   textTransform: 'none',
                   fontSize: '16px',
                   fontWeight: 400,
-                  color: isActive
-                    ? mode === 'dark'
-                      ? COLORS.primary
-                      : COLORS.secondary
-                    : 'text.primary',
+                  color: isActive ? (mode === 'dark' ? COLORS.primary : COLORS.secondary) : 'text.primary',
                   background: isActive
                     ? mode === 'dark'
                       ? 'linear-gradient(90deg, rgba(239, 154, 154, 0.15) 0%, rgba(206, 147, 216, 0.15) 100%)'
@@ -246,11 +238,7 @@ const Layout = ({ children }) => {
                   '& .MuiButton-startIcon': {
                     marginRight: isExpanded ? '12px' : 0,
                     marginLeft: 0,
-                    color: isActive
-                      ? mode === 'dark'
-                        ? COLORS.primary
-                        : COLORS.secondary
-                      : 'inherit',
+                    color: isActive ? (mode === 'dark' ? COLORS.primary : COLORS.secondary) : 'inherit',
                   },
                 }}
                 startIcon={item.icon}
@@ -343,11 +331,7 @@ const Layout = ({ children }) => {
             },
           }}
         >
-          {isExpanded ? (
-            <ChevronLeftIcon fontSize="small" />
-          ) : (
-            <ChevronRightIcon fontSize="small" />
-          )}
+          {isExpanded ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
         </IconButton>
       )}
     </Box>
@@ -680,6 +664,29 @@ const Layout = ({ children }) => {
         )}
       </IconButton>
 
+      {/* Notifications Button - Top Right */}
+      <IconButton
+        sx={{
+          position: 'fixed',
+          top: 16,
+          right: chatbotWindowOpen && !isMobile ? `calc(${chatbotWidth} + 72px)` : 72,
+          zIndex: 1200,
+          width: 40,
+          height: 40,
+          backgroundColor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          transition: 'right 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            backgroundColor: 'background.paper',
+            borderColor: COLORS.primary,
+          },
+        }}
+      >
+        <NotificationsIcon fontSize="small" sx={{ color: 'text.primary' }} />
+      </IconButton>
+
       {/* Chatbot Button */}
       <ChatbotButton
         isOpen={chatbotWindowOpen}
@@ -699,11 +706,7 @@ const Layout = ({ children }) => {
           left: isMobile ? 0 : 'auto',
           height: isMobile ? '70vh' : '100vh',
           width: chatbotWidth,
-          transform: chatbotWindowOpen
-            ? 'translate(0, 0)'
-            : isMobile
-              ? 'translateY(100%)'
-              : 'translateX(100%)',
+          transform: chatbotWindowOpen ? 'translate(0, 0)' : isMobile ? 'translateY(100%)' : 'translateX(100%)',
           transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           zIndex: 1199,
           borderTopLeftRadius: isMobile ? '20px' : 0,
@@ -711,7 +714,7 @@ const Layout = ({ children }) => {
           overflow: 'hidden',
         }}
       >
-        <ChatbotWindow isOpen={chatbotWindowOpen} setIsOpen={setChatbotWindowOpen}/>
+        <ChatbotWindow isOpen={chatbotWindowOpen} setIsOpen={setChatbotWindowOpen} />
       </Box>
 
       {/* Create Menu */}

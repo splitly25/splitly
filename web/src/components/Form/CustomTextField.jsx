@@ -71,6 +71,12 @@ const CustomTextField = ({ label, required, enableAutoCalculate, onChange, onBlu
     <StyledTextField
       label={required ? `${label} *` : label}
       InputLabelProps={{ shrink: true }}
+      slotProps={{
+        input: {
+          notched: false,
+          ...props.InputProps,
+        },
+      }}
       fullWidth
       value={value}
       onChange={onChange}
