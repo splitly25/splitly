@@ -6,6 +6,7 @@ import {historyRoute} from '~/routes/v1/historyRoute'
 import { billRoute } from '~/routes/v1/billRoute'
 import { userRoute } from './userRoute'
 import { debtRoute } from './debtRoute'
+import { assistantRoute } from './assistantRoute'
 
 const Router = express.Router()
 
@@ -28,5 +29,8 @@ Router.use('/users', userRoute)
 
 // Debt API routes
 Router.use('/debts', debtRoute)
+
+// AI API routes
+Router.use('/assistant', assistantRoute)
 
 export const APIs_V1 = Router

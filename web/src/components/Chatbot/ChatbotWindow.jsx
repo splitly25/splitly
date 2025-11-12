@@ -3,7 +3,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import TingTingGif from '~/assets/tingting.gif';
 import TingTingPng from '~/assets/tingting.png';
-import StopIcon from '@mui/icons-material/Stop';
 
 const ChatbotWindow = ({ isOpen, setIsOpen }) => {
   const [messages, setMessages] = useState(() => {
@@ -48,7 +47,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
       const botMessage = {
         id: messages.length + 2,
         text: 'Cảm ơn bạn đã nhắn tin! Tôi đang xử lý yêu cầu của bạn...',
-        sender: 'bot',
+        sender: 'assistant',
         time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN')
       };
       setMessages(prev => [...prev, botMessage]);
