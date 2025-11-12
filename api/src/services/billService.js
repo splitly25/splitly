@@ -19,9 +19,9 @@ const createNew = async (reqBody, options = {}) => {
       paymentStatus = reqBody.participants.map((userId) => ({
         userId: userId,
         amountOwed: amountPerPerson,
-        isPaid: userId === reqBody.payerId, // Payer already paid
-        paidDate: userId === reqBody.payerId ? Date.now() : null,
-      }));
+        amountPaid: userId === reqBody.payerId ? amountPerPerson : 0, // Payer already paid
+        paidDate: userId === reqBody.payerId ? Date.now() : null
+      }))
     } else if (reqBody.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
       const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0);
@@ -43,6 +43,9 @@ const createNew = async (reqBody, options = {}) => {
       paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
         userId: userId,
         amountOwed: Math.round(amount),
+        amountPaid: userId === reqBody.payerId ? Math.round(amount) : 0,
+        paidDate: userId === reqBody.payerId ? Date.now() : null
+      }))
         isPaid: userId === reqBody.payerId,
         paidDate: userId === reqBody.payerId ? Date.now() : null,
       }));
@@ -200,14 +203,19 @@ const update = async (billId, updateData, updatedBy) => {
 };
 
 /**
- * Mark bill as paid for a user
+ * Mark bill as paid for a user (full or partial payment)
  * @param {string} billId - Bill ID
  * @param {string} userId - User ID who paid
+ * @param {number} amountPaid - Amount paid
  * @param {string} paidBy - User ID who marked as paid (for logging)
  * @returns {Promise<Object>} Update result
  */
-const markAsPaid = async (billId, userId, paidBy) => {
+const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
   try {
+    const bill = await billModel.findOneById(billId)
+    
+    const result = await billModel.markAsPaid(billId, userId, amountPaid)
+    
     const bill = await billModel.findOneById(billId);
 
     const result = await billModel.markAsPaid(billId, userId);
@@ -215,6 +223,17 @@ const markAsPaid = async (billId, userId, paidBy) => {
     // Log payment activity
     if (paidBy) {
       try {
+        await activityModel.logBillActivity(
+          activityModel.ACTIVITY_TYPES.BILL_PAID,
+          paidBy,
+          billId,
+          {
+            billName: bill.billName,
+            amountPaid: amountPaid,
+            paymentStatus: 'paid',
+            description: `Payment of ${amountPaid} for bill: ${bill.billName}`
+          }
+        )
         await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_PAID, paidBy, billId, {
           billName: bill.billName,
           paymentStatus: 'paid',
@@ -224,6 +243,13 @@ const markAsPaid = async (billId, userId, paidBy) => {
         console.warn('Failed to log bill payment activity:', activityError.message);
       }
     }
+    
+    // Check if all participants have paid fully
+    const updatedBill = await billModel.findOneById(billId)
+    const allPaid = updatedBill.paymentStatus.every(status => 
+      (status.amountPaid || 0) >= status.amountOwed
+    )
+    
 
     // Check if all participants have paid
     const updatedBill = await billModel.findOneById(billId);

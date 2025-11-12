@@ -40,8 +40,25 @@ const getDebtSummary = async (req, res, next) => {
   }
 }
 
+/**
+ * Initiate payment request
+ */
+const initiatePayment = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const { creditorId, amount, note } = req.body
+    
+    const result = await debtService.initiatePayment(userId, creditorId, amount, note)
+    
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
-  getDebtSummary
+  getDebtSummary,
+  initiatePayment
 }
