@@ -1,19 +1,25 @@
 import Joi from 'joi'
 import { GET_DB } from '~/config/mongodb.js'
 import { ObjectId } from 'mongodb'
+import { userModel } from './userModel'
 
 const GROUP_COLLECTION_NAME = 'groups'
 
 const GROUP_COLLECTION_SCHEMA = Joi.object({
   groupName: Joi.string().required().trim().min(1).max(100),
   description: Joi.string().trim().max(500).default(''),
-  creatorId: Joi.string().required(),
-  members: Joi.array().items(Joi.string()).min(1).required(),
-  bills: Joi.array().items(Joi.string()).default([]),
+  creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
+  members: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
+    .min(1)
+    .required(),
+  bills: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
+    .default([]),
   avatar: Joi.string().uri().default(null),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(null),
-  _destroy: Joi.boolean().default(false)
+  _destroy: Joi.boolean().default(false),
 })
 
 const INVALID_UPDATE_FIELDS = ['_id', 'creatorId', 'createdAt']
@@ -27,7 +33,7 @@ const createNew = async (data) => {
     const validData = await validateBeforeCreate(data)
     const newGroupToAdd = {
       ...validData,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     }
     const createdGroup = await GET_DB().collection(GROUP_COLLECTION_NAME).insertOne(newGroupToAdd)
     return createdGroup
@@ -38,9 +44,15 @@ const createNew = async (data) => {
 
 const findOneById = async (groupId) => {
   try {
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOne({
-      _id: new ObjectId(groupId)
-    })
+    // Validate ObjectId before creating
+    if (!ObjectId.isValid(groupId)) {
+      throw new Error(`Invalid group ID format: ${JSON.stringify(groupId)} (type: ${typeof groupId})`)
+    }
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .findOne({
+        _id: new ObjectId(groupId),
+      })
     return result
   } catch (error) {
     throw new Error(error)
@@ -60,15 +72,42 @@ const getAll = async () => {
   }
 }
 
+// find all group user is member of and join member details
 const getGroupsByUser = async (userId) => {
   try {
     const result = await GET_DB()
       .collection(GROUP_COLLECTION_NAME)
-      .find({
-        members: userId,
-        _destroy: false
-      })
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $match: {
+            members: new ObjectId(userId),
+            _destroy: false,
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+          },
+        },
+        {
+          $addFields: {
+            members: '$memberDetails',
+          },
+        },
+        {
+          $project: {
+            memberDetails: 0,
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ])
       .toArray()
     return result
   } catch (error) {
@@ -78,17 +117,19 @@ const getGroupsByUser = async (userId) => {
 
 const update = async (groupId, updateData) => {
   try {
-    Object.keys(updateData).forEach(fieldName => {
+    Object.keys(updateData).forEach((fieldName) => {
       if (INVALID_UPDATE_FIELDS.includes(fieldName)) {
         delete updateData[fieldName]
       }
     })
 
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
-      { _id: new ObjectId(groupId) },
-      { $set: { ...updateData, updatedAt: Date.now() } },
-      { returnDocument: 'after' }
-    )
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(groupId) },
+        { $set: { ...updateData, updatedAt: Date.now() } },
+        { returnDocument: 'after' }
+      )
     return result
   } catch (error) {
     throw new Error(error)
@@ -97,14 +138,16 @@ const update = async (groupId, updateData) => {
 
 const addMember = async (groupId, memberId) => {
   try {
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
-      { _id: new ObjectId(groupId) },
-      { 
-        $addToSet: { members: memberId },
-        $set: { updatedAt: Date.now() }
-      },
-      { returnDocument: 'after' }
-    )
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(groupId) },
+        {
+          $addToSet: { members: memberId },
+          $set: { updatedAt: Date.now() },
+        },
+        { returnDocument: 'after' }
+      )
     return result
   } catch (error) {
     throw new Error(error)
@@ -113,14 +156,16 @@ const addMember = async (groupId, memberId) => {
 
 const removeMember = async (groupId, memberId) => {
   try {
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
-      { _id: new ObjectId(groupId) },
-      { 
-        $pull: { members: memberId },
-        $set: { updatedAt: Date.now() }
-      },
-      { returnDocument: 'after' }
-    )
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(groupId) },
+        {
+          $pull: { members: memberId },
+          $set: { updatedAt: Date.now() },
+        },
+        { returnDocument: 'after' }
+      )
     return result
   } catch (error) {
     throw new Error(error)
@@ -129,14 +174,16 @@ const removeMember = async (groupId, memberId) => {
 
 const addBill = async (groupId, billId) => {
   try {
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).findOneAndUpdate(
-      { _id: new ObjectId(groupId) },
-      { 
-        $addToSet: { bills: billId },
-        $set: { updatedAt: Date.now() }
-      },
-      { returnDocument: 'after' }
-    )
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(groupId) },
+        {
+          $addToSet: { bills: billId },
+          $set: { updatedAt: Date.now() },
+        },
+        { returnDocument: 'after' }
+      )
     return result
   } catch (error) {
     throw new Error(error)
@@ -145,9 +192,87 @@ const addBill = async (groupId, billId) => {
 
 const deleteOneById = async (groupId) => {
   try {
-    const result = await GET_DB().collection(GROUP_COLLECTION_NAME).deleteOne({
-      _id: new ObjectId(groupId)
-    })
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .deleteOne({
+        _id: new ObjectId(groupId),
+      })
+    return result
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
+const getGroupAndMembers = async (groupId) => {
+  try {
+    if (!ObjectId.isValid(groupId)) {
+      throw new Error(`Invalid group ID format: ${JSON.stringify(groupId)} (type: ${typeof groupId})`)
+    }
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .aggregate([
+        {
+          $match: {
+            _id: new ObjectId(groupId),
+            _destroy: false,
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+          },
+        },
+        {
+          $addFields: {
+            members: '$memberDetails',
+          },
+        },
+        {
+          $project: {
+            memberDetails: 0,
+          },
+        },
+      ])
+      .toArray()
+    return result[0] || null
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
+const getAllGroupsAndMembers = async () => {
+  try {
+    const result = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .aggregate([
+        {
+          $match: {
+            _destroy: false,
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+          },
+        },
+        {
+          $addFields: {
+            members: '$memberDetails',
+          },
+        },
+        {
+          $project: {
+            memberDetails: 0,
+          },
+        },
+      ])
+      .toArray()
     return result
   } catch (error) {
     throw new Error(error)
@@ -165,5 +290,7 @@ export const groupModel = {
   addMember,
   removeMember,
   addBill,
-  deleteOneById
+  deleteOneById,
+  getGroupAndMembers,
+  getAllGroupsAndMembers,
 }

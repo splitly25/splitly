@@ -1,14 +1,14 @@
-import Joi from 'joi';
-import { ObjectId } from 'mongodb';
-import { GET_DB } from '~/config/mongodb';
-import { EMAIL_RULE_MESSAGE } from '~/utils/constants';
+import Joi from 'joi'
+import { ObjectId } from 'mongodb'
+import { GET_DB } from '~/config/mongodb'
+import { EMAIL_RULE_MESSAGE } from '~/utils/constants'
 
-const USER_COLLECTION_NAME = 'users';
+const USER_COLLECTION_NAME = 'users'
 
 const USER_TYPE = {
   MEMBER: 'member',
   GUEST: 'guest',
-};
+}
 
 const USER_COLLECTION_SCHEMA = Joi.object({
   email: Joi.string().email().required().trim().lowercase().message(EMAIL_RULE_MESSAGE),
@@ -18,6 +18,8 @@ const USER_COLLECTION_SCHEMA = Joi.object({
     .optional()
     .pattern(/^[0-9]{10,11}$/)
     .default(null),
+  bankName: Joi.string().optional().default(null),
+  bankAccount: Joi.string().optional().default(null),
   password: Joi.string().required(),
   isVerified: Joi.boolean().default(false),
   userType: Joi.string()
@@ -29,91 +31,83 @@ const USER_COLLECTION_SCHEMA = Joi.object({
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(null),
   _destroy: Joi.boolean().default(false),
-});
+})
 
-const INVALID_UPDATE_FIELDS = ['_id', 'email', 'createdAt'];
+const INVALID_UPDATE_FIELDS = ['_id', 'email', 'createdAt']
 
 const validateBeforeCreate = async (data) => {
-  return await USER_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false });
-};
+  return await USER_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
+}
 
 const createNew = async (data) => {
   try {
-    const validData = await validateBeforeCreate(data);
-    const createdUser = await GET_DB().collection(USER_COLLECTION_NAME).insertOne(validData);
-    return createdUser;
+    const validData = await validateBeforeCreate(data)
+    const createdUser = await GET_DB().collection(USER_COLLECTION_NAME).insertOne(validData)
+    return createdUser
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const findOneById = async (userId) => {
   try {
     const res = await GET_DB()
       .collection(USER_COLLECTION_NAME)
-      .findOne({ _id: new ObjectId(userId) });
-    return res;
+      .findOne({ _id: new ObjectId(userId) })
+    return res
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const findOneByEmail = async (email) => {
   try {
-    const res = await GET_DB().collection(USER_COLLECTION_NAME).findOne({ email });
-    return res;
+    const res = await GET_DB().collection(USER_COLLECTION_NAME).findOne({ email: email.toLowerCase() })
+    return res
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const update = async (userId, updateData) => {
   try {
     Object.keys(updateData).forEach((key) => {
       if (INVALID_UPDATE_FIELDS.includes(key)) {
-        delete updateData[key];
+        delete updateData[key]
       }
-    });
+    })
 
     const result = await GET_DB()
       .collection(USER_COLLECTION_NAME)
-      .findOneAndUpdate(
-        { _id: new ObjectId(userId) },
-        { $set: updateData },
-        { returnDocument: 'after' }
-      );
-    return result.value;
+      .findOneAndUpdate({ _id: new ObjectId(userId) }, { $set: updateData }, { returnDocument: 'after' })
+    return result.value
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getAll = async () => {
   try {
-    return await GET_DB()
-      .collection(USER_COLLECTION_NAME)
-      .find({ _destroy: false })
-      .sort({ createdAt: -1 })
-      .toArray();
+    return await GET_DB().collection(USER_COLLECTION_NAME).find({ _destroy: false }).sort({ createdAt: -1 }).toArray()
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const findManyByIds = async (userIds) => {
   try {
-    const objectIds = userIds.map(id => new ObjectId(id));
+    const objectIds = userIds.map((id) => new ObjectId(id))
     return await GET_DB()
       .collection(USER_COLLECTION_NAME)
       .find({
         _id: { $in: objectIds },
-        _destroy: false
+        _destroy: false,
       })
-      .toArray();
+      .toArray()
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const deleteOneById = async (userId) => {
   try {
@@ -123,12 +117,12 @@ const deleteOneById = async (userId) => {
         { _id: new ObjectId(userId) },
         { $set: { _destroy: true, updatedAt: Date.now() } },
         { returnDocument: 'after' }
-      );
-    return result;
+      )
+    return result
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 export const userModel = {
   USER_COLLECTION_NAME,
@@ -141,4 +135,4 @@ export const userModel = {
   getAll,
   findManyByIds,
   deleteOneById,
-};
+}

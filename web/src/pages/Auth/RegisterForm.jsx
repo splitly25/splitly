@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -19,9 +19,12 @@ import {
   PASSWORD_RULE,
   FIELD_REQUIRED_MESSAGE,
   PASSWORD_RULE_MESSAGE,
-  EMAIL_RULE_MESSAGE
+  EMAIL_RULE_MESSAGE,
 } from '~/utils/validators'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
+import { registerUserAPI } from '~/apis'
+import { toast } from 'react-toastify'
+import { COLORS } from '~/theme'
 
 function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -30,21 +33,28 @@ function RegisterForm() {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
+      name: '',
       email: '',
       password: '',
-      confirmPassword: ''
-    }
+      confirmPassword: '',
+    },
   })
 
   const password = watch('password')
 
+  const navigate = useNavigate()
   const onSubmit = async (data) => {
-    // Handle registration logic here
-    //  console.log('Register data:', data)
-
+    const { name, email, password } = data
+    toast
+      .promise(registerUserAPI({ name, email, password }), {
+        pending: 'Registering your account...',
+      })
+      .then((user) => {
+        navigate(`/login?registeredEmail=${user.email}`)
+      })
   }
 
   const handleClickShowPassword = () => {
@@ -57,38 +67,76 @@ function RegisterForm() {
 
   return (
     <Zoom in={true} style={{ transitionDelay: '200ms' }}>
-      <Card sx={{ minWidth: 380, maxWidth: 400, width: '100%', mx: 2 }}>
+      <Card
+        sx={{
+          minWidth: 300,
+          maxWidth: 450,
+          width: '100%',
+          mx: 2,
+          boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
+          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              mb: 3
+              mb: 3,
             }}
           >
-            <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-              <PersonAddOutlinedIcon />
+            <Avatar
+              sx={{
+                m: 1,
+                background: COLORS.gradientPrimary,
+                width: 56,
+                height: 56,
+                boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)',
+              }}
+            >
+              <PersonAddOutlinedIcon sx={{ fontSize: 28, color: '#fff' }} />
             </Avatar>
-            <Typography component="h1" variant="h5" fontWeight="bold">
+            <Typography component="h1" variant="h5" fontWeight="bold" color="text.primary" sx={{ mt: 1 }}>
               Sign Up
+            </Typography>
+            <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
+              Create your Splitly account
             </Typography>
           </Box>
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
             <TextField
               fullWidth
+              label="Full Name"
+              margin="normal"
+              autoComplete="name"
+              autoFocus
+              error={!!errors.name}
+              {...register('name', {
+                required: FIELD_REQUIRED_MESSAGE,
+                minLength: {
+                  value: 2,
+                  message: 'Name must be at least 2 characters long.',
+                },
+              })}
+            />
+            <FieldErrorAlert errors={errors} fieldName="name" />
+
+            <TextField
+              fullWidth
               label="Email Address"
               margin="normal"
               autoComplete="email"
-              autoFocus
               error={!!errors.email}
               {...register('email', {
                 required: FIELD_REQUIRED_MESSAGE,
                 pattern: {
                   value: EMAIL_RULE,
-                  message: EMAIL_RULE_MESSAGE
-                }
+                  message: EMAIL_RULE_MESSAGE,
+                },
               })}
             />
             <FieldErrorAlert errors={errors} fieldName="email" />
@@ -103,22 +151,18 @@ function RegisterForm() {
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      edge="end"
-                    >
+                    <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
               {...register('password', {
                 required: FIELD_REQUIRED_MESSAGE,
                 pattern: {
                   value: PASSWORD_RULE,
-                  message: PASSWORD_RULE_MESSAGE
-                }
+                  message: PASSWORD_RULE_MESSAGE,
+                },
               })}
             />
             <FieldErrorAlert errors={errors} fieldName="password" />
@@ -141,12 +185,11 @@ function RegisterForm() {
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
               {...register('confirmPassword', {
                 required: FIELD_REQUIRED_MESSAGE,
-                validate: (value) =>
-                  value === password || 'Passwords do not match.'
+                validate: (value) => value === password || 'Passwords do not match.',
               })}
             />
             <FieldErrorAlert errors={errors} fieldName="confirmPassword" />
@@ -155,18 +198,38 @@ function RegisterForm() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5 }}
+              color="primary"
+              sx={{
+                mt: 3,
+                mb: 2,
+                py: 1.5,
+                fontWeight: 500,
+                fontSize: '1rem',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                },
+                '&:disabled': {
+                  opacity: 0.7,
+                  transform: 'none',
+                },
+              }}
               disabled={isSubmitting}
+              className="interceptor-loading"
             >
               {isSubmitting ? 'Signing Up...' : 'Sign Up'}
             </Button>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" color="text.primary">
                 Already have an account?{' '}
                 <Link
                   to="/login"
-                  style={{ textDecoration: 'none', color: 'inherit', fontWeight: 'bold' }}
+                  style={{
+                    textDecoration: 'none',
+                    color: COLORS.primary,
+                    fontWeight: '600',
+                  }}
                 >
                   Sign In
                 </Link>

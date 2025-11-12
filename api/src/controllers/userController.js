@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/userService.js'
+import ms from 'ms'
 
 const createNew = async (req, res, next) => {
   try {
@@ -22,12 +23,51 @@ const verifyAccount = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const result = await userService.login(req.body)
-
-    // TODO:
-    // return http only cookie for authentication
-    console.log('Logged in user:', result)
-
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: ms('7d'),
+    })
     res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
+const logout = async (req, res, next) => {
+  try {
+    res.clearCookie('accessToken')
+    res.status(StatusCodes.OK).json({ loggedOut: true })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await userService.getAll()
+    res.status(StatusCodes.OK).json(users)
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.userId
+    const user = await userService.findOneById(userId)
+    res.status(StatusCodes.OK).json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getUserByEmail = async (req, res, next) => {
+  try {
+    const email = req.params.email
+    const user = await userService.findOneByEmail(email)
+    res.status(StatusCodes.OK).json(user)
   } catch (error) {
     next(error)
   }
@@ -37,4 +77,8 @@ export const userController = {
   createNew,
   verifyAccount,
   login,
+  logout,
+  getAllUsers,
+  getUserById,
+  getUserByEmail,
 }
