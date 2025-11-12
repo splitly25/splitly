@@ -1,6 +1,8 @@
 import Layout from '~/components/Layout'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { selectCurrentUser } from '~/redux/user/userSlice'
 import { fetchDashboardDataAPI } from '~/apis'
 import { formatCurrency } from '~/utils/formatters'
 import {
@@ -615,8 +617,9 @@ const Dashboard = () => {
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
   const containerRef = useRef(null)
 
-  // For now, using a hardcoded user ID - this should come from authentication context
-  const currentUserId = '69097a08cfc3fcbcfb0f5b72' // This should be from auth context
+  // Get current user from Redux store
+  const currentUser = useSelector(selectCurrentUser)
+  const currentUserId = currentUser?._id
 
   // Measure container width
   useEffect(() => {
@@ -653,6 +656,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!currentUserId) {
+        setLoading(false)
+        setError('User not authenticated')
+        return
+      }
+
       try {
         setLoading(true)
         const data = await fetchDashboardDataAPI(currentUserId)

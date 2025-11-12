@@ -20,6 +20,7 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
   const [errors, setErrors] = useState({})
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [qrLoading, setQrLoading] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
 
   // Set amount when dialog opens or creditor changes
   useEffect(() => {
@@ -74,9 +75,12 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
+  const handlePaymentClick = () => {
     if (!validateForm()) return
+    setShowConfirmation(true)
+  }
 
+  const handleConfirmPayment = async () => {
     setLoading(true)
     try {
       await onSubmit({
@@ -89,13 +93,19 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
       setAmount('')
       setNote('')
       setErrors({})
+      setShowConfirmation(false)
       onClose()
     } catch (error) {
       console.error('Payment submission error:', error)
       setErrors({ submit: error.message || 'Có lỗi xảy ra. Vui lòng thử lại.' })
+      setShowConfirmation(false)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmation(false)
   }
 
   const handleClose = () => {
@@ -103,6 +113,7 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
       setAmount('')
       setNote('')
       setErrors({})
+      setShowConfirmation(false)
       onClose()
     }
   }
@@ -143,23 +154,26 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
           <CloseIcon fontSize="small" />
         </IconButton>
 
-        {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 600, 
-              fontSize: '18px',
-              fontFamily: "'Nunito Sans', sans-serif",
-              mb: 0.5
-            }}
-          >
-            Thông tin chuyển khoản
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
-            Chuyển khoản cho {creditor?.userName || ''}
-          </Typography>
-        </Box>
+        {/* Conditional Content: Payment Info or Confirmation */}
+        {!showConfirmation ? (
+          <>
+            {/* Header */}
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '18px',
+                  fontFamily: "'Nunito Sans', sans-serif",
+                  mb: 0.5
+                }}
+              >
+                Thông tin chuyển khoản
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+                Chuyển khoản cho {creditor?.userName || ''}
+              </Typography>
+            </Box>
 
         {/* Amount Input */}
         <Box sx={{ mb: 2 }}>
@@ -313,55 +327,127 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
           </Typography>
         )}
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            onClick={handleClose}
-            disabled={loading}
-            fullWidth
-            sx={{
-              py: 1,
-              borderRadius: '18px',
-              textTransform: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: 'text.primary',
-              borderColor: 'divider',
-              '&:hover': {
-                borderColor: 'divider',
-                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-              }
-            }}
-            variant="outlined"
-          >
-            Để sau
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            fullWidth
-            startIcon={<CheckCircleIcon />}
-            sx={{
-              py: 1,
-              borderRadius: '18px',
-              textTransform: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
-              color: 'white',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
-              },
-              '&:disabled': {
-                background: 'rgba(0, 0, 0, 0.12)',
-                color: 'rgba(0, 0, 0, 0.26)'
-              }
-            }}
-            variant="contained"
-          >
-            {loading ? 'Đang xử lý...' : 'Đã thanh toán'}
-          </Button>
-        </Box>
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={handleClose}
+                disabled={loading}
+                fullWidth
+                sx={{
+                  py: 1,
+                  borderRadius: '18px',
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: 'text.primary',
+                  borderColor: 'divider',
+                  '&:hover': {
+                    borderColor: 'divider',
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+                variant="outlined"
+              >
+                Để sau
+              </Button>
+              <Button
+                onClick={handlePaymentClick}
+                disabled={loading}
+                fullWidth
+                startIcon={<CheckCircleIcon />}
+                sx={{
+                  py: 1,
+                  borderRadius: '18px',
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                  color: 'white',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                  },
+                  '&:disabled': {
+                    background: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.26)'
+                  }
+                }}
+                variant="contained"
+              >
+                {loading ? 'Đang xử lý...' : 'Thanh toán'}
+              </Button>
+            </Box>
+          </>
+        ) : (
+          <>
+            {/* Confirmation View */}
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '18px',
+                    fontFamily: "'Nunito Sans', sans-serif",
+                    mb: 2
+                  }}
+                >
+                  Xác nhận thanh toán
+                </Typography>
+                <Typography variant="body1" sx={{ fontSize: '15px', color: 'text.primary' }}>
+                  Bạn đã thanh toán <strong>{formatCurrency(parseFloat(amount) || 0)}</strong> cho <strong>{creditor?.userName}</strong>?
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Button
+                  onClick={handleCancelConfirmation}
+                  disabled={loading}
+                  fullWidth
+                  sx={{
+                    py: 1.2,
+                    borderRadius: '18px',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      borderColor: 'divider',
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
+                  variant="outlined"
+                >
+                  Chưa thanh toán
+                </Button>
+                <Button
+                  onClick={handleConfirmPayment}
+                  disabled={loading}
+                  fullWidth
+                  sx={{
+                    py: 1.2,
+                    borderRadius: '18px',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                    },
+                    '&:disabled': {
+                      background: 'rgba(0, 0, 0, 0.12)',
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }
+                  }}
+                  variant="contained"
+                >
+                  {loading ? 'Đang xử lý...' : 'Đã thanh toán'}
+                </Button>
+              </Box>
+            </Box>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

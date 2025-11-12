@@ -19,13 +19,13 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon
 } from '@mui/icons-material'
+import { useSelector } from 'react-redux'
+import { selectCurrentUser } from '~/redux/user/userSlice'
 import Layout from '~/components/Layout'
 import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 import PaymentDialog from './PaymentDialog'
 import { submitPaymentRequestAPI } from '~/apis'
-
-const CURRENT_USER_ID = '69097a08cfc3fcbcfb0f5b72' // Replace with actual user ID from auth context
 
 // Summary Card Component
 const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
@@ -223,7 +223,12 @@ const Debt = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedCreditor, setSelectedCreditor] = useState(null)
-  const { loading, error, debtData } = useDebt(CURRENT_USER_ID)
+  
+  // Get current user from Redux store
+  const currentUser = useSelector(selectCurrentUser)
+  const currentUserId = currentUser?._id
+  
+  const { loading, error, debtData } = useDebt(currentUserId)
 
   const handlePaymentClick = (creditor) => {
     setSelectedCreditor(creditor)
@@ -242,13 +247,23 @@ const Debt = () => {
 
   const handlePaymentSubmit = async (paymentData) => {
     try {
-      await submitPaymentRequestAPI(CURRENT_USER_ID, paymentData)
+      await submitPaymentRequestAPI(currentUserId, paymentData)
       // Optionally refresh debt data here
       window.location.reload() // Simple approach
     } catch (error) {
       console.error('Payment submission failed:', error)
       throw error
     }
+  }
+
+  if (!currentUserId) {
+    return (
+      <Layout>
+        <Box sx={{ py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
+          <Alert severity="error">User not authenticated</Alert>
+        </Box>
+      </Layout>
+    )
   }
 
   if (loading) {
