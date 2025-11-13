@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { toast } from 'react-toastify'
-import { logoutUserAPI } from '~/redux/user/userSlice'
+import { clearUser } from '~/redux/user/userSlice'
 import { interceptorLoadingElements } from '~/utils/formatters'
 
 let axiosReduxStore
@@ -38,7 +38,13 @@ authorizedAxiosInstance.interceptors.response.use(
 
     if (error.response?.status === 401 && !isLoggingout) {
       isLoggingout = true
-      axiosReduxStore.dispatch(logoutUserAPI(false))
+      
+      // Clear user state locally without calling logout API
+      axiosReduxStore.dispatch(clearUser())
+      
+      // Navigate to login page
+      window.location.href = '/login'
+      
       isLoggingout = false
     }
 
@@ -48,7 +54,8 @@ authorizedAxiosInstance.interceptors.response.use(
       errorMessage = error.response.data.message
     }
 
-    if (error.response?.status !== 410) {
+    // Don't show toast for 401 errors since we're redirecting
+    if (error.response?.status !== 410 && error.response?.status !== 401) {
       toast.error(errorMessage)
     }
 

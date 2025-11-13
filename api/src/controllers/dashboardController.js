@@ -4,6 +4,7 @@
  */
 
 import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
 import { userModel, billModel, groupModel, activityModel } from '~/models/index.js'
 import ApiError from '~/utils/APIError.js'
 
@@ -20,39 +21,50 @@ const getDashboardData = async (req, res, next) => {
       throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own dashboard data')
     }
     
+    // Convert userId to ObjectId for consistent comparisons
+    const userIdObj = new ObjectId(userId)
+    
     // Validate user exists
-    const user = await userModel.findOneById(userId)
+    const user = await userModel.findOneById(userIdObj)
     if (!user) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     
     // Get user's bills
-    const userBills = await billModel.getBillsByUser(userId)
+    const userBills = await billModel.getBillsByUser(userIdObj)
     
     // Calculate debt data
-    const debtData = await calculateDebtData(userBills, userId)
+    const debtData = await calculateDebtData(userBills, userIdObj)
     
     // Get pending bills (bills where user hasn't paid yet)
-    const pendingBills = getPendingBills(userBills, userId)
+    const pendingBills = getPendingBills(userBills, userIdObj)
     
     // Get user's groups
-    const userGroups = await groupModel.getGroupsByUser(userId)
+    const userGroups = await groupModel.getGroupsByUser(userIdObj)
     
-    // Get group details with member information
+    // Limit to maximum 5 groups for dashboard
     const groupsWithMembers = await Promise.all(
-      userGroups.map(async (group) => {
+      userGroups.slice(0, 5).map(async (group) => {
+        // Only get first 3 members for display (2 avatars + count)
+        const memberIds = group.members.slice(0, 3)
+        // If group.members contains user objects, map directly
         const members = await Promise.all(
-          group.members.map(memberId => userModel.findOneById(memberId))
+          memberIds.map(async member => {
+            return { _id: member._id, name: member.name }
+          })
         )
         return {
-          ...group,
-          memberDetails: members.filter(member => member) // Filter out null members
+          _id: group._id,
+          groupName: group.groupName,
+          memberDetails: members.filter(Boolean),
+          totalMembers: group.members.length,
+          bills: group.bills || []
         }
       })
     )
     
     // Get recent activities for user (excluding login activities)
-    const recentActivities = await activityModel.getActivitiesByUser(userId, 20) // Get more to filter
+    const recentActivities = await activityModel.getActivitiesByUser(userIdObj, 20) // Get more to filter
     
     // Filter out login/logout activities
     const filteredActivities = recentActivities.filter(activity => 
@@ -60,7 +72,7 @@ const getDashboardData = async (req, res, next) => {
     ).slice(0, 10) // Take only 10 after filtering
     
     // Format activities for display
-    const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userId)
+    const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userIdObj)
     
     const dashboardData = {
       user: {
@@ -99,7 +111,7 @@ const calculateTotalSpendingForMonth = (bills, userId, year, month) => {
     // Check if bill is in the specified month
     if (billYear === year && billMonth === month) {
       for (const status of bill.paymentStatus) {
-        if (status.userId === userId) {
+        if (status.userId.equals(userId)) {
           // Add all amounts this user owes (paid or unpaid)
           totalSpending += status.amountOwed
         }
@@ -158,56 +170,80 @@ const calculateDebtData = async (bills, userId) => {
   
   for (const bill of bills) {
     for (const status of bill.paymentStatus) {
-      if (status.userId === userId) {
+      if (status.userId.equals(userId)) {
         // This is what the current user owes/is owed
-        if (!status.isPaid && bill.payerId !== userId) {
-          // User owes money
-          youOwe += status.amountOwed
+        if (!bill.payerId.equals(userId)) {
+          // User owes money - calculate remaining amount after payments
+          const amountPaid = status.amountPaid || 0
+          const remainingAmount = status.amountOwed - amountPaid
           
-          // Find who paid (who user owes money to)
-          const payer = await userModel.findOneById(bill.payerId)
-          const payerName = payer ? payer.name : 'Unknown'
-          if (!debtDetails[payerName]) {
-            debtDetails[payerName] = { amount: 0, billCount: 0 }
+          // Only add if there's remaining debt
+          if (remainingAmount > 0) {
+            youOwe += remainingAmount
+            
+            // Find who paid (who user owes money to)
+            const payer = await userModel.findOneById(bill.payerId)
+            const payerName = payer ? payer.name : 'Unknown'
+            if (!debtDetails[payerName]) {
+              debtDetails[payerName] = { amount: 0, billCount: 0 }
+            }
+            debtDetails[payerName].amount += remainingAmount
+            debtDetails[payerName].billCount += 1
           }
-          debtDetails[payerName].amount += status.amountOwed
-          debtDetails[payerName].billCount += 1
         }
       } else {
         // This is what others owe the current user
-        if (!status.isPaid && bill.payerId === userId) {
-          // Others owe current user money
-          theyOweYou += status.amountOwed
+        if (bill.payerId.equals(userId)) {
+          // Others owe current user money - calculate remaining amount after payments
+          const amountPaid = status.amountPaid || 0
+          const remainingAmount = status.amountOwed - amountPaid
           
-          // Find who owes money
-          const debtor = await userModel.findOneById(status.userId)
-          const debtorName = debtor ? debtor.name : 'Unknown'
-          if (!creditDetails[debtorName]) {
-            creditDetails[debtorName] = { amount: 0, billCount: 0 }
+          // Only add if there's remaining debt
+          if (remainingAmount > 0) {
+            theyOweYou += remainingAmount
+            
+            // Find who owes money
+            const debtor = await userModel.findOneById(status.userId)
+            const debtorName = debtor ? debtor.name : 'Unknown'
+            if (!creditDetails[debtorName]) {
+              creditDetails[debtorName] = { amount: 0, billCount: 0 }
+            }
+            creditDetails[debtorName].amount += remainingAmount
+            creditDetails[debtorName].billCount += 1
           }
-          creditDetails[debtorName].amount += status.amountOwed
-          creditDetails[debtorName].billCount += 1
         }
       }
     }
   }
   
+  // Convert to arrays and sort by amount (largest first)
+  const debtArray = Object.entries(debtDetails)
+    .map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    }))
+    .sort((a, b) => b.amount - a.amount)
+  
+  const creditArray = Object.entries(creditDetails)
+    .map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    }))
+    .sort((a, b) => b.amount - a.amount)
+  
+  // Return top 2 for each, plus count of others
   return {
     currentMonthSpending: monthlySpending.currentMonthSpending,
     previousMonthSpending: monthlySpending.previousMonthSpending,
     percentageChange: monthlySpending.percentageChange,
     youOwe,
     theyOweYou,
-    debtDetails: Object.entries(debtDetails).map(([name, data]) => ({ 
-      name, 
-      amount: data.amount, 
-      billCount: data.billCount 
-    })),
-    creditDetails: Object.entries(creditDetails).map(([name, data]) => ({ 
-      name, 
-      amount: data.amount, 
-      billCount: data.billCount 
-    }))
+    debtDetails: debtArray.slice(0, 2), // Top 2 people user owes
+    debtCount: debtArray.length,
+    creditDetails: creditArray.slice(0, 2), // Top 2 people who owe user
+    creditCount: creditArray.length
   }
 }
 
@@ -218,7 +254,7 @@ const getPendingBills = (bills, userId) => {
   const pending = []
   
   bills.forEach(bill => {
-    const userPaymentStatus = bill.paymentStatus.find(status => status.userId === userId)
+    const userPaymentStatus = bill.paymentStatus.find(status => status.userId.equals(userId))
     if (userPaymentStatus && !userPaymentStatus.isPaid) {
       pending.push({
         id: bill._id,
@@ -247,7 +283,7 @@ const formatActivitiesForDisplay = async (activities, currentUserId) => {
     // Get user who performed the action
     const actor = await userModel.findOneById(activity.userId)
     const actorName = actor ? actor.name : 'Someone'
-    const isCurrentUser = activity.userId === currentUserId
+    const isCurrentUser = activity.userId.equals(currentUserId)
     const actorDisplay = isCurrentUser ? 'Bạn' : actorName
     
     switch (activity.activityType) {

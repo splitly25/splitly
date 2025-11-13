@@ -17,6 +17,7 @@ import {
   Grid,
   useTheme,
   useMediaQuery,
+  Skeleton,
 } from '@mui/material'
 import {
   TrendingUp as TrendingUpIcon,
@@ -29,7 +30,33 @@ import {
 import { COLORS } from '~/theme'
 
 // Total Spending Card Component
-const TotalSpendingCard = ({ debtData }) => {
+const TotalSpendingCard = ({ debtData, loading }) => {
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          borderRadius: '16px',
+          border: '1px solid',
+          borderColor: 'divider',
+          height: '100%',
+          width: '100%',
+          backgroundColor: '#ffffff',
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Skeleton variant="text" width={150} height={20} sx={{ mb: 5 }} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box>
+              <Skeleton variant="text" width={120} height={40} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width={200} height={20} />
+            </Box>
+            <Skeleton variant="circular" width={48} height={48} />
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
   // Use current month spending from backend
   const currentMonthSpending = debtData.currentMonthSpending || 0
   const percentageChange = debtData.percentageChange || 0
@@ -104,11 +131,43 @@ const TotalSpendingCard = ({ debtData }) => {
 }
 
 // You Owe Card Component
-const YouOweCard = ({ debtData }) => {
+const YouOweCard = ({ debtData, loading }) => {
   const [showAmount, setShowAmount] = useState(true)
 
   const toggleVisibility = () => {
     setShowAmount(!showAmount)
+  }
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          borderRadius: '16px',
+          border: '1px solid #ffd6a7',
+          backgroundColor: '#fff9f0',
+          height: '100%',
+          width: '100%',
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Skeleton variant="text" width={150} height={20} />
+            <Skeleton variant="circular" width={24} height={24} />
+          </Box>
+          <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #ffd6a7', display: 'flex', justifyContent: 'space-between' }}>
+            <Box>
+              <Skeleton variant="text" width={80} height={16} />
+              <Skeleton variant="text" width={100} height={40} />
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Skeleton variant="text" width={60} height={16} />
+              <Skeleton variant="text" width={50} height={40} />
+            </Box>
+          </Box>
+          <Skeleton variant="rectangular" width="100%" height={70} sx={{ borderRadius: '16px' }} />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -124,7 +183,6 @@ const YouOweCard = ({ debtData }) => {
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ArrowForwardIcon sx={{ fontSize: 20, color: '#ca3500' }} />
             <Typography
               variant="subtitle2"
               sx={{
@@ -169,7 +227,7 @@ const YouOweCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
             >
-              {debtData.debtDetails?.length || 0}
+              {debtData.debtCount || 0}
             </Typography>
           </Box>
         </Box>
@@ -215,6 +273,22 @@ const YouOweCard = ({ debtData }) => {
                 </Typography>
               </Card>
             ))}
+            <Button
+              size="small"
+              startIcon={<ArrowForwardIcon />}
+              onClick={() => navigate('/debt')}
+              sx={{
+                textTransform: 'none',
+                color: 'text.secondary',
+                alignSelf: 'flex-end',
+                ml: 'auto',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 2,
+              }}
+            >
+              Xem tất cả
+            </Button>
           </Box>
         ) : (
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -227,11 +301,43 @@ const YouOweCard = ({ debtData }) => {
 }
 
 // They Owe You Card Component
-const TheyOweYouCard = ({ debtData }) => {
+const TheyOweYouCard = ({ debtData, loading }) => {
   const [showAmount, setShowAmount] = useState(true)
 
   const toggleVisibility = () => {
     setShowAmount(!showAmount)
+  }
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          borderRadius: '16px',
+          border: '1px solid #b9f8cf',
+          backgroundColor: '#f0fdf4',
+          height: '100%',
+          width: '100%',
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Skeleton variant="text" width={150} height={20} />
+            <Skeleton variant="circular" width={24} height={24} />
+          </Box>
+          <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #b9f8cf', display: 'flex', justifyContent: 'space-between' }}>
+            <Box>
+              <Skeleton variant="text" width={80} height={16} />
+              <Skeleton variant="text" width={100} height={40} />
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Skeleton variant="text" width={60} height={16} />
+              <Skeleton variant="text" width={50} height={40} />
+            </Box>
+          </Box>
+          <Skeleton variant="rectangular" width="100%" height={70} sx={{ borderRadius: '16px' }} />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -247,7 +353,6 @@ const TheyOweYouCard = ({ debtData }) => {
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ArrowForwardIcon sx={{ fontSize: 20, color: '#008236' }} />
             <Typography
               variant="subtitle2"
               sx={{
@@ -292,7 +397,7 @@ const TheyOweYouCard = ({ debtData }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {debtData.creditDetails?.length || 0}
+              {debtData.debtCount || 0}
             </Typography>
           </Box>
         </Box>
@@ -338,6 +443,22 @@ const TheyOweYouCard = ({ debtData }) => {
                 </Typography>
               </Card>
             ))}
+            <Button
+              size="small"
+              startIcon={<ArrowForwardIcon />}
+              onClick={() => navigate('/debt')}
+              sx={{
+                textTransform: 'none',
+                color: 'text.secondary',
+                alignSelf: 'flex-end',
+                ml: 'auto',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 2,
+              }}
+            >
+              Xem tất cả
+            </Button>
           </Box>
         ) : (
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -350,11 +471,49 @@ const TheyOweYouCard = ({ debtData }) => {
 }
 
 // Pending Bills Card Component
-const PendingBillsCard = ({ pendingBills, navigate }) => {
+const PendingBillsCard = ({ pendingBills, navigate, loading }) => {
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A'
     const date = new Date(timestamp)
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
+  if (loading) {
+    return (
+      <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={80} height={24} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[1, 2].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Skeleton variant="circular" width={48} height={48} />
+                  <Box>
+                    <Skeleton variant="text" width={150} height={24} />
+                    <Skeleton variant="text" width={100} height={20} />
+                  </Box>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Skeleton variant="text" width={80} height={24} />
+                  <Skeleton variant="rectangular" width={100} height={22} sx={{ borderRadius: '11px', mt: 0.5 }} />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -371,14 +530,6 @@ const PendingBillsCard = ({ pendingBills, navigate }) => {
           >
             Hóa đơn chưa quyết toán
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/history')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {pendingBills.bills && pendingBills.bills.length > 0 ? (
@@ -439,13 +590,60 @@ const PendingBillsCard = ({ pendingBills, navigate }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/history')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )
 }
 
 // Recent Activities Card Component
-const RecentActivitiesCard = ({ activities, navigate }) => {
+const RecentActivitiesCard = ({ activities, navigate, loading }) => {
+  if (loading) {
+    return (
+      <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={80} height={24} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[1, 2, 3].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 1.5,
+                }}
+              >
+                <Skeleton variant="circular" width={32} height={32} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="100%" height={20} />
+                  <Skeleton variant="text" width="60%" height={18} />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
       <CardContent sx={{ p: 3 }}>
@@ -460,14 +658,6 @@ const RecentActivitiesCard = ({ activities, navigate }) => {
           >
             Hoạt động gần đây
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/activity')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {activities && activities.length > 0 ? (
@@ -506,13 +696,75 @@ const RecentActivitiesCard = ({ activities, navigate }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/activity')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )
 }
 
 // Groups Card Component
-const GroupsCard = ({ groups, navigate }) => {
+const GroupsCard = ({ groups, navigate, loading }) => {
+  if (loading) {
+    return (
+      <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={80} height={24} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  p: 1.5,
+                  borderRadius: '16px',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ display: 'flex', ml: -0.5 }}>
+                    {[1, 2, 3].map((j) => (
+                      <Skeleton
+                        key={j}
+                        variant="circular"
+                        width={24}
+                        height={24}
+                        sx={{
+                          border: '2px solid white',
+                          ml: j > 1 ? -1 : 0,
+                        }}
+                      />
+                    ))}
+                  </Box>
+                  <Skeleton variant="text" width={120} height={20} />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Skeleton variant="text" width={100} height={18} />
+                  <Skeleton variant="text" width={80} height={22} />
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', backgroundColor: '#ffffff', width: '100%' }}>
       <CardContent sx={{ p: 3 }}>
@@ -527,14 +779,6 @@ const GroupsCard = ({ groups, navigate }) => {
           >
             Nhóm chi tiêu
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/groups')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {groups && groups.length > 0 ? (
@@ -551,7 +795,7 @@ const GroupsCard = ({ groups, navigate }) => {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Box sx={{ display: 'flex', ml: -0.5 }}>
-                    {group.memberDetails && group.memberDetails.slice(0, 3).map((member, idx) => (
+                    {group.memberDetails && group.memberDetails.slice(0, 2).map((member, idx) => (
                       <Avatar
                         key={member._id || idx}
                         sx={{
@@ -566,7 +810,7 @@ const GroupsCard = ({ groups, navigate }) => {
                         {member.name.substring(0, 2).toUpperCase()}
                       </Avatar>
                     ))}
-                    {group.memberDetails && group.memberDetails.length > 3 && (
+                    {group.memberDetails && group.memberDetails.length > 2 && (
                       <Avatar
                         sx={{
                           width: 24,
@@ -577,7 +821,7 @@ const GroupsCard = ({ groups, navigate }) => {
                           ml: -1,
                         }}
                       >
-                        +{group.memberDetails.length - 3}
+                        +{group.totalMembers - 2}
                       </Avatar>
                     )}
                   </Box>
@@ -590,7 +834,7 @@ const GroupsCard = ({ groups, navigate }) => {
                     {group.bills?.length || 0} hóa đơn
                   </Typography>
                   <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                    {group.memberDetails?.length || 0} thành viên
+                    {group.totalMembers || 0} thành viên
                   </Typography>
                 </Box>
               </Box>
@@ -601,6 +845,22 @@ const GroupsCard = ({ groups, navigate }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/history')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )
@@ -612,9 +872,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const navigate = useNavigate()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'))
   const containerRef = useRef(null)
 
   // Get current user from Redux store
@@ -678,27 +935,6 @@ const Dashboard = () => {
     fetchDashboardData()
   }, [currentUserId])
 
-  if (loading) {
-    return (
-      <Layout>
-        <Box
-          sx={{
-            p: { xs: 3, md: 4 },
-            minHeight: '100vh',
-            backgroundColor: 'background.default',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography variant="h5" color="text.secondary">
-            Loading dashboard...
-          </Typography>
-        </Box>
-      </Layout>
-    )
-  }
-
   if (error) {
     return (
       <Layout>
@@ -720,7 +956,7 @@ const Dashboard = () => {
     )
   }
 
-  if (!dashboardData) {
+  if (!dashboardData && !loading) {
     return (
       <Layout>
         <Box
@@ -741,7 +977,7 @@ const Dashboard = () => {
     )
   }
 
-  const { user, debtData, pendingBills, groups, activities } = dashboardData
+  const { user, debtData, pendingBills, groups, activities } = dashboardData || {}
 
   return (
     <Layout>
@@ -786,7 +1022,7 @@ const Dashboard = () => {
               maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? '100%' : '100%')
             }}
           >
-            <TotalSpendingCard debtData={debtData} />
+            <TotalSpendingCard debtData={debtData} loading={loading} />
           </Grid>
 
           {/* Mình nợ người khác Card */}
@@ -801,7 +1037,7 @@ const Dashboard = () => {
               maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
             }}
           >
-            <YouOweCard debtData={debtData} />
+            <YouOweCard debtData={debtData} loading={loading} />
           </Grid>
 
           {/* Người khác nợ mình Card */}
@@ -816,7 +1052,7 @@ const Dashboard = () => {
               maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
             }}
           >
-            <TheyOweYouCard debtData={debtData} />
+            <TheyOweYouCard debtData={debtData} loading={loading} />
           </Grid>
         </Grid>
 
@@ -825,14 +1061,14 @@ const Dashboard = () => {
           {/* Left Column - Hóa đơn chưa quyết toán and Hoạt động gần đây */}
           <Grid item xs={12} lg={8} sx={{ display: 'flex', flexGrow: 2, minWidth: 0 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%' }}>
-              <PendingBillsCard pendingBills={pendingBills} navigate={navigate} />
-              <RecentActivitiesCard activities={activities} navigate={navigate} />
+              <PendingBillsCard pendingBills={pendingBills} navigate={navigate} loading={loading} />
+              <RecentActivitiesCard activities={activities} navigate={navigate} loading={loading} />
             </Box>
           </Grid>
 
           {/* Right Column - Nhóm chi tiêu */}
           <Grid item xs={12} lg={4} sx={{ display: 'flex', flexGrow: 1, minWidth: 0 }}>
-            <GroupsCard groups={groups} navigate={navigate} />
+            <GroupsCard groups={groups} navigate={navigate} loading={loading} />
           </Grid>
         </Grid>
       </Box>

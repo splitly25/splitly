@@ -74,7 +74,7 @@ const getHistoryData = async (req, res, next) => {
         })
         .filter((p) => p !== null);
       const userPaymentStatus = bill.paymentStatus.find(
-        (status) => status.userId === userId
+        (status) => status.userId.equals(userId)
       );
       return {
         id: bill._id,
@@ -166,7 +166,7 @@ const getBillDetail = async (req, res, next) => {
 
         // Tìm trạng thái thanh toán
         const paymentStatus = bill.paymentStatus.find(
-          (status) => status.userId === participantId.toString()
+          (status) => status.userId.equals(participantId)
         );
 
         return {
@@ -274,7 +274,7 @@ const getBillBySearching = async (req, res, next) => {
 
       // Find the payment status for the user making the request
       const userPaymentStatus = bill.paymentStatus.find(
-        (status) => status.userId === userId
+        (status) => status.userId.equals(userId)
       );
 
       return {
@@ -391,7 +391,7 @@ const filterBillsByUser = async (req, res, next) => {
 
       // Find the payment status for the user making the request
       const userPaymentStatus = bill.paymentStatus.find(
-        (status) => status.userId === userId
+        (status) => status.userId.equals(userId)
       );
 
       return {

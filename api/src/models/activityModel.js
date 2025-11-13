@@ -44,12 +44,12 @@ const ACTIVITY_TYPES = {
 const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
   activityType: Joi.string().valid(...Object.values(ACTIVITY_TYPES)).required(),
   
-  // User who performed the activity
-  userId: Joi.string().required(),
+  // User who performed the activity - MUST be ObjectId
+  userId: Joi.object().instance(ObjectId).required(),
   
-  // Resource information
+  // Resource information - MUST be ObjectId
   resourceType: Joi.string().valid('bill', 'group', 'user').required(),
-  resourceId: Joi.string().required(),
+  resourceId: Joi.object().instance(ObjectId).required(),
   
   // Activity details and metadata
   details: Joi.object({
@@ -61,7 +61,7 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
     // For group activities  
     groupName: Joi.string().optional(),
     memberEmail: Joi.string().email().optional(),
-    memberId: Joi.string().optional(),
+    memberId: Joi.object().instance(ObjectId).optional(),
     
     // For user activities
     userEmail: Joi.string().email().optional(),
@@ -73,10 +73,12 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
     creditorName: Joi.string().optional(),
     debtorEmail: Joi.string().email().optional(),
     creditorEmail: Joi.string().email().optional(),
+    paymentId: Joi.object().instance(ObjectId).optional(),
+    payerId: Joi.object().instance(ObjectId).optional(),
     
     // For reminders
     reminderType: Joi.string().valid('email', 'notification', 'sms').optional(),
-    recipientId: Joi.string().optional(),
+    recipientId: Joi.object().instance(ObjectId).optional(),
     
     // Previous and new values for updates
     previousValue: Joi.object().optional(),
@@ -98,13 +100,56 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
 // Fields that should not be updated after creation
 const INVALID_UPDATE_FIELDS = ['_id', 'userId', 'resourceType', 'resourceId', 'activityType', 'createdAt']
 
+/**
+ * Convert string IDs to ObjectId for consistency
+ */
+const convertIdsToObjectId = (data) => {
+  const converted = { ...data }
+  
+  // Convert userId
+  if (converted.userId && typeof converted.userId === 'string' && ObjectId.isValid(converted.userId)) {
+    converted.userId = new ObjectId(converted.userId)
+  }
+  
+  // Convert resourceId
+  if (converted.resourceId && typeof converted.resourceId === 'string' && ObjectId.isValid(converted.resourceId)) {
+    converted.resourceId = new ObjectId(converted.resourceId)
+  }
+  
+  // Convert detail fields that may contain IDs
+  if (converted.details) {
+    // Convert memberId
+    if (converted.details.memberId && typeof converted.details.memberId === 'string' && ObjectId.isValid(converted.details.memberId)) {
+      converted.details.memberId = new ObjectId(converted.details.memberId)
+    }
+    
+    // Convert recipientId
+    if (converted.details.recipientId && typeof converted.details.recipientId === 'string' && ObjectId.isValid(converted.details.recipientId)) {
+      converted.details.recipientId = new ObjectId(converted.details.recipientId)
+    }
+    
+    // Convert paymentId if it's a valid ObjectId
+    if (converted.details.paymentId && typeof converted.details.paymentId === 'string' && ObjectId.isValid(converted.details.paymentId)) {
+      converted.details.paymentId = new ObjectId(converted.details.paymentId)
+    }
+    
+    // Convert payerId if it's a valid ObjectId
+    if (converted.details.payerId && typeof converted.details.payerId === 'string' && ObjectId.isValid(converted.details.payerId)) {
+      converted.details.payerId = new ObjectId(converted.details.payerId)
+    }
+  }
+  
+  return converted
+}
+
 const validateBeforeCreate = async (data) => {
   return await ACTIVITY_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
 }
 
 const createNew = async (data) => {
   try {
-    const validData = await validateBeforeCreate(data)
+    const convertedData = convertIdsToObjectId(data)
+    const validData = await validateBeforeCreate(convertedData)
     const newActivityToAdd = {
       ...validData,
       createdAt: Date.now()
@@ -147,7 +192,7 @@ const getActivitiesByUser = async (userId, limit = 50, offset = 0) => {
     const result = await GET_DB()
       .collection(ACTIVITY_COLLECTION_NAME)
       .find({
-        userId: userId,
+        userId: new ObjectId(userId),
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -166,7 +211,7 @@ const getActivitiesByResource = async (resourceType, resourceId, limit = 50) => 
       .collection(ACTIVITY_COLLECTION_NAME)
       .find({
         resourceType: resourceType,
-        resourceId: resourceId,
+        resourceId: new ObjectId(resourceId),
         _destroy: false
       })
       .sort({ createdAt: -1 })
