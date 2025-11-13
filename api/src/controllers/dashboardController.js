@@ -45,26 +45,18 @@ const getDashboardData = async (req, res, next) => {
     // Limit to maximum 5 groups for dashboard
     const groupsWithMembers = await Promise.all(
       userGroups.slice(0, 5).map(async (group) => {
-        // Only get first 4 members for display (3 avatars + count)
-        const memberIds = group.members.slice(0, 4)
+        // Only get first 3 members for display (2 avatars + count)
+        const memberIds = group.members.slice(0, 3)
+        // If group.members contains user objects, map directly
         const members = await Promise.all(
-          memberIds.map(memberId => {
-            // Always convert to string, check validity, then create ObjectId
-            const idStr = String(memberId)
-            if (/^[a-fA-F0-9]{24}$/.test(idStr)) {
-              return userModel.findOneById(new ObjectId(idStr))
-            }
-            // Invalid, skip
-            return null
+          memberIds.map(async member => {
+            return { _id: member._id, name: member.name }
           })
         )
         return {
           _id: group._id,
           groupName: group.groupName,
-          memberDetails: members.filter(member => member).map(m => ({
-            _id: m._id,
-            name: m.name
-          })), // Only include id and name
+          memberDetails: members.filter(Boolean),
           totalMembers: group.members.length,
           bills: group.bills || []
         }

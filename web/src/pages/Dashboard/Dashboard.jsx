@@ -795,7 +795,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Box sx={{ display: 'flex', ml: -0.5 }}>
-                    {group.memberDetails && group.memberDetails.slice(0, 3).map((member, idx) => (
+                    {group.memberDetails && group.memberDetails.slice(0, 2).map((member, idx) => (
                       <Avatar
                         key={member._id || idx}
                         sx={{
@@ -810,7 +810,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
                         {member.name.substring(0, 2).toUpperCase()}
                       </Avatar>
                     ))}
-                    {group.memberDetails && group.memberDetails.length > 3 && (
+                    {group.memberDetails && group.memberDetails.length > 2 && (
                       <Avatar
                         sx={{
                           width: 24,
@@ -821,7 +821,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
                           ml: -1,
                         }}
                       >
-                        +{group.memberDetails.length - 3}
+                        +{group.totalMembers - 2}
                       </Avatar>
                     )}
                   </Box>
@@ -834,7 +834,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
                     {group.bills?.length || 0} hóa đơn
                   </Typography>
                   <Typography variant="caption" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                    {group.memberDetails?.length || 0} thành viên
+                    {group.totalMembers || 0} thành viên
                   </Typography>
                 </Box>
               </Box>
