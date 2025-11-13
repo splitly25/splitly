@@ -25,7 +25,11 @@ import Layout from '~/components/Layout'
 import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 import PaymentDialog from './PaymentDialog'
+import ConfirmPaymentDialog from './ConfirmPaymentDialog'
+import axios from 'axios'
 import { submitPaymentRequestAPI } from '~/apis'
+import authorizedAxiosInstance from '~/utils/authorizeAxios'
+import { API_ROOT } from '~/utils/constants'
 
 // Summary Card Component
 const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
@@ -223,12 +227,15 @@ const Debt = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedCreditor, setSelectedCreditor] = useState(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [selectedDebtor, setSelectedDebtor] = useState(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   
   // Get current user from Redux store
   const currentUser = useSelector(selectCurrentUser)
   const currentUserId = currentUser?._id
   
-  const { loading, error, debtData } = useDebt(currentUserId)
+  const { loading, error, debtData, refetch } = useDebt(currentUserId)
 
   const handlePaymentClick = (creditor) => {
     setSelectedCreditor(creditor)
@@ -241,15 +248,28 @@ const Debt = () => {
   }
 
   const handleConfirmPayment = (debtor) => {
-    console.log('Confirm payment:', debtor)
-    // TODO: Implement confirm payment functionality
+    setSelectedDebtor(debtor)
+    setConfirmDialogOpen(true)
+  }
+
+  const handleConfirmPaymentSubmit = async (formData) => {
+    setConfirmLoading(true)
+    try {
+      await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${currentUserId}/confirm-payment`, formData)
+      setConfirmDialogOpen(false)
+      setSelectedDebtor(null)
+      await refetch()
+    } catch (err) {
+      alert('Xác nhận thanh toán thất bại!')
+    } finally {
+      setConfirmLoading(false)
+    }
   }
 
   const handlePaymentSubmit = async (paymentData) => {
     try {
       await submitPaymentRequestAPI(currentUserId, paymentData)
-      // Optionally refresh debt data here
-      window.location.reload() // Simple approach
+      await refetch()
     } catch (error) {
       console.error('Payment submission failed:', error)
       throw error
@@ -394,6 +414,17 @@ const Debt = () => {
         onClose={() => setPaymentDialogOpen(false)}
         creditor={selectedCreditor}
         onSubmit={handlePaymentSubmit}
+      />
+
+      {/* Confirm Payment Dialog */}
+      <ConfirmPaymentDialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        debtor={selectedDebtor}
+        defaultAmount={selectedDebtor?.totalAmount}
+        bills={selectedDebtor?.bills || []}
+        onSubmit={handleConfirmPaymentSubmit}
+        loading={confirmLoading}
       />
     </Layout>
   )
