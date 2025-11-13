@@ -1,67 +1,21 @@
-/* eslint-disable no-unused-vars */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
-import { Box, Card, Typography, Button, IconButton, Avatar } from '@mui/material'
-import { styled } from '@mui/material/styles'
+import { Box, Typography, Button, IconButton } from '@mui/material'
 import { COLORS } from '~/theme'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import GroupAddIcon from '@mui/icons-material/GroupAdd'
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
-import CustomTextField from '~/components/Form/CustomTextField'
-import CustomSelect from '~/components/Form/CustomSelect'
-import CustomDatePicker from '~/components/Form/CustomDatePicker'
-import SplitTypeToggle from '~/components/Form/SplitTypeToggle'
-import ParticipantCard from '~/components/Form/ParticipantCard'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
-import { createBillAPI,  getAllGroupsAndMembersAPI } from '~/apis'
-import { categoryOptions } from '~/apis/mock-data'
-import { useForm, Controller } from 'react-hook-form'
-
-const SectionCard = styled(Card)(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
-  border: `0.8px solid ${theme.palette.divider}`,
-  borderRadius: '16px',
-  boxShadow: 'none',
-  marginBottom: '24px',
-  padding: '24px',
-}))
-
-const SectionHeader = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  marginBottom: '24px',
-})
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  fontFamily: "'Nunito Sans', sans-serif",
-  fontSize: '20px',
-  fontWeight: 600,
-  lineHeight: '20px',
-  color: theme.palette.text.primary,
-}))
-
-const GradientButton = styled(Button)({
-  background: COLORS.gradientPrimary,
-  color: '#FAFAFA',
-  borderRadius: '16px',
-  textTransform: 'none',
-  fontSize: '14px',
-  fontWeight: 500,
-  padding: '6px 12px',
-  height: '32px',
-  '&:hover': {
-    background: COLORS.gradientPrimary,
-    opacity: 0.9,
-  },
-})
+import GeneralInformationSection from '~/components/Bills/GeneralInformationSection'
+import ParticipantsSection from '~/components/Bills/ParticipantsSection'
+import EqualSplitDetails from '~/components/Bills/EqualSplitDetails'
+import ByPersonSplitDetails from '~/components/Bills/ByPersonSplitDetails'
+import ByItemSplitDetails from '~/components/Bills/ByItemSplitDetails'
+import { createBillAPI, fetchUsersAPI, fetchGroupsAPI } from '~/apis'
+import { useForm } from 'react-hook-form'
 
 function BillCreate() {
   const navigate = useNavigate()
@@ -74,7 +28,6 @@ function BillCreate() {
     watch,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
       billName: '',
@@ -103,6 +56,16 @@ function BillCreate() {
     },
   ])
 
+  // Items state for item-based split
+  const [items, setItems] = useState([
+    {
+      id: Date.now(),
+      name: '',
+      amount: 0,
+      allocatedTo: [],
+    },
+  ])
+
   // Dialog states
   const [openParticipantDialog, setOpenParticipantDialog] = useState(false)
   const [openPayerDialog, setOpenPayerDialog] = useState(false)
@@ -110,60 +73,250 @@ function BillCreate() {
   const [submitError, setSubmitError] = useState(null)
 
   // Real data states
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const [availableGroups, setAvailableGroups] = useState([])
   const [availablePeople, setAvailablePeople] = useState([])
-  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [searchedUsers, setSearchedUsers] = useState([])
+  const [searchedGroups, setSearchedGroups] = useState([])
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false)
+  const [searchPagination, setSearchPagination] = useState({
+    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+  })
+  const [normalPagination, setNormalPagination] = useState({
+    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+  })
 
-  // Fetch groups and extract all unique members
+  // Handler for loading more in normal mode (non-search)
+  const handleLoadMore = async (page = 1, limit = 10, append = true, type = 'both') => {
+    try {
+      setIsLoadingData(true)
+
+      if (type === 'users' || type === 'both') {
+        const usersResponse = await fetchUsersAPI(page, limit, '').catch((err) => {
+          console.error('Error fetching users:', err)
+          return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 } }
+        })
+
+        const transformedUsers = usersResponse.users.map((user) => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+        }))
+
+        if (append) {
+          setAvailablePeople((prev) => [...prev, ...transformedUsers])
+        } else {
+          setAvailablePeople(transformedUsers)
+        }
+
+        setNormalPagination((prev) => ({
+          ...prev,
+          users: {
+            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
+            totalPages: usersResponse.pagination.totalPages || 1,
+            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
+            limit: usersResponse.pagination.limit || limit,
+          },
+        }))
+      }
+
+      if (type === 'groups' || type === 'both') {
+        const groupsResponse = await fetchGroupsAPI(page, limit, '').catch((err) => {
+          console.error('Error fetching groups:', err)
+          return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit: 10 } }
+        })
+
+        const transformedGroups = groupsResponse.groups.map((group) => ({
+          id: group._id,
+          name: group.groupName || group.name,
+          members: (group.members || []).map((member) => ({
+            id: member._id,
+            name: member.name,
+            email: member.email,
+            avatar: member.avatar,
+          })),
+        }))
+
+        if (append) {
+          setAvailableGroups((prev) => [...prev, ...transformedGroups])
+        } else {
+          setAvailableGroups(transformedGroups)
+        }
+
+        setNormalPagination((prev) => ({
+          ...prev,
+          groups: {
+            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
+            totalPages: groupsResponse.pagination.totalPages || 1,
+            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
+            limit: groupsResponse.pagination.limit || limit,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error('Error loading more:', error)
+    } finally {
+      setIsLoadingData(false)
+    }
+  }
+
+  // Unified search handler - fetches both users and groups
+  const handleSearch = async (page = 1, limit = 10, search = '', append = false, type = 'both') => {
+    if (!search.trim()) {
+      setSearchedUsers([])
+      setSearchedGroups([])
+      return
+    }
+
+    try {
+      setIsLoadingSearch(true)
+
+      // Fetch based on type parameter
+      if (type === 'users' || type === 'both') {
+        const usersResponse = await fetchUsersAPI(page, limit, search).catch((err) => {
+          console.error('Error fetching users:', err)
+          return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit } }
+        })
+
+        // Transform users data
+        const transformedUsers = usersResponse.users.map((user) => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+        }))
+
+        if (append) {
+          setSearchedUsers((prev) => [...prev, ...transformedUsers])
+        } else {
+          setSearchedUsers(transformedUsers)
+        }
+
+        setSearchPagination((prev) => ({
+          ...prev,
+          users: {
+            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
+            totalPages: usersResponse.pagination.totalPages || 1,
+            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
+            limit: usersResponse.pagination.limit || limit,
+          },
+        }))
+      }
+
+      if (type === 'groups' || type === 'both') {
+        const groupsResponse = await fetchGroupsAPI(page, limit, search).catch((err) => {
+          console.error('Error fetching groups:', err)
+          return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit } }
+        })
+
+        // Transform groups data
+        const transformedGroups = groupsResponse.groups.map((group) => ({
+          id: group._id,
+          name: group.groupName || group.name,
+          members: (group.members || []).map((member) => ({
+            id: member._id,
+            name: member.name,
+            email: member.email,
+            avatar: member.avatar,
+          })),
+        }))
+
+        if (append) {
+          setSearchedGroups((prev) => [...prev, ...transformedGroups])
+        } else {
+          setSearchedGroups(transformedGroups)
+        }
+
+        setSearchPagination((prev) => ({
+          ...prev,
+          groups: {
+            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
+            totalPages: groupsResponse.pagination.totalPages || 1,
+            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
+            limit: groupsResponse.pagination.limit || limit,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error('Error searching:', error)
+      if (!append) {
+        if (type === 'users' || type === 'both') setSearchedUsers([])
+        if (type === 'groups' || type === 'both') setSearchedGroups([])
+      }
+    } finally {
+      setIsLoadingSearch(false)
+    }
+  }
+
+  // Fetch initial users and groups with pagination
   useEffect(() => {
-    const fetchGroupsAndMembers = async () => {
+    const fetchInitialData = async () => {
       if (!currentUser?._id) return
 
       try {
         setIsLoadingData(true)
-        // Fetch all groups and their members
-        const groupsData = await getAllGroupsAndMembersAPI()
 
-        // Transform groups data to match the expected format
-        const transformedGroups = groupsData.map(group => ({
+        // Fetch first page of users and groups in parallel
+        const [usersResponse, groupsResponse] = await Promise.all([
+          fetchUsersAPI(1, 10, '').catch((err) => {
+            console.error('Error fetching users:', err)
+            return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 } }
+          }),
+          fetchGroupsAPI(1, 10, '').catch((err) => {
+            console.error('Error fetching groups:', err)
+            return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit: 10 } }
+          }),
+        ])
+
+        // Transform users data
+        const transformedUsers = usersResponse.users.map((user) => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+        }))
+
+        // Transform groups data
+        const transformedGroups = groupsResponse.groups.map((group) => ({
           id: group._id,
-          name: group.groupName,
-          members: group.members.map(member => ({
+          name: group.groupName || group.name,
+          members: (group.members || []).map((member) => ({
             id: member._id,
             name: member.name,
             email: member.email,
-            avatar: member.avatar
-          }))
+            avatar: member.avatar,
+          })),
         }))
 
-        // Extract all unique members from all groups
-        const allMembersMap = new Map()
-        groupsData.forEach(group => {
-          group.members.forEach(member => {
-            if (!allMembersMap.has(member._id)) {
-              allMembersMap.set(member._id, {
-                id: member._id,
-                name: member.name,
-                email: member.email,
-                avatar: member.avatar
-              })
-            }
-          })
-        })
-
-        const uniqueMembers = Array.from(allMembersMap.values())
-
+        setAvailablePeople(transformedUsers)
         setAvailableGroups(transformedGroups)
-        setAvailablePeople(uniqueMembers)
+
+        setNormalPagination({
+          users: {
+            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
+            totalPages: usersResponse.pagination.totalPages || 1,
+            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
+            limit: usersResponse.pagination.limit || 10,
+          },
+          groups: {
+            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
+            totalPages: groupsResponse.pagination.totalPages || 1,
+            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
+            limit: groupsResponse.pagination.limit || 10,
+          },
+        })
       } catch (error) {
-        console.error('Error fetching groups and members:', error)
+        console.error('Error fetching initial data:', error)
         setSubmitError('Không thể tải danh sách nhóm và thành viên')
       } finally {
         setIsLoadingData(false)
       }
     }
 
-    fetchGroupsAndMembers()
+    fetchInitialData()
   }, [currentUser?._id])
 
   const handleAddParticipants = (newParticipants) => {
@@ -182,26 +335,6 @@ function BillCreate() {
     setParticipants([...participants, ...uniqueParticipants])
   }
 
-  const handleSelectPayer = (person) => {
-    // Set the payer in the form
-    setValue('payer', person.id)
-
-    // Auto-add payer to participants if not already there
-    const isAlreadyParticipant = participants.some((p) => p.id === person.id)
-    if (!isAlreadyParticipant) {
-      setParticipants([
-        ...participants,
-        {
-          id: person.id,
-          name: person.name,
-          email: person.email,
-          amount: 0,
-          usedAmount: 0,
-        },
-      ])
-    }
-  }
-
   // Get the selected payer's name for display
   const getPayerName = () => {
     const payerId = getValues('payer')
@@ -213,8 +346,44 @@ function BillCreate() {
     setParticipants(participants.filter((p) => p.id !== id))
   }
 
+  // Money amount change handler 
   const handleParticipantAmountChange = (id, amount) => {
     setParticipants(participants.map((p) => (p.id === id ? { ...p, usedAmount: amount } : p)))
+  }
+
+  // Item management handlers for item-based split
+  const handleAddItem = () => {
+    setItems([
+      ...items,
+      {
+        id: Date.now(),
+        name: '',
+        amount: 0,
+        allocatedTo: [],
+      },
+    ])
+  }
+
+  const handleDeleteItem = (id) => {
+    setItems(items.filter((item) => item.id !== id))
+  }
+
+  const handleItemChange = (id, field, value) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
+  }
+
+  const handleItemAllocationToggle = (itemId, participantId) => {
+    setItems(
+      items.map((item) => {
+        if (item.id === itemId) {
+          const allocatedTo = item.allocatedTo.includes(participantId)
+            ? item.allocatedTo.filter((id) => id !== participantId)
+            : [...item.allocatedTo, participantId]
+          return { ...item, allocatedTo }
+        }
+        return item
+      })
+    )
   }
 
   const handleCalculate = () => {
@@ -233,14 +402,39 @@ function BillCreate() {
           }))
         )
       }
+    } else if (splitType === 'by-item') {
+      // Calculate based on item allocations
+      const participantAmounts = {}
+      participants.forEach((p) => {
+        participantAmounts[p.id] = 0
+      })
+
+      items.forEach((item) => {
+        const itemAmount = parseFloat(item.amount) || 0
+        const allocatedCount = item.allocatedTo.length
+        if (allocatedCount > 0) {
+          const perPerson = itemAmount / allocatedCount
+          item.allocatedTo.forEach((participantId) => {
+            if (participantAmounts[participantId] !== undefined) {
+              participantAmounts[participantId] += perPerson
+            }
+          })
+        }
+      })
+
+      setParticipants(
+        participants.map((p) => ({
+          ...p,
+          amount: participantAmounts[p.id] || 0,
+        }))
+      )
     }
   }
 
-  // Auto-calculate when relevant data changes
   useEffect(() => {
     handleCalculate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [splitType, totalAmount, participants.length])
+  }, [splitType, totalAmount, participants.length, items])
 
   const handleSubmit = async (formData) => {
     try {
@@ -252,6 +446,7 @@ function BillCreate() {
         return
       }
 
+      // Base bill data for all split types
       const billData = {
         billName: formData.billName,
         creatorId: currentUser?._id,
@@ -259,17 +454,38 @@ function BillCreate() {
         totalAmount: parseFloat(formData.totalAmount),
         paymentDate: formData.creationDate,
         description: formData.notes,
-        splittingMethod: formData.splitType,
         category: formData.category,
-        participants: participants.map((p) => ({
-          userId: p.id,
-          name: p.name,
-          email: p.email,
-          amount: p.amount || 0,
-        })),
+        participants: participants.map((p) => String(p.id)),
       }
 
-      console.log('Submitting bill data:', billData)
+      // Add type-specific fields based on splitType
+      if (formData.splitType === 'equal') {
+        // Equal split - only needs participants
+        billData.splittingMethod = 'equal'
+      } else if (formData.splitType === 'by-item') {
+        // Item-based split - needs items array
+        billData.splittingMethod = 'item-based'
+        billData.items = items
+          .filter((item) => item.name && item.amount > 0 && item.allocatedTo.length > 0)
+          .map((item) => ({
+            name: item.name,
+            amount: parseFloat(item.amount),
+            allocatedTo: item.allocatedTo.map((id) => String(id)),
+          }))
+
+        if (billData.items.length === 0) {
+          setSubmitError('Vui lòng thêm ít nhất một món hàng cho phương thức chia theo món')
+          return
+        }
+      } else if (formData.splitType === 'by-person') {
+        // People-based split - needs paymentStatus array
+        billData.splittingMethod = 'people-based'
+        billData.paymentStatus = participants.map((p) => ({
+          userId: String(p.id),
+          amountOwed: parseFloat(p.amount || 0),
+        }))
+      }
+
       await createBillAPI(billData)
       navigate('/history')
     } catch (error) {
@@ -282,15 +498,6 @@ function BillCreate() {
 
   const handleCancel = () => {
     navigate(-1)
-  }
-
-  const getInitials = (name) => {
-    if (!name) return 'NA'
-    const parts = name.trim().split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
   }
 
   return (
@@ -351,311 +558,48 @@ function BillCreate() {
 
         {submitError && <FieldErrorAlert message={submitError} />}
 
-        {/* General Information Card */}
-        <SectionCard>
-          <SectionHeader>
-            <InfoOutlinedIcon sx={{ width: '20px', height: '20px', color: 'text.primary' }} />
-            <SectionTitle>Thông tin chung</SectionTitle>
-          </SectionHeader>
+        {/* General Information Section */}
+        <GeneralInformationSection
+          control={control}
+          getPayerName={getPayerName}
+          onOpenPayerDialog={() => setOpenPayerDialog(true)}
+        />
 
-          {/* Row 1: Bill Name and Category */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', mb: 3 }}>
-            <Controller
-              name="billName"
-              control={control}
-              rules={{ required: 'Vui lòng nhập tên hóa đơn' }}
-              render={({ field, fieldState: { error } }) => (
-                <CustomTextField
-                  {...field}
-                  label="Tên hóa đơn"
-                  required
-                  placeholder="VD: Ăn tối nhà hàng"
-                  error={!!error}
-                  helperText={error?.message}
-                />
-              )}
-            />
-            <Controller
-              name="category"
-              control={control}
-              rules={{ required: 'Vui lòng chọn phân loại' }}
-              render={({ field }) => <CustomSelect {...field} label="Phân loại" required options={categoryOptions} />}
-            />
-          </Box>
+        {/* Participants Section */}
+        <ParticipantsSection
+          participants={participants}
+          splitType={splitType}
+          onOpenParticipantDialog={() => setOpenParticipantDialog(true)}
+          onDeleteParticipant={handleDeleteParticipant}
+          onParticipantAmountChange={handleParticipantAmountChange}
+        />
+        {/* Split Details Section */}
+        {splitType === 'equal' && (
+          <EqualSplitDetails control={control} participants={participants} totalAmount={totalAmount} />
+        )}
 
-          {/* Row 2: Notes */}
-          <Box sx={{ mb: 3 }}>
-            <Controller
-              name="notes"
-              control={control}
-              render={({ field }) => (
-                <CustomTextField
-                  {...field}
-                  label="Ghi chú"
-                  placeholder="Thêm mô tả cho hóa đơn..."
-                  multiline
-                  rows={3}
-                />
-              )}
-            />
-          </Box>
+        {splitType === 'by-person' && (
+          <ByPersonSplitDetails
+            control={control}
+            participants={participants}
+            totalAmount={totalAmount}
+            setValue={setValue}
+          />
+        )}
 
-          {/* Row 3: Dates and Payer */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', mb: 3 }}>
-            <Controller
-              name="creationDate"
-              control={control}
-              render={({ field }) => (
-                <CustomDatePicker label="Thời gian tạo" value={field.value} onChange={(date) => field.onChange(date)} />
-              )}
-            />
-            <Controller
-              name="paymentDeadline"
-              control={control}
-              render={({ field }) => (
-                <CustomDatePicker
-                  label="Hạn thanh toán"
-                  value={field.value}
-                  onChange={(date) => field.onChange(date)}
-                />
-              )}
-            />
-            <Controller
-              name="payer"
-              control={control}
-              rules={{ required: 'Vui lòng chọn người ứng tiền' }}
-              render={({ field, fieldState: { error } }) => (
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      color: 'text.primary',
-                      mb: 1,
-                    }}
-                  >
-                    Người ứng tiền *
-                  </Typography>
-                  <Button
-                    fullWidth
-                    onClick={() => setOpenPayerDialog(true)}
-                    sx={(theme) => ({
-                      fontSize: '14px',
-                      borderRadius: '16px',
-                      backgroundColor: theme.palette.background.default,
-                      border: `0.8px solid ${error ? theme.palette.error.main : theme.palette.divider}`,
-                      color: field.value ? theme.palette.text.primary : theme.palette.text.secondary,
-                      textTransform: 'none',
-                      justifyContent: 'flex-start',
-                      padding: '8px 12px',
-                      fontWeight: 400,
-                      '&:hover': {
-                        backgroundColor:
-                          theme.palette.mode === 'dark'
-                            ? theme.palette.background.paper
-                            : theme.palette.background.default,
-                        border: `0.8px solid ${error ? theme.palette.error.main : theme.palette.divider}`,
-                      },
-                    })}
-                  >
-                    {getPayerName()}
-                  </Button>
-                  {error && (
-                    <Typography sx={{ fontSize: '12px', color: 'error.main', mt: 0.5, ml: 1.5 }}>
-                      {error.message}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-            />
-          </Box>
-
-          {/* Row 4: Split Type */}
-          <Box>
-            <Typography
-              sx={{
-                fontSize: '14px',
-                fontWeight: 500,
-                color: 'text.primary',
-                mb: 1,
-              }}
-            >
-              Kiểu chia *
-            </Typography>
-            <Controller
-              name="splitType"
-              control={control}
-              render={({ field }) => <SplitTypeToggle value={field.value} onChange={field.onChange} />}
-            />
-          </Box>
-        </SectionCard>
-
-        {/* Participants Card */}
-        <SectionCard>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <SectionHeader sx={{ mb: 0 }}>
-              <GroupAddIcon sx={{ width: '20px', height: '20px', color: 'text.primary' }} />
-              <SectionTitle>Thành viên tham gia ({participants.length})</SectionTitle>
-            </SectionHeader>
-            <GradientButton startIcon={<GroupAddIcon />} onClick={() => setOpenParticipantDialog(true)}>
-              Thêm thành viên
-            </GradientButton>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {participants.map((participant) => (
-              <ParticipantCard
-                key={participant.id}
-                participant={participant}
-                showAmountInput={splitType === 'by-person'}
-                onAmountChange={(amount) => handleParticipantAmountChange(participant.id, amount)}
-                onDelete={() => handleDeleteParticipant(participant.id)}
-                canDelete={participants.length > 1}
-              />
-            ))}
-          </Box>
-        </SectionCard>
-
-        {/* Bill Details Card */}
-        <SectionCard sx={{ mb: 10 }}>
-          <SectionHeader>
-            <ReceiptLongIcon sx={{ width: '20px', height: '20px', color: 'text.primary' }} />
-            <SectionTitle>Chi tiết hóa đơn</SectionTitle>
-          </SectionHeader>
-
-          {/* Total Amount Input */}
-          <Box sx={{ mb: 3 }}>
-            <Controller
-              name="totalAmount"
-              control={control}
-              rules={{
-                required: 'Vui lòng nhập tổng số tiền',
-                validate: (value) => {
-                  const numValue = parseFloat(value)
-                  if (isNaN(numValue) || numValue <= 0) {
-                    return 'Số tiền phải lớn hơn 0'
-                  }
-                  return true
-                },
-              }}
-              render={({ field, fieldState: { error } }) => (
-                <CustomTextField
-                  {...field}
-                  label="Tổng số tiền thanh toán"
-                  required
-                  type="text"
-                  placeholder="VD: 100+200 hoặc 500*3 hoặc (100+50)/2"
-                  enableAutoCalculate
-                  error={!!error}
-                  helperText={error?.message}
-                  InputProps={{
-                    startAdornment: (
-                      <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />
-                    ),
-                  }}
-                />
-              )}
-            />
-            <Typography
-              sx={{
-                fontSize: '14px',
-                color: 'text.secondary',
-                mt: 1,
-              }}
-            >
-              Hỗ trợ phép tính: + (cộng), - (trừ), * (nhân), / (chia), () (ngoặc)
-            </Typography>
-          </Box>
-
-          <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 3, mb: 3 }} />
-
-          {/* Auto Calculate Section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-            <Typography
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                color: 'text.primary',
-              }}
-            >
-              Tự động tính toán
-            </Typography>
-          </Box>
-
-          {/* Calculated Amounts - All Participants */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {participants.map((participant) => (
-              <Box
-                key={participant.id}
-                sx={(theme) => ({
-                  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F5F5F5',
-                  borderRadius: '16px',
-                  padding: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                })}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Avatar
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      background: COLORS.gradientPrimary,
-                      fontSize: '16px',
-                      fontWeight: 400,
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {getInitials(participant.name)}
-                  </Avatar>
-                  <Typography
-                    sx={{
-                      fontSize: '14px',
-                      fontWeight: 400,
-                      color: 'text.primary',
-                    }}
-                  >
-                    {participant.name}
-                  </Typography>
-                </Box>
-                <Typography
-                  sx={{
-                    fontSize: '16px',
-                    fontWeight: 500,
-                    color: 'text.primary',
-                  }}
-                >
-                  {participant.amount?.toFixed(0) || 0} ₫
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-
-          <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 1.5 }} />
-
-          {/* Total */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography
-              sx={{
-                fontSize: '18px',
-                fontWeight: 500,
-                color: 'text.primary',
-              }}
-            >
-              Tổng cộng:
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '18px',
-                fontWeight: 700,
-                color: 'text.primary',
-              }}
-            >
-              {totalAmount || 0} ₫
-            </Typography>
-          </Box>
-        </SectionCard>
+        {splitType === 'by-item' && (
+          <ByItemSplitDetails
+            control={control}
+            participants={participants}
+            totalAmount={totalAmount}
+            items={items}
+            setValue={setValue}
+            onAddItem={handleAddItem}
+            onDeleteItem={handleDeleteItem}
+            onItemChange={handleItemChange}
+            onItemAllocationToggle={handleItemAllocationToggle}
+          />
+        )}
       </Box>
 
       {/* Fixed Action Buttons */}
@@ -665,14 +609,14 @@ function BillCreate() {
           justifyContent: 'center',
           position: 'fixed',
           bottom: '0',
-          left: '256px',
+          left: { xs: '0', md: '256px' },
           right: '0',
           backgroundColor: theme.palette.mode === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(10px)',
           border: `0.8px solid ${theme.palette.divider}`,
           borderRadius: '16px 16px 0 0',
-          padding: '16px',
-          gap: '12px',
+          padding: { xs: '12px', sm: '16px' },
+          gap: { xs: '8px', sm: '12px' },
           zIndex: 1000,
           boxShadow: theme.palette.mode === 'dark' ? '0 -2px 10px rgba(0,0,0,0.3)' : '0 -2px 10px rgba(0,0,0,0.05)',
         })}
@@ -684,10 +628,12 @@ function BillCreate() {
           sx={{
             borderRadius: '16px',
             textTransform: 'none',
-            fontSize: '14px',
+            fontSize: { xs: '13px', sm: '14px' },
             fontWeight: 500,
             border: (theme) => `0.8px solid ${theme.palette.divider}`,
             color: 'text.primary',
+            minWidth: { xs: '80px', sm: 'auto' },
+            px: { xs: 1.5, sm: 2 },
             '&:hover': {
               border: (theme) => `0.8px solid ${theme.palette.divider}`,
             },
@@ -695,17 +641,29 @@ function BillCreate() {
         >
           Hủy
         </Button>
-        <GradientButton
-          startIcon={<CheckCircleIcon />}
+        <Button
+          startIcon={<CheckCircleIcon sx={{ display: { xs: 'none', sm: 'block' } }} />}
           onClick={handleFormSubmit(handleSubmit)}
           disabled={isLoading}
           sx={{
+            background: COLORS.gradientPrimary,
+            color: '#FAFAFA',
+            borderRadius: '16px',
+            textTransform: 'none',
+            fontWeight: 500,
+            padding: '6px 12px',
             height: '36px',
-            px: 2,
+            px: { xs: 1.5, sm: 2 },
+            minWidth: { xs: '120px', sm: 'auto' },
+            fontSize: { xs: '13px', sm: '14px' },
+            '&:hover': {
+              background: COLORS.gradientPrimary,
+              opacity: 0.9,
+            },
           }}
         >
           {isLoading ? 'Đang xử lý...' : 'Lưu hóa đơn'}
-        </GradientButton>
+        </Button>
       </Box>
 
       {/* Add Participant Dialog */}
@@ -718,15 +676,21 @@ function BillCreate() {
         availablePeople={availablePeople}
         availableGroups={availableGroups}
         isLoading={isLoadingData}
+        onSearch={handleSearch}
+        onLoadMore={handleLoadMore}
+        searchedUsers={searchedUsers}
+        searchedGroups={searchedGroups}
+        searchPagination={searchPagination}
+        normalPagination={normalPagination}
+        isLoadingSearch={isLoadingSearch}
       />
 
       {/* Select Payer Dialog */}
       <SelectPayerDialog
         open={openPayerDialog}
         onClose={() => setOpenPayerDialog(false)}
-        onSelect={handleSelectPayer}
-        availablePeople={availablePeople}
-        currentUser={currentUser}
+        onSelect={(person) => setValue('payer', person.id)}
+        availablePeople={participants}
         isLoading={isLoadingData}
       />
     </Box>

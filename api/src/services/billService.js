@@ -3,22 +3,15 @@ import { billModel } from '~/models/billModel.js';
 import { activityModel } from '~/models/activityModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
 
-/**
- * Create a new bill with splitting logic and activity logging
- * @param {Object} reqBody - Bill data from request
- * @param {Object} options - Additional options (userId for logging)
- * @returns {Promise<Object>} Created bill
- */
-const createNew = async (reqBody, options = {}) => {
+const createNew = async (reqBody) => {
   try {
     let paymentStatus = []
-    
+
     if (reqBody.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
       const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
       paymentStatus = reqBody.participants.map(userId => {
-        // Use .equals() for proper ObjectId comparison
-        const isPayer = userId.equals(reqBody.payerId);
+        const isPayer = userId.toString() === reqBody.payerId.toString();
         return {
           userId: userId,
           amountOwed: amountPerPerson,
@@ -30,20 +23,20 @@ const createNew = async (reqBody, options = {}) => {
       // Item-based split: calculate based on items with discount/tax adjustment
       const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0)
       const adjustmentRatio = reqBody.totalAmount / sumOfItemAmounts
-      
+
       const userAmounts = {}
-      
+
       // Calculate total owed by each user with adjustment
       reqBody.items.forEach(item => {
         const adjustedItemAmount = item.amount * adjustmentRatio
         const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
-        
+
         item.allocatedTo.forEach(userId => {
           const userKey = userId.toString(); // Use string key for object
           userAmounts[userKey] = (userAmounts[userKey] || 0) + amountPerPerson
         })
       })
-      
+
       // Create payment status array
       paymentStatus = Object.entries(userAmounts).map(([userIdStr, amount]) => {
         // Use .equals() for proper ObjectId comparison (convert key back to ObjectId for comparison)
@@ -55,12 +48,35 @@ const createNew = async (reqBody, options = {}) => {
           paidDate: isPayer ? Date.now() : null
         };
       })
+    } else if (reqBody.splittingMethod === 'people-based') {
+      // People-based split: each person has a custom amount
+      if (!reqBody.paymentStatus || !Array.isArray(reqBody.paymentStatus)) {
+        throw new Error('paymentStatus array is required for people-based splitting');
+      }
+
+      // Validate that the sum of amountOwed matches totalAmount
+      const totalOwed = reqBody.paymentStatus.reduce((sum, ps) => sum + ps.amountOwed, 0);
+      if (Math.abs(totalOwed - reqBody.totalAmount) > 0.01) {
+        throw new Error(`Sum of amountOwed (${totalOwed}) must equal totalAmount (${reqBody.totalAmount})`);
+      }
+
+      // Set payment status with payer already paid
+      paymentStatus = reqBody.paymentStatus.map(ps => {
+        const isPayer = ps.userId.toString() === reqBody.payerId.toString();
+        return {
+          userId: ps.userId,
+          amountOwed: ps.amountOwed,
+          amountPaid: isPayer ? ps.amountOwed : 0,
+          paidDate: isPayer ? Date.now() : null
+        };
+      });
     }
     
     const newBillData = {
       ...reqBody,
       paymentStatus,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     }
     
     const createdBill = await billModel.createNew(newBillData)

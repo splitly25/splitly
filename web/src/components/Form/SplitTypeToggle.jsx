@@ -1,6 +1,7 @@
 import { Box, Button } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { COLORS } from '~/theme'
+import { options } from '~/utils/constants'
 
 const ToggleButton = styled(Button)(({ theme, active }) => ({
   flex: 1,
@@ -21,12 +22,6 @@ const ToggleButton = styled(Button)(({ theme, active }) => ({
 }))
 
 const SplitTypeToggle = ({ value, onChange }) => {
-  const options = [
-    { value: 'equal', label: 'Chia đều' },
-    { value: 'by-person', label: 'Theo người' },
-    { value: 'by-item', label: 'Theo món' },
-  ]
-
   return (
     <Box sx={{ display: 'flex', gap: '12px', width: '100%' }}>
       {options.map((option) => (

@@ -1,35 +1,21 @@
 import { useState } from 'react'
-import { Dialog, Box, Typography, TextField, Button, Avatar, IconButton, InputAdornment, CircularProgress } from '@mui/material'
-import { styled } from '@mui/material/styles'
+import {
+  Dialog,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Avatar,
+  IconButton,
+  InputAdornment,
+  CircularProgress,
+} from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
-import EmailIcon from '@mui/icons-material/Email'
 import CloseIcon from '@mui/icons-material/Close'
 import PersonIcon from '@mui/icons-material/Person'
 
-const StyledInput = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '8px',
-    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
-    fontSize: '14px',
-    '& fieldset': {
-      borderColor: theme.palette.divider,
-      borderWidth: '0.8px',
-    },
-    '&:hover fieldset': {
-      borderColor: theme.palette.divider,
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: theme.palette.primary.main,
-    },
-  },
-  '& .MuiOutlinedInput-input': {
-    padding: '8px 12px',
-  },
-}))
-
-const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], currentUser = null, isLoading = false }) => {
+const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], isLoading = false }) => {
   const [searchQuery, setSearchQuery] = useState('')
-  const [emailInput, setEmailInput] = useState('')
 
   const getInitials = (name) => {
     if (!name) return '?'
@@ -45,30 +31,13 @@ const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], curr
     handleCancel()
   }
 
-  const handleAddByEmail = () => {
-    if (emailInput.trim() && emailInput.includes('@')) {
-      const newPerson = {
-        id: `email-${Date.now()}`,
-        name: emailInput.split('@')[0],
-        email: emailInput.trim(),
-        isFromEmail: true,
-      }
-      onSelect(newPerson)
-      handleCancel()
-    }
-  }
-
   const handleCancel = () => {
     setSearchQuery('')
-    setEmailInput('')
     onClose()
   }
 
-  // Combine current user with available people
-  const allPeople = currentUser ? [currentUser, ...availablePeople] : availablePeople
-
   // Filter people based on search query
-  const filteredPeople = allPeople.filter(
+  const filteredPeople = availablePeople.filter(
     (person) =>
       person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       person.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,65 +75,12 @@ const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], curr
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ width: '20px', height: '20px', color: 'text.primary' }} />
             <Typography sx={(theme) => ({ fontSize: '20px', fontWeight: 600, color: theme.palette.text.primary })}>
-              Chọn người ứng tiền
+              Chọn người ứng tiền trong danh sách tham gia
             </Typography>
           </Box>
           <IconButton onClick={handleCancel} size="small">
             <CloseIcon sx={{ width: '20px', height: '20px' }} />
           </IconButton>
-        </Box>
-
-        {/* Add by Email Section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            sx={{
-              fontSize: '14px',
-              fontWeight: 500,
-              color: 'text.primary',
-              mb: 1.5,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <EmailIcon sx={{ width: '16px', height: '16px' }} />
-            Chọn bằng email
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <StyledInput
-              fullWidth
-              placeholder="Nhập địa chỉ email..."
-              variant="outlined"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddByEmail()
-                }
-              }}
-            />
-            <Button
-              sx={(theme) => ({
-                backgroundColor: theme.palette.background.default,
-                border: `0.8px solid ${theme.palette.divider}`,
-                borderRadius: '8px',
-                textTransform: 'none',
-                fontSize: '14px',
-                fontWeight: 400,
-                padding: '8px 16px',
-                color: theme.palette.text.primary,
-                height: '36px',
-                minWidth: '60px',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
-                  border: `0.8px solid ${theme.palette.divider}`,
-                },
-              })}
-              onClick={handleAddByEmail}
-            >
-              Thêm
-            </Button>
-          </Box>
         </Box>
 
         {/* Search Section */}
@@ -177,9 +93,29 @@ const SelectPayerDialog = ({ open, onClose, onSelect, availablePeople = [], curr
               mb: 1.5,
             }}
           >
-            Tìm kiếm
+            Tìm kiếm trong danh sách
           </Typography>
-          <StyledInput
+          <TextField
+            sx={(theme) => ({
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
+                fontSize: '14px',
+                '& fieldset': {
+                  borderColor: theme.palette.divider,
+                  borderWidth: '0.8px',
+                },
+                '&:hover fieldset': {
+                  borderColor: theme.palette.divider,
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.palette.primary.main,
+                },
+              },
+              '& .MuiOutlinedInput-input': {
+                padding: '8px 12px',
+              },
+            })}
             fullWidth
             placeholder="Tìm kiếm người..."
             variant="outlined"

@@ -72,6 +72,40 @@ const getAll = async () => {
   }
 }
 
+const fetchGroups = async (page = 1, limit = 10, search = '') => {
+  try {
+    const skip = (page - 1) * limit
+    const query = { _destroy: false }
+
+    // Add search condition if search term is provided
+    if (search) {
+      query.$or = [{ groupName: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }]
+    }
+
+    const groups = await GET_DB()
+      .collection(GROUP_COLLECTION_NAME)
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    const total = await GET_DB().collection(GROUP_COLLECTION_NAME).countDocuments(query)
+
+    return {
+      groups,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 // find all group user is member of and join member details
 const getGroupsByUser = async (userId) => {
   try {
@@ -293,4 +327,5 @@ export const groupModel = {
   deleteOneById,
   getGroupAndMembers,
   getAllGroupsAndMembers,
+  fetchGroups,
 }

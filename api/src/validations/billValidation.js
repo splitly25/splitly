@@ -4,62 +4,17 @@ import ApiError from '~/utils/APIError.js';
 import sharp from 'sharp';
 import { fileTypeFromBuffer } from 'file-type';
 
-// sample JSON for postman
-/*
-  {
-    "billName": "Dinner Bill",
-    "description": "Dinner at a restaurant",
-    "creatorId": "user123",
-    "payerId": "user456",
-    "totalAmount": 150.75,
-    "paymentDate": "2024-06-15",
-    "splittingMethod": "equal",
-    "participants": ["user123", "user456", "user789"],
-    "items": [
-      {
-        "name": "Pizza",
-        "amount": 50.25,    
-        "allocatedTo": ["user123", "user456"]
-      },
-      {
-        "name": "Pasta",
-        "amount": 40.50,
-        "allocatedTo": ["user456", "user789"]
-      },
-    ] ,
-    "paymentStatus": [
-      {
-        "userId": "user123",
-        "amountOwed": 50.25,
-        "isPaid": false
-      },  
-      {
-        "userId": "user456",
-        "amountOwed": 60.75,
-        "isPaid": false 
-      },
-      {
-        "userId": "user789",
-        "amountOwed": 39.75,
-        "isPaid": false
-      }
-    ],
-    "isSettled": false,
-    "optedOutUsers": []
-  }
-
-*/
-
 const createNew = async (req, res, next) => {
   const correctCondition = Joi.object({
     // Define the validation schema for a bill
     billName: Joi.string().min(1).max(200).required(),
-    description: Joi.string().max(500).optional(),
+    description: Joi.string().max(500).allow('').optional(),
+    category: Joi.string().max(100).allow('').optional(),
     creatorId: Joi.string().required(),
     payerId: Joi.string().required(),
     totalAmount: Joi.number().min(0).required(),
     paymentDate: Joi.date().optional(),
-    splittingMethod: Joi.string().valid('equal', 'item-based').optional(),
+    splittingMethod: Joi.string().valid('equal', 'item-based', 'people-based'),
     participants: Joi.array().items(Joi.string()).optional(),
     items: Joi.array()
       .items(
@@ -75,7 +30,7 @@ const createNew = async (req, res, next) => {
         Joi.object({
           userId: Joi.string().required(),
           amountOwed: Joi.number().required(),
-          isPaid: Joi.boolean().required(),
+          amountPaid: Joi.number().optional(),
           paidDate: Joi.date().optional(),
         })
       )

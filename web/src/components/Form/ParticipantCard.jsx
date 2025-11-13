@@ -2,21 +2,10 @@ import { Box, Avatar, Typography, IconButton, Chip } from '@mui/material'
 import { COLORS } from '~/theme'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CustomTextField from './CustomTextField'
+import { getInitials } from '~/utils/formatters'
+import { formatCurrency } from '~/utils/formatters'
 
 const ParticipantCard = ({ participant, showAmountInput = false, onAmountChange, onDelete, canDelete = true }) => {
-  const getInitials = (name) => {
-    if (!name) return 'NA'
-    const parts = name.trim().split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-  }
-
-  const formatCurrency = (amount) => {
-    return `${amount || 0} ₫`
-  }
-
   return (
     <Box
       sx={(theme) => ({
@@ -53,15 +42,40 @@ const ParticipantCard = ({ participant, showAmountInput = false, onAmountChange,
             >
               {participant.name}
             </Typography>
-            <Typography
-              sx={{
-                fontSize: '14px',
-                color: 'text.secondary',
-                lineHeight: 1.4,
-              }}
-            >
-              {participant.email}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  color: 'text.secondary',
+                  lineHeight: 1.4,
+                }}
+              >
+                {participant.email}
+              </Typography>
+              {participant.groups && participant.groups.length > 0 && (
+                <>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>•</Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {participant.groups.map((groupName, idx) => (
+                      <Chip
+                        key={idx}
+                        label={groupName}
+                        size="small"
+                        sx={{
+                          height: '18px',
+                          fontSize: '10px',
+                          backgroundColor: 'primary.main',
+                          color: 'primary.contrastText',
+                          '& .MuiChip-label': {
+                            px: 0.75,
+                          },
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+            </Box>
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -104,7 +118,10 @@ const ParticipantCard = ({ participant, showAmountInput = false, onAmountChange,
           label="Số tiền sử dụng"
           type="text"
           value={participant.usedAmount || ''}
-          onChange={(e) => onAmountChange(parseFloat(e.target.value) || 0)}
+          onChange={(e) => {
+            const numValue = parseFloat(e.target.value)
+            onAmountChange(isNaN(numValue) ? 0 : numValue)
+          }}
           placeholder="VD: 100+200 hoặc 500*3 hoặc 1000/4"
           enableAutoCalculate
         />

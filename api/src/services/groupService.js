@@ -37,15 +37,10 @@ const createNew = async (reqBody, creatorId) => {
 
     // Log group creation activity
     try {
-      await activityModel.logGroupActivity(
-        activityModel.ACTIVITY_TYPES.GROUP_CREATED,
-        creatorId,
-        groupIdString,
-        {
-          groupName: reqBody.groupName,
-          description: `Created new group: ${reqBody.groupName}`,
-        }
-      )
+      await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_CREATED, creatorId, groupIdString, {
+        groupName: reqBody.groupName,
+        description: `Created new group: ${reqBody.groupName}`,
+      })
     } catch (activityError) {
       console.warn('Failed to log group creation activity:', activityError.message)
     }
@@ -310,6 +305,18 @@ const getGroupsByUserId = async (userId) => {
   }
 }
 
+const fetchGroups = async (page = 1, limit = 10, search = '') => {
+  try {
+    const result = await groupModel.fetchGroups(page, limit, search)
+    return {
+      groups: result.groups,
+      pagination: result.pagination,
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 export const groupService = {
   createNew,
   getAll,
@@ -322,5 +329,6 @@ export const groupService = {
   deleteOneById,
   getGroupAndMembers,
   getAllGroupsAndMembers,
-  getGroupsByUserId
+  getGroupsByUserId,
+  fetchGroups,
 }

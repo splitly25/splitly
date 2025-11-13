@@ -219,6 +219,18 @@ const getAll = async () => {
   }
 }
 
+const fetchUsers = async (page = 1, limit = 10, search = '') => {
+  try {
+    const result = await userModel.fetchUsers(page, limit, search)
+    return {
+      users: result.users.map((user) => pickUser(user)),
+      pagination: result.pagination,
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 /**
  * Get user by ID
  * @param {string} userId - User ID
@@ -363,4 +375,5 @@ export const userService = {
   update,
   deleteOneById,
   findOrCreateUserByEmail,
+  fetchUsers,
 }

@@ -1,25 +1,33 @@
-import Joi from 'joi';
-import { ObjectId } from 'mongodb';
-import { GET_DB } from '~/config/mongodb';
+import Joi from 'joi'
+import { ObjectId } from 'mongodb'
+import { GET_DB } from '~/config/mongodb'
+import { BILL_TYPE } from '~/utils/constants.js'
 
 // Define Collection name and schema
-const BILL_COLLECTION_NAME = 'bills';
+const BILL_COLLECTION_NAME = 'bills'
 
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(500).optional(),
+  category: Joi.string().max(100).optional(),
   creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   totalAmount: Joi.number().min(0).required(),
   paymentDate: Joi.date().optional(),
-  splittingMethod: Joi.string().valid('equal', 'item-based').optional(),
-  participants: Joi.array().items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId))).optional(),
+  splittingMethod: Joi.string()
+    .valid(...BILL_TYPE)
+    .optional(),
+  participants: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
+    .optional(),
   items: Joi.array()
     .items(
       Joi.object({
         name: Joi.string().required(),
         amount: Joi.number().required(),
-        allocatedTo: Joi.array().items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId))).optional(),
+        allocatedTo: Joi.array()
+          .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
+          .optional(),
       })
     )
     .optional(),
@@ -29,97 +37,98 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
         userId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
         amountOwed: Joi.number().required(),
         amountPaid: Joi.number().default(0),
-        paidDate: Joi.date().optional(),
+        paidDate: Joi.date().allow(null).optional(),
       })
     )
     .optional(),
   isSettled: Joi.boolean().optional(),
-  optedOutUsers: Joi.array().items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId))).optional(),
+  optedOutUsers: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
+    .optional(),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(null),
   _destroy: Joi.boolean().default(false),
-});
+})
 
 // fields that cannot be updated
-const INVALID_UPDATE_FIELDS = ['_id', 'createdAt'];
+const INVALID_UPDATE_FIELDS = ['_id', 'createdAt']
 
 const validateBeforeCreate = async (data) => {
-  return await BILL_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false });
-};
+  return await BILL_COLLECTION_SCHEMA.validateAsync(data, { abortEarly: false })
+}
 
 /**
  * Convert string IDs to ObjectId for consistency
  */
 const convertIdsToObjectId = (data) => {
-  const converted = { ...data };
-  
+  const converted = { ...data }
+
   // Convert creatorId
   if (converted.creatorId && typeof converted.creatorId === 'string' && ObjectId.isValid(converted.creatorId)) {
-    converted.creatorId = new ObjectId(converted.creatorId);
+    converted.creatorId = new ObjectId(converted.creatorId)
   }
-  
+
   // Convert payerId
   if (converted.payerId && typeof converted.payerId === 'string' && ObjectId.isValid(converted.payerId)) {
-    converted.payerId = new ObjectId(converted.payerId);
+    converted.payerId = new ObjectId(converted.payerId)
   }
-  
+
   // Convert participants
   if (converted.participants && Array.isArray(converted.participants)) {
-    converted.participants = converted.participants.map(p => 
-      (typeof p === 'string' && ObjectId.isValid(p)) ? new ObjectId(p) : p
-    );
+    converted.participants = converted.participants.map((p) =>
+      typeof p === 'string' && ObjectId.isValid(p) ? new ObjectId(p) : p
+    )
   }
-  
+
   // Convert paymentStatus.userId
   if (converted.paymentStatus && Array.isArray(converted.paymentStatus)) {
-    converted.paymentStatus = converted.paymentStatus.map(ps => ({
+    converted.paymentStatus = converted.paymentStatus.map((ps) => ({
       ...ps,
-      userId: (typeof ps.userId === 'string' && ObjectId.isValid(ps.userId)) 
-        ? new ObjectId(ps.userId) 
-        : ps.userId
-    }));
+      userId: typeof ps.userId === 'string' && ObjectId.isValid(ps.userId) ? new ObjectId(ps.userId) : ps.userId,
+    }))
   }
-  
+
   // Convert optedOutUsers
   if (converted.optedOutUsers && Array.isArray(converted.optedOutUsers)) {
-    converted.optedOutUsers = converted.optedOutUsers.map(u => 
-      (typeof u === 'string' && ObjectId.isValid(u)) ? new ObjectId(u) : u
-    );
+    converted.optedOutUsers = converted.optedOutUsers.map((u) =>
+      typeof u === 'string' && ObjectId.isValid(u) ? new ObjectId(u) : u
+    )
   }
-  
+
   // Convert items.allocatedTo
   if (converted.items && Array.isArray(converted.items)) {
-    converted.items = converted.items.map(item => ({
+    converted.items = converted.items.map((item) => ({
       ...item,
-      allocatedTo: item.allocatedTo && Array.isArray(item.allocatedTo)
-        ? item.allocatedTo.map(u => (typeof u === 'string' && ObjectId.isValid(u)) ? new ObjectId(u) : u)
-        : item.allocatedTo
-    }));
+      allocatedTo:
+        item.allocatedTo && Array.isArray(item.allocatedTo)
+          ? item.allocatedTo.map((u) => (typeof u === 'string' && ObjectId.isValid(u) ? new ObjectId(u) : u))
+          : item.allocatedTo,
+    }))
   }
-  
-  return converted;
-};
+
+  return converted
+}
 
 const createNew = async (data) => {
   try {
-    const convertedData = convertIdsToObjectId(data);
-    const validData = await validateBeforeCreate(convertedData);
-    const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(validData);
-    return createdBill;
+    const convertedData = convertIdsToObjectId(data)
+    const validData = await validateBeforeCreate(convertedData)
+    const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(validData)
+    return createdBill
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const findOneById = async (billId) => {
   try {
     return await GET_DB()
       .collection(BILL_COLLECTION_NAME)
-      .findOne({ _id: new ObjectId(billId) });
+      .findOne({ _id: new ObjectId(billId) })
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 // NOT CHECKED YET
 const update = async (billId, updateData) => {
@@ -127,58 +136,52 @@ const update = async (billId, updateData) => {
     // Remove invalid fields from updateData
     Object.keys(updateData).forEach((key) => {
       if (INVALID_UPDATE_FIELDS.includes(key)) {
-        delete updateData[key];
+        delete updateData[key]
       }
-    });
+    })
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
-      .findOneAndUpdate({ _id: new ObjectId(billId) }, { $set: updateData }, { returnDocument: 'after' });
-    return result;
+      .findOneAndUpdate({ _id: new ObjectId(billId) }, { $set: updateData }, { returnDocument: 'after' })
+    return result
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getAll = async () => {
   try {
-    return await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .find({ _destroy: false })
-      .sort({ createdAt: -1 })
-      .toArray();
+    return await GET_DB().collection(BILL_COLLECTION_NAME).find({ _destroy: false }).sort({ createdAt: -1 }).toArray()
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getAllWithPagination = async (page = 1, limit = 10) => {
   try {
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit
     const bills = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({ _destroy: false })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .toArray();
-    
-    const total = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .countDocuments({ _destroy: false });
-    
+      .toArray()
+
+    const total = await GET_DB().collection(BILL_COLLECTION_NAME).countDocuments({ _destroy: false })
+
     return {
       bills,
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getBillsByUser = async (userId) => {
   try {
@@ -186,49 +189,49 @@ const getBillsByUser = async (userId) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
-        _destroy: false
+        _destroy: false,
       })
       .sort({ createdAt: -1 })
-      .toArray();
+      .toArray()
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   try {
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit
     const bills = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
-        _destroy: false
+        _destroy: false,
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .toArray();
-    
+      .toArray()
+
     const total = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .countDocuments({
         participants: new ObjectId(userId),
-        _destroy: false
-      });
-    
+        _destroy: false,
+      })
+
     return {
       bills,
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 /**
  * Search bills by user with pagination
@@ -241,42 +244,40 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
  */
 const searchBillsByUserWithPagination = async (userId, customQuery = {}, page = 1, limit = 10) => {
   try {
-    const skip = (page - 1) * limit;
-    
+    const skip = (page - 1) * limit
+
     // Build base query with user filter
     // If customQuery has payerId, it means we're filtering by payer only
     // Otherwise, filter by participants
     const query = {
       ...(customQuery.payerId ? {} : { participants: new ObjectId(userId) }),
       _destroy: false,
-      ...customQuery
-    };
-    
+      ...customQuery,
+    }
+
     const bills = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .toArray();
-    
-    const total = await GET_DB()
-      .collection(BILL_COLLECTION_NAME)
-      .countDocuments(query);
-    
+      .toArray()
+
+    const total = await GET_DB().collection(BILL_COLLECTION_NAME).countDocuments(query)
+
     return {
       bills,
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const getBillsByCreator = async (creatorId) => {
   try {
@@ -284,63 +285,63 @@ const getBillsByCreator = async (creatorId) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         creatorId: creatorId,
-        _destroy: false
+        _destroy: false,
       })
       .sort({ createdAt: -1 })
-      .toArray();
+      .toArray()
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const markAsPaid = async (billId, userId, amountPaid) => {
   try {
-    const bill = await findOneById(billId);
+    const bill = await findOneById(billId)
     if (!bill) {
-      throw new Error('Bill not found');
+      throw new Error('Bill not found')
     }
-    
-    const userObjectId = new ObjectId(userId);
-    
+
+    const userObjectId = new ObjectId(userId)
+
     // Find the payment status for this user by comparing ObjectIds
-    const paymentStatusIndex = bill.paymentStatus.findIndex(ps => ps.userId.equals(userObjectId));
-    
+    const paymentStatusIndex = bill.paymentStatus.findIndex((ps) => ps.userId.equals(userObjectId))
+
     if (paymentStatusIndex === -1) {
-      throw new Error('User not found in payment status');
+      throw new Error('User not found in payment status')
     }
-    
+
     // Use the actual userId from the database (ObjectId)
-    const actualUserId = bill.paymentStatus[paymentStatusIndex].userId;
-    
+    const actualUserId = bill.paymentStatus[paymentStatusIndex].userId
+
     // Use $inc to increment the amount (supports partial payments)
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .findOneAndUpdate(
         {
           _id: new ObjectId(billId),
-          'paymentStatus.userId': actualUserId
+          'paymentStatus.userId': actualUserId,
         },
         {
           $inc: {
-            'paymentStatus.$.amountPaid': amountPaid
+            'paymentStatus.$.amountPaid': amountPaid,
           },
           $set: {
             'paymentStatus.$.paidDate': Date.now(),
-            updatedAt: Date.now()
-          }
+            updatedAt: Date.now(),
+          },
         },
         { returnDocument: 'after' }
-      );
-    
+      )
+
     if (!result) {
-      throw new Error('Failed to update payment status');
+      throw new Error('Failed to update payment status')
     }
-    
-    return result;
+
+    return result
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const optOutUser = async (billId, userId) => {
   try {
@@ -351,15 +352,15 @@ const optOutUser = async (billId, userId) => {
         {
           $addToSet: { optedOutUsers: new ObjectId(userId) },
           $pull: { participants: new ObjectId(userId) },
-          $set: { updatedAt: Date.now() }
+          $set: { updatedAt: Date.now() },
         },
         { returnDocument: 'after' }
-      );
-    return result;
+      )
+    return result
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 const deleteOneById = async (billId) => {
   try {
@@ -369,12 +370,12 @@ const deleteOneById = async (billId) => {
         { _id: new ObjectId(billId) },
         { $set: { _destroy: true, updatedAt: Date.now() } },
         { returnDocument: 'after' }
-      );
-    return result;
+      )
+    return result
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-};
+}
 
 export const billModel = {
   BILL_COLLECTION_NAME,
@@ -391,4 +392,4 @@ export const billModel = {
   markAsPaid,
   optOutUser,
   deleteOneById,
-};
+}

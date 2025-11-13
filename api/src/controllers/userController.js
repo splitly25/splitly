@@ -53,6 +53,19 @@ const getAllUsers = async (req, res, next) => {
   }
 }
 
+const fetchUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const search = req.query.search || ''
+
+    const result = await userService.fetchUsers(page, limit, search)
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 const getUserById = async (req, res, next) => {
   try {
     const userId = req.params.userId
@@ -81,4 +94,5 @@ export const userController = {
   getAllUsers,
   getUserById,
   getUserByEmail,
+  fetchUsers,
 }

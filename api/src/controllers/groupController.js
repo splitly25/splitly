@@ -22,6 +22,19 @@ const getAllGroups = async (req, res, next) => {
   }
 }
 
+const fetchGroups = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const search = req.query.search || ''
+
+    const result = await groupService.fetchGroups(page, limit, search)
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 const getGroupById = async (req, res, next) => {
   try {
     const groupId = req.params.groupId
@@ -68,4 +81,5 @@ export const groupController = {
   getGroupAndMembers,
   getAllGroupAndMembers,
   getGroupsByUserId,
+  fetchGroups,
 }

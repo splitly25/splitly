@@ -10,7 +10,7 @@ Router.route('/getAllGroupAndMembers').get(authMiddleware.isAuthorized, groupCon
 Router.route('/getGroupAndMembers/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupAndMembers)
 
 Router.route('/')
-  .get(authMiddleware.isAuthorized, groupController.getAllGroups)
+  .get(authMiddleware.isAuthorized, groupValidation.fetchGroups, groupController.fetchGroups)
   .post(authMiddleware.isAuthorized, groupValidation.createNew, groupController.createNew)
 
 Router.route('/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupById)

@@ -5,7 +5,7 @@ import { authMiddleware } from '~/middlewares/authMiddleware'
 
 const Router = express.Router()
 
-Router.route('/').get(authMiddleware.isAuthorized, userController.getAllUsers)
+Router.route('/').get(authMiddleware.isAuthorized, userValidation.fetchUsers, userController.fetchUsers)
 
 Router.route('/register').post(userValidation.createNew, userController.createNew)
 
