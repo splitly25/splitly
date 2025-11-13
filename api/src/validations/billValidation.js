@@ -8,12 +8,13 @@ const createNew = async (req, res, next) => {
   const correctCondition = Joi.object({
     // Define the validation schema for a bill
     billName: Joi.string().min(1).max(200).required(),
-    description: Joi.string().max(500).optional(),
+    description: Joi.string().max(500).allow('').optional(),
+    category: Joi.string().max(100).allow('').optional(),
     creatorId: Joi.string().required(),
     payerId: Joi.string().required(),
     totalAmount: Joi.number().min(0).required(),
     paymentDate: Joi.date().optional(),
-    splittingMethod: Joi.string().valid('equal', 'item-based').optional(),
+    splittingMethod: Joi.string().valid('equal', 'item-based', 'people-based'),
     participants: Joi.array().items(Joi.string()).optional(),
     items: Joi.array()
       .items(
@@ -29,7 +30,7 @@ const createNew = async (req, res, next) => {
         Joi.object({
           userId: Joi.string().required(),
           amountOwed: Joi.number().required(),
-          isPaid: Joi.boolean().required(),
+          amountPaid: Joi.number().optional(),
           paidDate: Joi.date().optional(),
         })
       )

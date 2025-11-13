@@ -8,6 +8,7 @@ import { userRoute } from './userRoute'
 import { debtRoute } from './debtRoute'
 import { assistantRoute } from './assistantRoute'
 import { groupRoute } from './groupRoute'
+import { paymentConfirmationRoute } from './paymentConfirmationRoute'
 
 const Router = express.Router()
 
@@ -36,5 +37,8 @@ Router.use('/assistant', assistantRoute)
 
 // Group all V1 APIs
 Router.use('/groups', groupRoute)
+
+// Payment Confirmation API routes
+Router.use('/payment-confirmation', paymentConfirmationRoute)
 
 export const APIs_V1 = Router

@@ -1,0 +1,290 @@
+import { StatusCodes } from 'http-status-codes'
+import ApiError from '~/utils/APIError'
+import { JwtProvider } from '~/providers/JwtProvider'
+import { env } from '~/config/environment'
+import { activityModel } from '~/models/activityModel'
+import { billModel } from '~/models/billModel'
+import { billService } from '~/services/billService'
+import { userModel } from '~/models/userModel'
+import { paymentConfirmationModel } from '~/models/paymentConfirmationModel'
+import { sendPaymentResponseEmail } from '~/utils/emailService'
+
+/**
+ * Generate a payment confirmation token
+ * Token contains: paymentId, recipientId, payerId, amount, note
+ * Valid for 3 days
+ */
+const generateConfirmationToken = async (req, res, next) => {
+  try {
+    const { paymentId, recipientId, payerId, amount, note } = req.body
+
+    // Validate required fields
+    if (!paymentId || !recipientId || !payerId || !amount) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Missing required fields')
+    }
+
+    // Create token payload
+    const payload = {
+      paymentId,
+      recipientId,
+      payerId,
+      amount,
+      note: note || '',
+      type: 'payment_confirmation'
+    }
+
+    // Generate token with 3 days expiration
+    const token = await JwtProvider.generateToken(
+      payload,
+      env.ACCESS_JWT_SECRET_KEY,
+      '3d' // 3 days
+    )
+
+    res.status(StatusCodes.OK).json({ token })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Verify payment confirmation token and return payment data
+ */
+const verifyConfirmationToken = async (req, res, next) => {
+  try {
+    const { token } = req.params
+
+    if (!token) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Token is required')
+    }
+
+    // Check if token has already been used
+    const existingConfirmation = await paymentConfirmationModel.findByToken(token)
+    if (existingConfirmation) {
+      return res.status(StatusCodes.OK).json({
+        alreadyUsed: true,
+        isConfirmed: existingConfirmation.isConfirmed,
+        confirmedAt: existingConfirmation.confirmedAt,
+        message: 'Bạn đã phản hồi cho yêu cầu xác nhận này trước đó.\nVui lòng đăng nhập để xem chi tiết.'
+      })
+    }
+
+    // Verify and decode token
+    const decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+
+    // Check if it's a payment confirmation token
+    if (decoded.type !== 'payment_confirmation') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid token type')
+    }
+
+    // Get recipient and payer names
+    const recipient = await userModel.findOneById(decoded.recipientId)
+    const payer = await userModel.findOneById(decoded.payerId)
+
+    if (!recipient || !payer) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Return payment data
+    const paymentData = {
+      alreadyUsed: false,
+      paymentId: decoded.paymentId,
+      recipientName: recipient.name,
+      recipientId: decoded.recipientId,
+      payerName: payer.name,
+      payerId: decoded.payerId,
+      amount: decoded.amount,
+      note: decoded.note
+    }
+
+    res.status(StatusCodes.OK).json(paymentData)
+  } catch (error) {
+    if (error.message === 'Invalid or expired token') {
+      next(new ApiError(StatusCodes.UNAUTHORIZED, 'Token đã hết hạn hoặc không hợp lệ'))
+    } else {
+      next(error)
+    }
+  }
+}
+
+/**
+ * Confirm payment received
+ */
+const confirmPayment = async (req, res, next) => {
+  try {
+    const { token } = req.body
+    const { isConfirmed } = req.body // true = confirmed, false = not received
+
+    if (!token) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Token is required')
+    }
+
+    // Check if token has already been used
+    const existingConfirmation = await paymentConfirmationModel.findByToken(token)
+    if (existingConfirmation) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Bạn đã phản hồi cho yêu cầu xác nhận này rồi')
+    }
+
+    // Verify token
+    const decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+
+    if (decoded.type !== 'payment_confirmation') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid token type')
+    }
+
+    const { paymentId, recipientId, payerId, amount } = decoded
+
+    // Get user information for email
+    const recipient = await userModel.findOneById(recipientId)
+    const payer = await userModel.findOneById(payerId)
+
+    if (!recipient || !payer) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Record the confirmation to prevent reuse
+    await paymentConfirmationModel.createNew({
+      paymentId,
+      token,
+      recipientId,
+      payerId,
+      amount,
+      isConfirmed
+    })
+
+    if (isConfirmed) {
+      // Mark payment as confirmed in the bills
+      // Find bills where payer owes money to the recipient
+      // Payer sent money TO recipient, so find bills where recipient paid and payer owes
+      const bills = await billModel.getBillsByUser(payerId)
+      
+      let remainingAmount = amount
+      const updatedBills = []
+      
+      // Process bills where payer owes money to recipient and hasn't fully paid
+      for (const bill of bills) {
+        if (remainingAmount <= 0) break
+        
+        // Check if this bill is paid by the recipient and payer owes money
+        // Use .equals() for proper ObjectId comparison
+        if (bill.payerId.equals(recipientId)) {
+          const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(payerId))
+          
+          if (paymentStatus) {
+            const amountOwed = paymentStatus.amountOwed
+            const currentAmountPaid = paymentStatus.amountPaid || 0
+            const stillOwes = amountOwed - currentAmountPaid
+            
+            if (stillOwes > 0) {
+              // Calculate how much to pay for this bill
+              const paymentForThisBill = Math.min(stillOwes, remainingAmount)
+              
+              // Update payment amount for this bill using billService (proper architecture)
+              // Pass payerId directly (can be string or ObjectId, model will handle conversion)
+              const updateResult = await billService.markAsPaid(
+                bill._id.toString(),
+                payerId, // The person who owes money (who sent the payment)
+                paymentForThisBill,
+                recipientId // paidBy parameter for activity logging (recipient confirms)
+              )
+              
+              if (updateResult) {
+                remainingAmount -= paymentForThisBill
+                updatedBills.push({
+                  billId: bill._id.toString(),
+                  billName: bill.billName,
+                  amountPaid: paymentForThisBill
+                })
+              }
+            }
+          }
+        }
+      }
+
+      // Log activity
+      try {
+        await activityModel.createNew({
+          userId: recipientId,
+          activityType: 'payment_confirmed',
+          resourceType: 'bill',
+          resourceId: paymentId,
+          details: {
+            paymentId,
+            payerId,
+            amount,
+            updatedBills,
+            description: `Đã xác nhận nhận được ${amount.toLocaleString('vi-VN')}₫ từ người dùng`
+          }
+        })
+      } catch (activityError) {
+        console.warn('Failed to log payment confirmation activity:', activityError.message)
+      }
+
+      // Send email notification to payer
+      try {
+        await sendPaymentResponseEmail({
+          payerEmail: payer.email,
+          payerName: payer.name,
+          recipientName: recipient.name,
+          amount,
+          isConfirmed: true
+        })
+      } catch (emailError) {
+        console.error('Failed to send payment response email:', emailError)
+      }
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: 'Payment confirmed successfully',
+        updatedBills
+      })
+    } else {
+      // Log rejection
+      try {
+        await activityModel.createNew({
+          userId: recipientId,
+          activityType: 'payment_rejected',
+          resourceType: 'bill',
+          resourceId: paymentId,
+          details: {
+            paymentId,
+            payerId,
+            amount,
+            description: `Từ chối xác nhận nhận được ${amount.toLocaleString('vi-VN')}₫ từ người dùng`
+          }
+        })
+      } catch (activityError) {
+        console.warn('Failed to log payment rejection activity:', activityError.message)
+      }
+
+      // Send email notification to payer
+      try {
+        await sendPaymentResponseEmail({
+          payerEmail: payer.email,
+          payerName: payer.name,
+          recipientName: recipient.name,
+          amount,
+          isConfirmed: false
+        })
+      } catch (emailError) {
+        console.error('Failed to send payment response email:', emailError)
+      }
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        message: 'Payment rejection recorded'
+      })
+    }
+  } catch (error) {
+    if (error.message === 'Invalid or expired token') {
+      next(new ApiError(StatusCodes.UNAUTHORIZED, 'Token đã hết hạn hoặc không hợp lệ'))
+    } else {
+      next(error)
+    }
+  }
+}
+
+export const paymentConfirmationController = {
+  generateConfirmationToken,
+  verifyConfirmationToken,
+  confirmPayment
+}

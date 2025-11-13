@@ -172,7 +172,7 @@ const Layout = ({ children }) => {
           }}
           onClick={() => handleNavigate('/dashboard')}
         >
-          {isExpanded ? 'Splitly' : 'S'}
+          {isExpanded ? 'Splitly' : 'LOGO'}
         </Typography>
       </Box>
 
@@ -319,8 +319,8 @@ const Layout = ({ children }) => {
             right: -12,
             top: '50%',
             transform: 'translateY(-50%)',
-            width: 24,
-            height: 24,
+            width: 30,
+            height: 60,
             backgroundColor: 'background.paper',
             border: '1px solid',
             borderColor: 'divider',

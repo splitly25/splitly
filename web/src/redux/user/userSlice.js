@@ -21,7 +21,11 @@ export const logoutUserAPI = createAsyncThunk('user/logoutUserAPI', async (showS
 export const userSlice = createSlice({
   name: 'user',
   initialState,
-  reducers: {},
+  reducers: {
+    clearUser: (state) => {
+      state.currentUser = null
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(loginUserAPI.fulfilled, (state, action) => {
       state.currentUser = action.payload
@@ -31,6 +35,8 @@ export const userSlice = createSlice({
     })
   },
 })
+
+export const { clearUser } = userSlice.actions
 
 export const selectCurrentUser = (state) => {
   return state.user.currentUser
