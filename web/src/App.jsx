@@ -10,6 +10,7 @@ import { selectCurrentUser } from './redux/user/userSlice'
 import { Outlet } from 'react-router-dom'
 import Debt from './pages/Debt'
 import AccountVerification from './pages/Auth/AccountVerification'
+import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
 import { Ocr, Bills } from "./pages/Bills"
 
 const ProtectedRoute = ({ user }) => {
@@ -37,6 +38,9 @@ function App() {
       <Route path="/login" element={<Auth />} />
       <Route path="/register" element={<Auth />} />
       <Route path="/account/verification" element={<AccountVerification />} />
+      
+      {/* Public Routes (no authentication required) */}
+      <Route path="/payment/confirm" element={<PaymentConfirmation />} />
       
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />

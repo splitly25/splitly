@@ -3,6 +3,8 @@ import { billModel } from '~/models/billModel.js'
 import { userModel } from '~/models/userModel.js'
 import { activityModel } from '~/models/activityModel.js'
 import { sendPaymentEmail } from '~/utils/emailService.js'
+import { JwtProvider } from '~/providers/JwtProvider.js'
+import { env } from '~/config/environment.js'
 
 /**
  * Calculate debts for people who owe money to the current user
@@ -225,13 +227,30 @@ const initiatePayment = async (debtorId, creditorId, amount, note = '') => {
       }
     })
 
-    // Send email notification
+    // Generate payment confirmation token
+    const paymentId = activity.insertedId.toString()
+    const tokenPayload = {
+      paymentId,
+      recipientId: creditorId,
+      payerId: debtorId,
+      amount,
+      note: note || '',
+      type: 'payment_confirmation'
+    }
+    const confirmationToken = await JwtProvider.generateToken(
+      tokenPayload,
+      env.ACCESS_JWT_SECRET_KEY,
+      '3d' // 3 days
+    )
+
+    // Send email notification with confirmation link
     const emailSent = await sendPaymentEmail({
       recipientEmail: creditor.email,
       recipientName: creditor.name,
       payerName: debtor.name,
       amount: amount,
-      note: note || ''
+      note: note || '',
+      confirmationToken
     })
 
     return {
