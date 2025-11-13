@@ -94,6 +94,44 @@ const getAll = async () => {
   }
 }
 
+const fetchUsers = async (page = 1, limit = 10, search = '') => {
+  try {
+    const skip = (page - 1) * limit
+    const query = { _destroy: false }
+
+    // Add search condition if search term is provided
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+      ]
+    }
+
+    const users = await GET_DB()
+      .collection(USER_COLLECTION_NAME)
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    const total = await GET_DB().collection(USER_COLLECTION_NAME).countDocuments(query)
+
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 const findManyByIds = async (userIds) => {
   try {
     const objectIds = userIds.map((id) => new ObjectId(id))
@@ -133,6 +171,7 @@ export const userModel = {
   findOneByEmail,
   update,
   getAll,
+  fetchUsers,
   findManyByIds,
   deleteOneById,
 }

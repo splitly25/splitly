@@ -35,33 +35,20 @@ const getDashboardData = async (req, res, next) => {
     // Get pending bills (bills where user hasn't paid yet)
     const pendingBills = getPendingBills(userBills, userId)
     
-    // Get user's groups
+    // Get user's groups (already includes member details from aggregation)
     const userGroups = await groupModel.getGroupsByUser(userId)
-    
-    // Get group details with member information
-    const groupsWithMembers = await Promise.all(
-      userGroups.map(async (group) => {
-        const members = await Promise.all(
-          group.members.map(memberId => userModel.findOneById(memberId))
-        )
-        return {
-          ...group,
-          memberDetails: members.filter(member => member) // Filter out null members
-        }
-      })
-    )
-    
+
     // Get recent activities for user (excluding login activities)
     const recentActivities = await activityModel.getActivitiesByUser(userId, 20) // Get more to filter
-    
+
     // Filter out login/logout activities
-    const filteredActivities = recentActivities.filter(activity => 
+    const filteredActivities = recentActivities.filter(activity =>
       !['user_login', 'user_logout'].includes(activity.activityType)
     ).slice(0, 10) // Take only 10 after filtering
-    
+
     // Format activities for display
     const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userId)
-    
+
     const dashboardData = {
       user: {
         id: user._id,
@@ -73,7 +60,7 @@ const getDashboardData = async (req, res, next) => {
         count: pendingBills.length,
         bills: pendingBills.slice(0, 3) // Show only first 3 for dashboard
       },
-      groups: groupsWithMembers,
+      groups: userGroups,
       activities: formattedActivities
     }
     

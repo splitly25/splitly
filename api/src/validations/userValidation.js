@@ -49,8 +49,24 @@ const login = async (req, res, next) => {
   }
 };
 
+const fetchUsers = async (req, res, next) => {
+  const correctCondition = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    search: Joi.string().trim().allow('').optional(),
+  });
+
+  try {
+    await correctCondition.validateAsync(req.query, { abortEarly: false });
+    next();
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+  }
+};
+
 export const userValidation = {
   createNew,
   verifyAccount,
   login,
+  fetchUsers,
 };
