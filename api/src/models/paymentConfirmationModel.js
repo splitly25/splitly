@@ -10,10 +10,10 @@ import { ObjectId } from 'mongodb'
 const PAYMENT_CONFIRMATION_COLLECTION_NAME = 'payment_confirmations'
 
 const PAYMENT_CONFIRMATION_SCHEMA = Joi.object({
-  paymentId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
+  paymentId: Joi.object().instance(ObjectId).required(),
   token: Joi.string().required(),
-  recipientId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
-  payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
+  recipientId: Joi.object().instance(ObjectId).required(),
+  payerId: Joi.object().instance(ObjectId).required(),
   amount: Joi.number().required(),
   isConfirmed: Joi.boolean().required(), // true = confirmed, false = rejected
   confirmedAt: Joi.date().timestamp('javascript').default(Date.now),
@@ -21,11 +21,36 @@ const PAYMENT_CONFIRMATION_SCHEMA = Joi.object({
 })
 
 /**
+ * Convert string IDs to ObjectId for consistency
+ */
+const convertIdsToObjectId = (data) => {
+  const converted = { ...data }
+  
+  // Convert paymentId
+  if (converted.paymentId && typeof converted.paymentId === 'string' && ObjectId.isValid(converted.paymentId)) {
+    converted.paymentId = new ObjectId(converted.paymentId)
+  }
+  
+  // Convert recipientId
+  if (converted.recipientId && typeof converted.recipientId === 'string' && ObjectId.isValid(converted.recipientId)) {
+    converted.recipientId = new ObjectId(converted.recipientId)
+  }
+  
+  // Convert payerId
+  if (converted.payerId && typeof converted.payerId === 'string' && ObjectId.isValid(converted.payerId)) {
+    converted.payerId = new ObjectId(converted.payerId)
+  }
+  
+  return converted
+}
+
+/**
  * Create a new payment confirmation record
  */
 const createNew = async (data) => {
   try {
-    const validData = await PAYMENT_CONFIRMATION_SCHEMA.validateAsync(data, { abortEarly: false })
+    const convertedData = convertIdsToObjectId(data)
+    const validData = await PAYMENT_CONFIRMATION_SCHEMA.validateAsync(convertedData, { abortEarly: false })
     const result = await GET_DB().collection(PAYMENT_CONFIRMATION_COLLECTION_NAME).insertOne({
       ...validData,
       confirmedAt: Date.now()
@@ -57,7 +82,7 @@ const findByPaymentId = async (paymentId) => {
   try {
     const result = await GET_DB()
       .collection(PAYMENT_CONFIRMATION_COLLECTION_NAME)
-      .findOne({ paymentId, _destroy: false })
+      .findOne({ paymentId: new ObjectId(paymentId), _destroy: false })
     return result
   } catch (error) {
     throw new Error(error)
