@@ -17,13 +17,13 @@ const createNew = async (reqBody, options = {}) => {
       // Equal split: total amount / number of participants
       const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
       paymentStatus = reqBody.participants.map(userId => {
-        // Compare as strings for equality check
-        const isPayerString = userId.toString() === reqBody.payerId.toString();
+        // Use .equals() for proper ObjectId comparison
+        const isPayer = userId.equals(reqBody.payerId);
         return {
           userId: userId,
           amountOwed: amountPerPerson,
-          amountPaid: isPayerString ? amountPerPerson : 0, // Payer already paid
-          paidDate: isPayerString ? Date.now() : null
+          amountPaid: isPayer ? amountPerPerson : 0, // Payer already paid
+          paidDate: isPayer ? Date.now() : null
         };
       })
     } else if (reqBody.splittingMethod === 'item-based') {
@@ -46,13 +46,13 @@ const createNew = async (reqBody, options = {}) => {
       
       // Create payment status array
       paymentStatus = Object.entries(userAmounts).map(([userIdStr, amount]) => {
-        // Compare as strings for equality check
-        const isPayerString = userIdStr === reqBody.payerId.toString();
+        // Use .equals() for proper ObjectId comparison (convert key back to ObjectId for comparison)
+        const isPayer = reqBody.payerId.toString() === userIdStr;
         return {
           userId: userIdStr,
           amountOwed: Math.round(amount),
-          amountPaid: isPayerString ? Math.round(amount) : 0,
-          paidDate: isPayerString ? Date.now() : null
+          amountPaid: isPayer ? Math.round(amount) : 0,
+          paidDate: isPayer ? Date.now() : null
         };
       })
     }

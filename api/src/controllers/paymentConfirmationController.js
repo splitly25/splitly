@@ -164,16 +164,9 @@ const confirmPayment = async (req, res, next) => {
         if (remainingAmount <= 0) break
         
         // Check if this bill is paid by the payer and recipient owes money
-        // Compare ObjectIds using .equals() method for proper comparison
-        const billPayerId = bill.payerId?.toString() || bill.payerId;
-        const currentPayerId = payerId?.toString() || payerId;
-        
-        if (billPayerId === currentPayerId) {
-          const paymentStatus = bill.paymentStatus.find(ps => {
-            const psUserId = ps.userId?.toString() || ps.userId;
-            const currentRecipientId = recipientId?.toString() || recipientId;
-            return psUserId === currentRecipientId;
-          })
+        // Use .equals() for proper ObjectId comparison
+        if (bill.payerId.equals(payerId)) {
+          const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(recipientId))
           
           if (paymentStatus) {
             const amountOwed = paymentStatus.amountOwed

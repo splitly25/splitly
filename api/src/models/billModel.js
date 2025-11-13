@@ -182,15 +182,10 @@ const getAllWithPagination = async (page = 1, limit = 10) => {
 
 const getBillsByUser = async (userId) => {
   try {
-    // Convert to ObjectId if it's a valid string
-    const userObjectId = (typeof userId === 'string' && ObjectId.isValid(userId)) 
-      ? new ObjectId(userId) 
-      : userId;
-    
     return await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        participants: userObjectId,
+        participants: new ObjectId(userId),
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -202,16 +197,11 @@ const getBillsByUser = async (userId) => {
 
 const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   try {
-    // Convert to ObjectId if it's a valid string
-    const userObjectId = (typeof userId === 'string' && ObjectId.isValid(userId)) 
-      ? new ObjectId(userId) 
-      : userId;
-    
     const skip = (page - 1) * limit;
     const bills = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .find({
-        participants: userObjectId,
+        participants: new ObjectId(userId),
         _destroy: false
       })
       .sort({ createdAt: -1 })
@@ -222,7 +212,7 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
     const total = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .countDocuments({
-        participants: userObjectId,
+        participants: new ObjectId(userId),
         _destroy: false
       });
     
@@ -257,7 +247,7 @@ const searchBillsByUserWithPagination = async (userId, customQuery = {}, page = 
     // If customQuery has payerId, it means we're filtering by payer only
     // Otherwise, filter by participants
     const query = {
-      ...(customQuery.payerId ? {} : { participants: userId }),
+      ...(customQuery.payerId ? {} : { participants: new ObjectId(userId) }),
       _destroy: false,
       ...customQuery
     };
@@ -310,23 +300,16 @@ const markAsPaid = async (billId, userId, amountPaid) => {
       throw new Error('Bill not found');
     }
     
-    // Convert userId to ObjectId if it's a valid string
-    const userObjectId = (typeof userId === 'string' && ObjectId.isValid(userId)) 
-      ? new ObjectId(userId) 
-      : userId;
+    const userObjectId = new ObjectId(userId);
     
     // Find the payment status for this user by comparing ObjectIds
-    const paymentStatusIndex = bill.paymentStatus.findIndex(ps => {
-      const psUserId = ps.userId instanceof ObjectId ? ps.userId : new ObjectId(ps.userId);
-      const compareUserId = userObjectId instanceof ObjectId ? userObjectId : new ObjectId(userObjectId);
-      return psUserId.equals(compareUserId);
-    });
+    const paymentStatusIndex = bill.paymentStatus.findIndex(ps => ps.userId.equals(userObjectId));
     
     if (paymentStatusIndex === -1) {
       throw new Error('User not found in payment status');
     }
     
-    // Use the actual userId from the database (should be ObjectId after migration)
+    // Use the actual userId from the database (ObjectId)
     const actualUserId = bill.paymentStatus[paymentStatusIndex].userId;
     
     // Use $inc to increment the amount (supports partial payments)
@@ -361,18 +344,13 @@ const markAsPaid = async (billId, userId, amountPaid) => {
 
 const optOutUser = async (billId, userId) => {
   try {
-    // Convert userId to ObjectId if it's a valid string
-    const userObjectId = (typeof userId === 'string' && ObjectId.isValid(userId)) 
-      ? new ObjectId(userId) 
-      : userId;
-    
     const result = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
       .findOneAndUpdate(
         { _id: new ObjectId(billId) },
         {
-          $addToSet: { optedOutUsers: userObjectId },
-          $pull: { participants: userObjectId },
+          $addToSet: { optedOutUsers: new ObjectId(userId) },
+          $pull: { participants: new ObjectId(userId) },
           $set: { updatedAt: Date.now() }
         },
         { returnDocument: 'after' }

@@ -17,7 +17,7 @@ const getDebtsOwedToMe = async (userId) => {
     const bills = await billModel.getBillsByUser(userId)
     
     // Filter bills where current user is the payer
-    const billsAsPayer = bills.filter(bill => bill.payerId === userId)
+    const billsAsPayer = bills.filter(bill => bill.payerId.equals(userId))
     
     // Calculate debts grouped by debtor
     const debtsByUser = {}
@@ -25,7 +25,7 @@ const getDebtsOwedToMe = async (userId) => {
     billsAsPayer.forEach(bill => {
       bill.paymentStatus?.forEach(payment => {
         // Skip if it's the current user
-        if (payment.userId === userId) return
+        if (payment.userId.equals(userId)) return
         
         const amountPaid = payment.amountPaid || 0
         const remainingAmount = payment.amountOwed - amountPaid
@@ -63,7 +63,7 @@ const getDebtsOwedToMe = async (userId) => {
     
     // Combine debt info with user info
     const debtsWithUserInfo = debtorIds.map(debtorId => {
-      const user = debtorUsers.find(u => u._id.toString() === debtorId)
+      const user = debtorUsers.find(u => u._id.equals(debtorId))
       return {
         userId: debtorId,
         userName: user?.name || 'Unknown User',
@@ -98,10 +98,10 @@ const getDebtsIOwe = async (userId) => {
     
     bills.forEach(bill => {
       // Find current user's payment status
-      const myPayment = bill.paymentStatus?.find(payment => payment.userId === userId)
+      const myPayment = bill.paymentStatus?.find(payment => payment.userId.equals(userId))
       
       // Skip if not found or user is the payer
-      if (!myPayment || bill.payerId === userId) return
+      if (!myPayment || bill.payerId.equals(userId)) return
       
       const amountPaid = myPayment.amountPaid || 0
       const remainingAmount = myPayment.amountOwed - amountPaid
@@ -138,7 +138,7 @@ const getDebtsIOwe = async (userId) => {
     
     // Combine debt info with user info
     const debtsWithUserInfo = payerIds.map(payerId => {
-      const user = payerUsers.find(u => u._id.toString() === payerId)
+      const user = payerUsers.find(u => u._id.equals(payerId))
       return {
         userId: payerId,
         userName: user?.name || 'Unknown User',

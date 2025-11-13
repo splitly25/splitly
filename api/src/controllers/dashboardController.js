@@ -99,7 +99,7 @@ const calculateTotalSpendingForMonth = (bills, userId, year, month) => {
     // Check if bill is in the specified month
     if (billYear === year && billMonth === month) {
       for (const status of bill.paymentStatus) {
-        if (status.userId === userId) {
+        if (status.userId.equals(userId)) {
           // Add all amounts this user owes (paid or unpaid)
           totalSpending += status.amountOwed
         }
@@ -158,9 +158,9 @@ const calculateDebtData = async (bills, userId) => {
   
   for (const bill of bills) {
     for (const status of bill.paymentStatus) {
-      if (status.userId === userId) {
+      if (status.userId.equals(userId)) {
         // This is what the current user owes/is owed
-        if (bill.payerId !== userId) {
+        if (!bill.payerId.equals(userId)) {
           // User owes money - calculate remaining amount after payments
           const amountPaid = status.amountPaid || 0
           const remainingAmount = status.amountOwed - amountPaid
@@ -181,7 +181,7 @@ const calculateDebtData = async (bills, userId) => {
         }
       } else {
         // This is what others owe the current user
-        if (bill.payerId === userId) {
+        if (bill.payerId.equals(userId)) {
           // Others owe current user money - calculate remaining amount after payments
           const amountPaid = status.amountPaid || 0
           const remainingAmount = status.amountOwed - amountPaid
@@ -230,7 +230,7 @@ const getPendingBills = (bills, userId) => {
   const pending = []
   
   bills.forEach(bill => {
-    const userPaymentStatus = bill.paymentStatus.find(status => status.userId === userId)
+    const userPaymentStatus = bill.paymentStatus.find(status => status.userId.equals(userId))
     if (userPaymentStatus && !userPaymentStatus.isPaid) {
       pending.push({
         id: bill._id,
@@ -259,7 +259,7 @@ const formatActivitiesForDisplay = async (activities, currentUserId) => {
     // Get user who performed the action
     const actor = await userModel.findOneById(activity.userId)
     const actorName = actor ? actor.name : 'Someone'
-    const isCurrentUser = activity.userId === currentUserId
+    const isCurrentUser = activity.userId.equals(currentUserId)
     const actorDisplay = isCurrentUser ? 'Bạn' : actorName
     
     switch (activity.activityType) {
