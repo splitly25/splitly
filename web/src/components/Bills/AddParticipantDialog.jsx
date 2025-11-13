@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   Box,
@@ -83,10 +83,67 @@ const AddParticipantDialog = ({
   availablePeople = [],
   availableGroups = [],
   isLoading = false,
+  // Unified search props
+  onSearch,
+  searchedUsers = [],
+  searchedGroups = [],
+  searchPagination = {
+    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+  },
+  isLoadingSearch = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPeople, setSelectedPeople] = useState([])
   const [selectedGroups, setSelectedGroups] = useState([])
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  // Debounce unified search - fetch both users and groups from API
+  useEffect(() => {
+    if (!onSearch) return // Skip if callback not provided
+
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        onSearch(1, 10, searchQuery, false) // Fetch first page, replace data
+      }
+    }, 500) // 500ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, onSearch])
+
+  // Handle infinite scroll for users list
+  const handleUsersScroll = (e) => {
+    const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight
+    if (
+      bottom &&
+      !isLoadingSearch &&
+      !isLoadingMore &&
+      searchQuery.trim() &&
+      searchPagination.users.currentPage < searchPagination.users.totalPages
+    ) {
+      setIsLoadingMore(true)
+      onSearch(searchPagination.users.currentPage + 1, searchPagination.users.limit, searchQuery, true).finally(() =>
+        setIsLoadingMore(false)
+      )
+    }
+  }
+
+  // Handle infinite scroll for groups list
+  const handleGroupsScroll = (e) => {
+    const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight
+    if (
+      bottom &&
+      !isLoadingSearch &&
+      !isLoadingMore &&
+      searchQuery.trim() &&
+      searchPagination.groups.currentPage < searchPagination.groups.totalPages
+    ) {
+      setIsLoadingMore(true)
+      onSearch(searchPagination.groups.currentPage + 1, searchPagination.groups.limit, searchQuery, true).finally(() =>
+        setIsLoadingMore(false)
+      )
+    }
+  }
 
   const getInitials = (name) => {
     if (!name) return '?'
@@ -150,10 +207,6 @@ const AddParticipantDialog = ({
     onClose()
   }
 
-  // Use provided available people and groups
-  const peopleList = availablePeople
-  const groupsList = availableGroups
-
   // Get all current participant IDs and selected person IDs
   const currentParticipantIds = new Set(currentParticipants.map((p) => p.id))
   const selectedPersonIds = new Set([
@@ -161,20 +214,18 @@ const AddParticipantDialog = ({
     ...selectedGroups.flatMap((g) => g.members.map((m) => m.id)),
   ])
 
-  // Filter out current participants and already selected people
-  const filteredPeople = peopleList.filter(
-    (person) =>
-      !currentParticipantIds.has(person.id) &&
-      !selectedPersonIds.has(person.id) &&
-      (person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        person.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Determine which data to display based on search state
+  const isSearching = searchQuery.trim() !== ''
+  const peopleToDisplay = isSearching ? searchedUsers : availablePeople
+  const groupsToDisplay = isSearching ? searchedGroups : availableGroups
+
+  // Filter out current participants and already selected people (only for local filtering)
+  const filteredPeople = peopleToDisplay.filter(
+    (person) => !currentParticipantIds.has(person.id) && !selectedPersonIds.has(person.id)
   )
 
-  // Filter out already selected groups
-  const filteredGroups = groupsList.filter(
-    (group) =>
-      !selectedGroups.find((g) => g.id === group.id) && group.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Filter out already selected groups (only for local filtering)
+  const filteredGroups = groupsToDisplay.filter((group) => !selectedGroups.find((g) => g.id === group.id))
 
   const getTotalSelected = () => {
     // Filter out people who are already current participants
@@ -494,7 +545,7 @@ const AddParticipantDialog = ({
             },
           })}
         >
-          {/* Search Section */}
+          {/* Unified Search Section */}
           <Box>
             <Label sx={{ mb: 1.5 }}>Search</Label>
             <TextField
@@ -519,7 +570,7 @@ const AddParticipantDialog = ({
                 },
               })}
               fullWidth
-              placeholder="Search people, groups, or members..."
+              placeholder="Search people and groups..."
               variant="outlined"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -531,47 +582,75 @@ const AddParticipantDialog = ({
                 ),
               }}
             />
+            {isSearching && (
+              <Typography sx={{ fontSize: '12px', color: 'text.secondary', mt: 1, ml: 0.5 }}>
+                Searching {searchPagination.users.total + searchPagination.groups.total} results (
+                {searchPagination.users.total} people, {searchPagination.groups.total} groups)
+              </Typography>
+            )}
           </Box>
 
           {/* Available People Section */}
           <Box>
             <SectionHeader>
-              <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>Available People</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>
+                  {isSearching ? 'Search Results - People' : 'Available People'}
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                  {filteredPeople.length} {isSearching ? 'found' : 'available'}
+                </Typography>
+              </Box>
             </SectionHeader>
-            <Box sx={{ maxHeight: '300px', overflowY: 'auto', mb: 2 }}>
-              {isLoading ? (
+
+            <Box sx={{ maxHeight: '300px', overflowY: 'auto', mb: 2 }} onScroll={isSearching ? handleUsersScroll : undefined}>
+              {(isSearching ? isLoadingSearch : isLoading) ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                   <CircularProgress size={24} />
                 </Box>
               ) : filteredPeople.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>Không tìm thấy người nào</Typography>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                    {isSearching ? 'No people found matching your search' : 'No people available from your groups'}
+                  </Typography>
                 </Box>
               ) : (
-                filteredPeople.map((person) => {
-                  return (
+                <>
+                  {filteredPeople.map((person) => (
                     <PersonRow key={person.id}>
-                      <UserAvatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          fontSize: '16px',
-                        }}
-                      >
+                      <UserAvatar sx={{ width: 32, height: 32, fontSize: '16px' }}>
                         {getInitials(person.name)}
                       </UserAvatar>
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
                           {person.name}
                         </Typography>
-                        <Typography sx={{ fontSize: '16px', color: 'text.secondary', fontWeight: 400 }}>
+                        <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
                           {person.email}
                         </Typography>
                       </Box>
                       <AddButton onClick={() => handleTogglePerson(person)}>Add</AddButton>
                     </PersonRow>
-                  )
-                })
+                  ))}
+
+                  {/* Loading more indicator */}
+                  {isLoadingMore && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={20} />
+                    </Box>
+                  )}
+
+                  {/* Show message when all pages loaded */}
+                  {isSearching &&
+                    searchPagination.users.currentPage >= searchPagination.users.totalPages &&
+                    searchPagination.users.totalPages > 1 && (
+                      <Box sx={{ textAlign: 'center', py: 2 }}>
+                        <Typography sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                          All {searchPagination.users.total} people loaded
+                        </Typography>
+                      </Box>
+                    )}
+                </>
               )}
             </Box>
           </Box>
@@ -579,73 +658,102 @@ const AddParticipantDialog = ({
           {/* Available Groups Section */}
           <Box>
             <SectionHeader>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <GroupIcon sx={{ width: '16px', height: '16px', color: 'text.secondary' }} />
-                <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>Available Groups</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <GroupIcon sx={{ width: '16px', height: '16px', color: 'text.secondary' }} />
+                  <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>
+                    {isSearching ? 'Search Results - Groups' : 'Available Groups'}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                  {filteredGroups.length} {isSearching ? 'found' : 'available'}
+                </Typography>
               </Box>
             </SectionHeader>
-            <Box sx={{ mt: 2 }}>
-              {isLoading ? (
+            <Box sx={{ mt: 2, maxHeight: '300px', overflowY: 'auto' }} onScroll={isSearching ? handleGroupsScroll : undefined}>
+              {(isSearching ? isLoadingSearch : isLoading) ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
                   <CircularProgress size={24} />
                 </Box>
               ) : filteredGroups.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>Không tìm thấy nhóm nào</Typography>
+                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                    {isSearching ? 'No groups found matching your search' : 'No groups available'}
+                  </Typography>
                 </Box>
               ) : (
-                filteredGroups.map((group) => {
-                  const isSelected = selectedGroups.find((g) => g.id === group.id)
-                  const displayMembers = group.members.slice(0, 3)
-                  const remainingCount = group.members.length - 3
+                <>
+                  {filteredGroups.map((group) => {
+                    const isSelected = selectedGroups.find((g) => g.id === group.id)
+                    const displayMembers = (group.members || []).slice(0, 3)
+                    const remainingCount = (group.members?.length || 0) - 3
 
-                  return (
-                    <Box
-                      sx={(theme) => ({
-                        border: `0.8px solid ${theme.palette.divider}`,
-                        borderRadius: '8px',
-                        padding: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        minHeight: '89.6px',
-                        marginBottom: '16px',
-                        [theme.breakpoints.down('sm')]: {
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          gap: '12px',
-                          minHeight: 'auto',
-                        },
-                      })}
-                      key={group.id}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <GroupIcon sx={{ width: '18px', height: '18px', color: 'text.primary' }} />
-                          <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                            {group.name}
-                          </Typography>
-                          <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                            ({group.members.length} members)
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 3 }}>
-                          {displayMembers.map((member) => (
-                            <UserAvatar key={member.id} sx={{ width: 24, height: 24, fontSize: '11px' }}>
-                              {getInitials(member.name)}
-                            </UserAvatar>
-                          ))}
-                          {remainingCount > 0 && (
-                            <Typography sx={{ fontSize: '12px', color: 'text.secondary', ml: 0.5 }}>
-                              +{remainingCount} more
+                    return (
+                      <Box
+                        sx={(theme) => ({
+                          border: `0.8px solid ${theme.palette.divider}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          minHeight: '89.6px',
+                          marginBottom: '16px',
+                          [theme.breakpoints.down('sm')]: {
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            minHeight: 'auto',
+                          },
+                        })}
+                        key={group.id}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <GroupIcon sx={{ width: '18px', height: '18px', color: 'text.primary' }} />
+                            <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                              {group.name}
                             </Typography>
-                          )}
+                            <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                              ({group.members?.length || 0} members)
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 3 }}>
+                            {displayMembers.map((member) => (
+                              <UserAvatar key={member.id} sx={{ width: 24, height: 24, fontSize: '11px' }}>
+                                {getInitials(member.name)}
+                              </UserAvatar>
+                            ))}
+                            {remainingCount > 0 && (
+                              <Typography sx={{ fontSize: '12px', color: 'text.secondary', ml: 0.5 }}>
+                                +{remainingCount} more
+                              </Typography>
+                            )}
+                          </Box>
                         </Box>
+                        <AddButton onClick={() => handleToggleGroup(group)}>{isSelected ? 'Remove' : 'Add'}</AddButton>
                       </Box>
-                      <AddButton onClick={() => handleToggleGroup(group)}>{isSelected ? 'Remove' : 'Add'}</AddButton>
+                    )
+                  })}
+
+                  {/* Loading more indicator */}
+                  {isLoadingMore && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={20} />
                     </Box>
-                  )
-                })
+                  )}
+
+                  {/* Show message when all pages loaded */}
+                  {isSearching &&
+                    searchPagination.groups.currentPage >= searchPagination.groups.totalPages &&
+                    searchPagination.groups.totalPages > 1 && (
+                      <Box sx={{ textAlign: 'center', py: 2 }}>
+                        <Typography sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                          All {searchPagination.groups.total} groups loaded
+                        </Typography>
+                      </Box>
+                    )}
+                </>
               )}
             </Box>
           </Box>

@@ -14,22 +14,23 @@ export const fetchHistoryDataAPI = async (userId, numPage, limit, search, settle
   return response.data
 }
 
-export const fetchHistorySearchingAPI = async(userId, numPage, limit, search, settled) => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/search/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`)
+export const fetchHistorySearchingAPI = async (userId, numPage, limit, search, settled) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/history/search/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`
+  )
   return response.data
-
 }
 
-export const fetchHistoryFilterAPI = async(userId, numPage, limit, fromDate, toDate, payer) => {
+export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer) => {
   const params = new URLSearchParams({
     page: numPage,
-    limit: limit
+    limit: limit,
   })
-  
+
   if (fromDate) params.append('fromDate', fromDate)
   if (toDate) params.append('toDate', toDate)
   if (payer) params.append('payer', payer)
-  
+
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/filter/${userId}?${params.toString()}`)
   return response.data
 }
@@ -80,6 +81,18 @@ export const getUserByIdAPI = async (userId) => {
   return response.data
 }
 
+export const fetchUsersAPI = async (page = 1, limit = 10, search = '') => {
+  const params = new URLSearchParams({
+    page: page,
+    limit: limit,
+  })
+
+  if (search) params.append('search', search)
+
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users?${params.toString()}`)
+  return response.data
+}
+
 // ============================================
 // BILL APIs
 // ============================================
@@ -116,12 +129,23 @@ export const getGroupByIdAPI = async (groupId) => {
   return response.data
 }
 
+export const fetchGroupsAPI = async (page = 1, limit = 10, search = '') => {
+  const params = new URLSearchParams({
+    page: page,
+    limit: limit,
+  })
+
+  if (search) params.append('search', search)
+
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups?${params.toString()}`)
+  return response.data
+}
 
 // OCR Bill
-export const sendOcrBillAPI = async(imageData, userId) => {
+export const sendOcrBillAPI = async (imageData, userId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills/scan`, {
-    userId: userId, 
-    imageData: imageData
+    userId: userId,
+    imageData: imageData,
   })
   return response.data
 }

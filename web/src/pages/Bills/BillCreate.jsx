@@ -20,7 +20,7 @@ import ParticipantCard from '~/components/Form/ParticipantCard'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
-import { createBillAPI, getAllGroupsAndMembersAPI } from '~/apis'
+import { createBillAPI, getAllGroupsAndMembersAPI, fetchUsersAPI, fetchGroupsAPI } from '~/apis'
 import { categoryOptions } from '~/apis/mock-data'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -110,9 +110,94 @@ function BillCreate() {
   const [submitError, setSubmitError] = useState(null)
 
   // Real data states
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const [availableGroups, setAvailableGroups] = useState([])
   const [availablePeople, setAvailablePeople] = useState([])
-  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [searchedUsers, setSearchedUsers] = useState([])
+  const [searchedGroups, setSearchedGroups] = useState([])
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false)
+  const [searchPagination, setSearchPagination] = useState({
+    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
+  })
+
+  // Unified search handler - fetches both users and groups
+  const handleSearch = async (page = 1, limit = 10, search = '', append = false) => {
+    if (!search.trim()) {
+      // Clear search results if search is empty
+      setSearchedUsers([])
+      setSearchedGroups([])
+      return
+    }
+
+    try {
+      setIsLoadingSearch(true)
+
+      // Fetch both users and groups in parallel
+      const [usersResponse, groupsResponse] = await Promise.all([
+        fetchUsersAPI(page, limit, search).catch((err) => {
+          console.error('Error fetching users:', err)
+          return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit } }
+        }),
+        fetchGroupsAPI(page, limit, search).catch((err) => {
+          console.error('Error fetching groups:', err)
+          return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit } }
+        }),
+      ])
+
+      // Transform users data
+      const transformedUsers = usersResponse.users.map((user) => ({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+      }))
+
+      // Transform groups data
+      const transformedGroups = groupsResponse.groups.map((group) => ({
+        id: group._id,
+        name: group.groupName || group.name,
+        members: (group.members || []).map((member) => ({
+          id: member._id,
+          name: member.name,
+          email: member.email,
+          avatar: member.avatar,
+        })),
+      }))
+
+      // Either append to existing data or replace it
+      if (append) {
+        setSearchedUsers((prev) => [...prev, ...transformedUsers])
+        setSearchedGroups((prev) => [...prev, ...transformedGroups])
+      } else {
+        setSearchedUsers(transformedUsers)
+        setSearchedGroups(transformedGroups)
+      }
+
+      setSearchPagination({
+        users: {
+          currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
+          totalPages: usersResponse.pagination.totalPages || 1,
+          total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
+          limit: usersResponse.pagination.limit || limit,
+        },
+        groups: {
+          currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
+          totalPages: groupsResponse.pagination.totalPages || 1,
+          total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
+          limit: groupsResponse.pagination.limit || limit,
+        },
+      })
+    } catch (error) {
+      console.error('Error searching:', error)
+      if (!append) {
+        setSearchedUsers([])
+        setSearchedGroups([])
+      }
+    } finally {
+      setIsLoadingSearch(false)
+    }
+  }
 
   // Fetch groups and extract all unique members
   useEffect(() => {
@@ -718,6 +803,11 @@ function BillCreate() {
         availablePeople={availablePeople}
         availableGroups={availableGroups}
         isLoading={isLoadingData}
+        onSearch={handleSearch}
+        searchedUsers={searchedUsers}
+        searchedGroups={searchedGroups}
+        searchPagination={searchPagination}
+        isLoadingSearch={isLoadingSearch}
       />
 
       {/* Select Payer Dialog */}
