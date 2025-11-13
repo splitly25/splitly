@@ -20,7 +20,7 @@ import ParticipantCard from '~/components/Form/ParticipantCard'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
-import { createBillAPI,  getAllGroupsAndMembersAPI } from '~/apis'
+import { createBillAPI, getAllGroupsAndMembersAPI } from '~/apis'
 import { categoryOptions } from '~/apis/mock-data'
 import { useForm, Controller } from 'react-hook-form'
 
@@ -125,27 +125,27 @@ function BillCreate() {
         const groupsData = await getAllGroupsAndMembersAPI()
 
         // Transform groups data to match the expected format
-        const transformedGroups = groupsData.map(group => ({
+        const transformedGroups = groupsData.map((group) => ({
           id: group._id,
           name: group.groupName,
-          members: group.members.map(member => ({
+          members: group.members.map((member) => ({
             id: member._id,
             name: member.name,
             email: member.email,
-            avatar: member.avatar
-          }))
+            avatar: member.avatar,
+          })),
         }))
 
         // Extract all unique members from all groups
         const allMembersMap = new Map()
-        groupsData.forEach(group => {
-          group.members.forEach(member => {
+        groupsData.forEach((group) => {
+          group.members.forEach((member) => {
             if (!allMembersMap.has(member._id)) {
               allMembersMap.set(member._id, {
                 id: member._id,
                 name: member.name,
                 email: member.email,
-                avatar: member.avatar
+                avatar: member.avatar,
               })
             }
           })
@@ -725,8 +725,7 @@ function BillCreate() {
         open={openPayerDialog}
         onClose={() => setOpenPayerDialog(false)}
         onSelect={handleSelectPayer}
-        availablePeople={availablePeople}
-        currentUser={currentUser}
+        availablePeople={participants}
         isLoading={isLoadingData}
       />
     </Box>

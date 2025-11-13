@@ -6,7 +6,6 @@ import {
   TextField,
   Button,
   Avatar,
-  Checkbox,
   IconButton,
   InputAdornment,
   CircularProgress,
@@ -18,99 +17,11 @@ import GroupIcon from '@mui/icons-material/Group'
 import CloseIcon from '@mui/icons-material/Close'
 import PeopleIcon from '@mui/icons-material/People'
 
-const DialogContainer = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialog-paper': {
-    borderRadius: '20px',
-    maxWidth: '1200px',
-    width: '100%',
-    overflow: 'hidden',
-    [theme.breakpoints.down('md')]: {
-      maxWidth: '95vw',
-      margin: '16px',
-      borderRadius: '16px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      maxWidth: '100vw',
-      margin: '8px',
-      borderRadius: '12px',
-    },
-  },
-}))
-
-const DialogContent = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  height: '90vh',
-  maxHeight: '717px',
-  [theme.breakpoints.down('md')]: {
-    flexDirection: 'column',
-    height: 'auto',
-    maxHeight: '90vh',
-  },
-}))
-
-const LeftPanel = styled(Box)(({ theme }) => ({
-  width: '630px',
-  padding: '24px',
-  borderRight: `0.8px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '16px',
-  height: '100%',
-  overflow: 'hidden',
-  [theme.breakpoints.down('md')]: {
-    width: '100%',
-    borderRight: 'none',
-    borderBottom: `0.8px solid ${theme.palette.divider}`,
-    height: 'auto',
-    minHeight: '300px',
-    maxHeight: '40vh',
-  },
-}))
-
-const RightPanel = styled(Box)(({ theme }) => ({
-  width: '550px',
-  padding: '24px',
-  backgroundColor: theme.palette.background.default,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-  height: '100%',
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  [theme.breakpoints.down('md')]: {
-    width: '100%',
-    height: 'auto',
-    maxHeight: '50vh',
-  },
-}))
-
 const Label = styled(Typography)(({ theme }) => ({
   fontSize: '14px',
   fontWeight: 400,
   color: theme.palette.text.primary,
   marginBottom: '0px',
-}))
-
-const StyledInput = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '8px',
-    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
-    fontSize: '14px',
-    '& fieldset': {
-      borderColor: theme.palette.divider,
-      borderWidth: '0.8px',
-    },
-    '&:hover fieldset': {
-      borderColor: theme.palette.divider,
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: theme.palette.primary.main,
-    },
-  },
-  '& .MuiOutlinedInput-input': {
-    padding: '8px 12px',
-  },
 }))
 
 const UserAvatar = styled(Avatar)(({ theme }) => ({
@@ -147,25 +58,7 @@ const PersonRow = styled(Box)(({ theme }) => ({
   },
 }))
 
-const GroupCard = styled(Box)(({ theme }) => ({
-  border: `0.8px solid ${theme.palette.divider}`,
-  borderRadius: '8px',
-  padding: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  minHeight: '89.6px',
-  marginBottom: '16px',
-  [theme.breakpoints.down('sm')]: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '12px',
-    minHeight: 'auto',
-  },
-}))
-
-// eslint-disable-next-line no-unused-vars
-const AddButton = styled(Button)(({ theme }) => ({
+const AddButton = styled(Button)(() => ({
   background: COLORS.gradientPrimary,
   color: '#FFFFFF',
   borderRadius: '99px',
@@ -178,23 +71,6 @@ const AddButton = styled(Button)(({ theme }) => ({
   '&:hover': {
     background: COLORS.gradientPrimary,
     opacity: 0.9,
-  },
-}))
-
-const AddByEmailButton = styled(Button)(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
-  border: `0.8px solid ${theme.palette.divider}`,
-  borderRadius: '8px',
-  textTransform: 'none',
-  fontSize: '14px',
-  fontWeight: 400,
-  padding: '8px 16px',
-  color: theme.palette.text.primary,
-  height: '36px',
-  minWidth: '60px',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
-    border: `0.8px solid ${theme.palette.divider}`,
   },
 }))
 
@@ -311,10 +187,85 @@ const AddParticipantDialog = ({
   }
 
   return (
-    <DialogContainer open={open} onClose={handleCancel} maxWidth="lg">
-      <DialogContent>
+    <Dialog
+      sx={(theme) => ({
+        '& .MuiInputLabel-root': {
+          fontSize: '14px',
+          fontWeight: 500,
+          color: theme.palette.text.primary,
+          marginBottom: '8px',
+          position: 'static',
+          transform: 'none',
+          '&.Mui-focused': {
+            color: theme.palette.text.primary,
+          },
+        },
+        '& .MuiOutlinedInput-root': {
+          marginTop: '8px',
+          fontSize: '14px',
+          borderRadius: '16px',
+          backgroundColor: theme.palette.background.default,
+          '& fieldset': {
+            borderColor: theme.palette.divider,
+            borderWidth: '0.8px',
+          },
+          '&:hover fieldset': {
+            borderColor: theme.palette.divider,
+            borderWidth: '0.8px',
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: theme.palette.primary.main,
+            borderWidth: '0.8px',
+          },
+        },
+        '& .MuiOutlinedInput-input': {
+          padding: '8px 12px',
+          fontSize: '14px',
+          color: theme.palette.text.primary,
+          '&::placeholder': {
+            color: theme.palette.text.secondary,
+            opacity: 0.7,
+          },
+        },
+      })}
+      open={open}
+      onClose={handleCancel}
+      maxWidth="lg"
+    >
+      <Box
+        sx={(theme) => ({
+          display: 'flex',
+          height: '90vh',
+          maxHeight: '717px',
+          [theme.breakpoints.down('md')]: {
+            flexDirection: 'column',
+            height: 'auto',
+            maxHeight: '90vh',
+          },
+        })}
+      >
         {/* Left Panel - Current Participants */}
-        <LeftPanel>
+        <Box
+          sx={(theme) => ({
+            width: '630px',
+            padding: '24px',
+            borderRight: `0.8px solid ${theme.palette.divider}`,
+            backgroundColor: theme.palette.background.default,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            height: '100%',
+            overflow: 'hidden',
+            [theme.breakpoints.down('md')]: {
+              width: '100%',
+              borderRight: 'none',
+              borderBottom: `0.8px solid ${theme.palette.divider}`,
+              height: 'auto',
+              minHeight: '300px',
+              maxHeight: '40vh',
+            },
+          })}
+        >
           <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <PeopleIcon sx={{ width: '16px', height: '16px', color: 'text.primary' }} />
@@ -522,14 +473,51 @@ const AddParticipantDialog = ({
               Thêm {getTotalSelected() > 0 ? `(${getTotalSelected()})` : ''}
             </Button>
           </Box>
-        </LeftPanel>
+        </Box>
 
         {/* Right Panel - Add Options */}
-        <RightPanel>
+        <Box
+          sx={(theme) => ({
+            width: '550px',
+            padding: '24px',
+            backgroundColor: theme.palette.background.default,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            height: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            [theme.breakpoints.down('md')]: {
+              width: '100%',
+              height: 'auto',
+              maxHeight: '50vh',
+            },
+          })}
+        >
           {/* Search Section */}
           <Box>
             <Label sx={{ mb: 1.5 }}>Search</Label>
-            <StyledInput
+            <TextField
+              sx={(theme) => ({
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
+                  fontSize: '14px',
+                  '& fieldset': {
+                    borderColor: theme.palette.divider,
+                    borderWidth: '0.8px',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.divider,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                  },
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '8px 12px',
+                },
+              })}
               fullWidth
               placeholder="Search people, groups, or members..."
               variant="outlined"
@@ -612,7 +600,25 @@ const AddParticipantDialog = ({
                   const remainingCount = group.members.length - 3
 
                   return (
-                    <GroupCard key={group.id}>
+                    <Box
+                      sx={(theme) => ({
+                        border: `0.8px solid ${theme.palette.divider}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: '89.6px',
+                        marginBottom: '16px',
+                        [theme.breakpoints.down('sm')]: {
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: '12px',
+                          minHeight: 'auto',
+                        },
+                      })}
+                      key={group.id}
+                    >
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <GroupIcon sx={{ width: '18px', height: '18px', color: 'text.primary' }} />
@@ -637,15 +643,15 @@ const AddParticipantDialog = ({
                         </Box>
                       </Box>
                       <AddButton onClick={() => handleToggleGroup(group)}>{isSelected ? 'Remove' : 'Add'}</AddButton>
-                    </GroupCard>
+                    </Box>
                   )
                 })
               )}
             </Box>
           </Box>
-        </RightPanel>
-      </DialogContent>
-    </DialogContainer>
+        </Box>
+      </Box>
+    </Dialog>
   )
 }
 
