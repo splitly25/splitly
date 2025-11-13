@@ -288,7 +288,9 @@ const Debt = () => {
 
   return (
     <Layout>
-      <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, height: '100%', overflow: 'auto' }}>
+      <Box
+        className="bg-gray-50"
+        sx={{ p: { xs: 2, sm: 3, md: 4 }, height: '100%', overflow: 'auto', backgroundColor: '#F9FAFB' }}>
         {/* Header */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" fontWeight="bold" sx={{ mb: 0.5, fontFamily: "'Nunito Sans', sans-serif" }}>
