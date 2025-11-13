@@ -153,20 +153,21 @@ const confirmPayment = async (req, res, next) => {
 
     if (isConfirmed) {
       // Mark payment as confirmed in the bills
-      // Find bills where recipient owes money to the payer
-      const bills = await billModel.getBillsByUser(recipientId)
+      // Find bills where payer owes money to the recipient
+      // Payer sent money TO recipient, so find bills where recipient paid and payer owes
+      const bills = await billModel.getBillsByUser(payerId)
       
       let remainingAmount = amount
       const updatedBills = []
       
-      // Process bills where recipient owes money and hasn't fully paid
+      // Process bills where payer owes money to recipient and hasn't fully paid
       for (const bill of bills) {
         if (remainingAmount <= 0) break
         
-        // Check if this bill is paid by the payer and recipient owes money
+        // Check if this bill is paid by the recipient and payer owes money
         // Use .equals() for proper ObjectId comparison
-        if (bill.payerId.equals(payerId)) {
-          const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(recipientId))
+        if (bill.payerId.equals(recipientId)) {
+          const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(payerId))
           
           if (paymentStatus) {
             const amountOwed = paymentStatus.amountOwed
@@ -178,12 +179,12 @@ const confirmPayment = async (req, res, next) => {
               const paymentForThisBill = Math.min(stillOwes, remainingAmount)
               
               // Update payment amount for this bill using billService (proper architecture)
-              // Pass recipientId directly (can be string or ObjectId, model will handle conversion)
+              // Pass payerId directly (can be string or ObjectId, model will handle conversion)
               const updateResult = await billService.markAsPaid(
                 bill._id.toString(),
-                recipientId, // Pass as-is, billModel will convert to ObjectId
+                payerId, // The person who owes money (who sent the payment)
                 paymentForThisBill,
-                recipientId // paidBy parameter for activity logging
+                recipientId // paidBy parameter for activity logging (recipient confirms)
               )
               
               if (updateResult) {
