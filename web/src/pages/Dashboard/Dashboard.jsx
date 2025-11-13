@@ -866,33 +866,12 @@ const GroupsCard = ({ groups, navigate, loading }) => {
   )
 }
 
-// Skeleton Loading Components
-const SkeletonCard = ({ height = 200, children }) => (
-  <Card
-    sx={{
-      borderRadius: '16px',
-      border: '1px solid',
-      borderColor: 'divider',
-      height: height,
-      width: '100%',
-      backgroundColor: '#ffffff',
-    }}
-  >
-    <CardContent sx={{ p: 3 }}>
-      {children}
-    </CardContent>
-  </Card>
-)
-
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const navigate = useNavigate()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'))
   const containerRef = useRef(null)
 
   // Get current user from Redux store
