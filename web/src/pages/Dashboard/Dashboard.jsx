@@ -227,7 +227,7 @@ const YouOweCard = ({ debtData, loading }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#ca3500' }}
             >
-              {debtData.debtDetails?.length || 0}
+              {debtData.debtCount || 0}
             </Typography>
           </Box>
         </Box>
@@ -397,7 +397,7 @@ const TheyOweYouCard = ({ debtData, loading }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {debtData.creditDetails?.length || 0}
+              {debtData.debtCount || 0}
             </Typography>
           </Box>
         </Box>

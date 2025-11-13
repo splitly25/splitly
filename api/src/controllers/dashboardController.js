@@ -249,9 +249,9 @@ const calculateDebtData = async (bills, userId) => {
     youOwe,
     theyOweYou,
     debtDetails: debtArray.slice(0, 2), // Top 2 people user owes
-    debtOthersCount: Math.max(0, debtArray.length - 2), // Count of remaining people
+    debtCount: debtArray.length,
     creditDetails: creditArray.slice(0, 2), // Top 2 people who owe user
-    creditOthersCount: Math.max(0, creditArray.length - 2) // Count of remaining people
+    creditCount: creditArray.length
   }
 }
 
