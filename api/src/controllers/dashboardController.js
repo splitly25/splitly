@@ -160,33 +160,45 @@ const calculateDebtData = async (bills, userId) => {
     for (const status of bill.paymentStatus) {
       if (status.userId === userId) {
         // This is what the current user owes/is owed
-        if (!status.isPaid && bill.payerId !== userId) {
-          // User owes money
-          youOwe += status.amountOwed
+        if (bill.payerId !== userId) {
+          // User owes money - calculate remaining amount after payments
+          const amountPaid = status.amountPaid || 0
+          const remainingAmount = status.amountOwed - amountPaid
           
-          // Find who paid (who user owes money to)
-          const payer = await userModel.findOneById(bill.payerId)
-          const payerName = payer ? payer.name : 'Unknown'
-          if (!debtDetails[payerName]) {
-            debtDetails[payerName] = { amount: 0, billCount: 0 }
+          // Only add if there's remaining debt
+          if (remainingAmount > 0) {
+            youOwe += remainingAmount
+            
+            // Find who paid (who user owes money to)
+            const payer = await userModel.findOneById(bill.payerId)
+            const payerName = payer ? payer.name : 'Unknown'
+            if (!debtDetails[payerName]) {
+              debtDetails[payerName] = { amount: 0, billCount: 0 }
+            }
+            debtDetails[payerName].amount += remainingAmount
+            debtDetails[payerName].billCount += 1
           }
-          debtDetails[payerName].amount += status.amountOwed
-          debtDetails[payerName].billCount += 1
         }
       } else {
         // This is what others owe the current user
-        if (!status.isPaid && bill.payerId === userId) {
-          // Others owe current user money
-          theyOweYou += status.amountOwed
+        if (bill.payerId === userId) {
+          // Others owe current user money - calculate remaining amount after payments
+          const amountPaid = status.amountPaid || 0
+          const remainingAmount = status.amountOwed - amountPaid
           
-          // Find who owes money
-          const debtor = await userModel.findOneById(status.userId)
-          const debtorName = debtor ? debtor.name : 'Unknown'
-          if (!creditDetails[debtorName]) {
-            creditDetails[debtorName] = { amount: 0, billCount: 0 }
+          // Only add if there's remaining debt
+          if (remainingAmount > 0) {
+            theyOweYou += remainingAmount
+            
+            // Find who owes money
+            const debtor = await userModel.findOneById(status.userId)
+            const debtorName = debtor ? debtor.name : 'Unknown'
+            if (!creditDetails[debtorName]) {
+              creditDetails[debtorName] = { amount: 0, billCount: 0 }
+            }
+            creditDetails[debtorName].amount += remainingAmount
+            creditDetails[debtorName].billCount += 1
           }
-          creditDetails[debtorName].amount += status.amountOwed
-          creditDetails[debtorName].billCount += 1
         }
       }
     }
