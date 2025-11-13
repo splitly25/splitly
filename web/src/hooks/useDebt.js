@@ -10,22 +10,23 @@ export const useDebt = (userId) => {
     netBalance: 0
   })
 
-  useEffect(() => {
-    const loadDebtData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchDebtSummaryAPI(userId)
-        setDebtData(data)
-      } catch (err) {
-        setError(err.message || 'Failed to load debt data')
-        console.error('Error loading debt data:', err)
-      } finally {
-        setLoading(false)
-      }
+  const loadDebtData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchDebtSummaryAPI(userId)
+      setDebtData(data)
+    } catch (err) {
+      setError(err.message || 'Failed to load debt data')
+      console.error('Error loading debt data:', err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadDebtData()
   }, [userId])
 
-  return { loading, error, debtData }
+  return { loading, error, debtData, refetch: loadDebtData }
 }

@@ -80,9 +80,84 @@ const initiatePayment = async (req, res, next) => {
   }
 }
 
+/**
+ * Confirm payment (in-app, not via email token)
+ * Body: { debtorId, amount, bills: [{ billId, amount }], note, isConfirmed }
+ * Only creditor (current user) can confirm
+ */
+const confirmPayment = async (req, res, next) => {
+  try {
+    const { userId } = req.params // creditor
+    const { debtorId, amount, bills, note, isConfirmed } = req.body
+
+    // Security: Only creditor can confirm
+    if (req.jwtDecoded._id !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only confirm payments to yourself')
+    }
+    if (!debtorId || !amount || !Array.isArray(bills) || bills.length === 0) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Missing required fields')
+    }
+
+    // Get user info
+    const [creditor, debtor] = await Promise.all([
+      (await import('~/models/userModel.js')).userModel.findOneById(userId),
+      (await import('~/models/userModel.js')).userModel.findOneById(debtorId)
+    ])
+    if (!creditor || !debtor) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Mark as paid for each bill (partial or full)
+    let remaining = amount
+    const updatedBills = []
+    const { billService } = await import('~/services/billService.js')
+    for (const b of bills) {
+      if (remaining <= 0) break
+      const payAmount = Math.min(b.amount, remaining)
+      const result = await billService.markAsPaid(b.billId, debtorId, payAmount, userId)
+      if (result) {
+        updatedBills.push({ billId: b.billId, amountPaid: payAmount })
+        remaining -= payAmount
+      }
+    }
+
+    // Record payment confirmation (token: null)
+    const { paymentConfirmationModel } = await import('~/models/paymentConfirmationModel.js')
+    // Generate a unique token for in-app confirmation (not used for validation, just to satisfy schema)
+    const token = `inapp_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    await paymentConfirmationModel.createNew({
+      paymentId: updatedBills[0]?.billId || null,
+      token,
+      recipientId: userId,
+      payerId: debtorId,
+      amount,
+      isConfirmed: !!isConfirmed
+    })
+
+    // Send email notification to payer
+    const { sendPaymentResponseEmail } = await import('~/utils/emailService.js')
+    await sendPaymentResponseEmail({
+      payerEmail: debtor.email,
+      payerName: debtor.name,
+      recipientName: creditor.name,
+      amount,
+      isConfirmed: !!isConfirmed
+    })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      updatedBills,
+      message: isConfirmed ? 'Payment confirmed' : 'Payment rejected'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
   getDebtSummary,
-  initiatePayment
+  initiatePayment,
+  confirmPayment
 }

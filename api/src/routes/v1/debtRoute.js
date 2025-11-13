@@ -14,7 +14,11 @@ Router.get('/:userId/i-owe', authMiddleware.isAuthorized, debtValidation.getUser
 // Get comprehensive debt summary
 Router.get('/:userId/summary', authMiddleware.isAuthorized, debtValidation.getUserDebts, debtController.getDebtSummary)
 
+
 // Initiate payment request
 Router.post('/:userId/payment', authMiddleware.isAuthorized, debtValidation.getUserDebts, debtValidation.initiatePayment, debtController.initiatePayment)
+
+// Confirm payment (in-app, not via email token)
+Router.post('/:userId/confirm-payment', authMiddleware.isAuthorized, debtValidation.getUserDebts, debtValidation.confirmPayment, debtController.confirmPayment)
 
 export const debtRoute = Router

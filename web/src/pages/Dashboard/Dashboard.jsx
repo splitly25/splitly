@@ -86,7 +86,7 @@ const TotalSpendingCard = ({ debtData, loading }) => {
             fontWeight: 500,
             fontSize: '14px',
             color: 'text.secondary',
-            mb: 5,
+            mb: 2,
           }}
         >
           Tổng chi tiêu tháng này
@@ -983,10 +983,11 @@ const Dashboard = () => {
     <Layout>
       <Box
         ref={containerRef}
+        className="bg-gray-50"
         sx={{
           p: { xs: 3, md: 4 },
           minHeight: '100vh',
-          backgroundColor: 'background.default',
+          backgroundColor: '#F9FAFB',
         }}
       >
         {/* Header Section */}
