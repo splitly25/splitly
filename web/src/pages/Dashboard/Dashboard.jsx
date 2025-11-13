@@ -183,7 +183,6 @@ const YouOweCard = ({ debtData, loading }) => {
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ArrowForwardIcon sx={{ fontSize: 20, color: '#ca3500' }} />
             <Typography
               variant="subtitle2"
               sx={{
@@ -274,6 +273,22 @@ const YouOweCard = ({ debtData, loading }) => {
                 </Typography>
               </Card>
             ))}
+            <Button
+              size="small"
+              startIcon={<ArrowForwardIcon />}
+              onClick={() => navigate('/debt')}
+              sx={{
+                textTransform: 'none',
+                color: 'text.secondary',
+                alignSelf: 'flex-end',
+                ml: 'auto',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 2,
+              }}
+            >
+              Xem tất cả
+            </Button>
           </Box>
         ) : (
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -338,7 +353,6 @@ const TheyOweYouCard = ({ debtData, loading }) => {
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ArrowForwardIcon sx={{ fontSize: 20, color: '#008236' }} />
             <Typography
               variant="subtitle2"
               sx={{
@@ -429,6 +443,22 @@ const TheyOweYouCard = ({ debtData, loading }) => {
                 </Typography>
               </Card>
             ))}
+            <Button
+              size="small"
+              startIcon={<ArrowForwardIcon />}
+              onClick={() => navigate('/debt')}
+              sx={{
+                textTransform: 'none',
+                color: 'text.secondary',
+                alignSelf: 'flex-end',
+                ml: 'auto',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 2,
+              }}
+            >
+              Xem tất cả
+            </Button>
           </Box>
         ) : (
           <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
@@ -500,14 +530,6 @@ const PendingBillsCard = ({ pendingBills, navigate, loading }) => {
           >
             Hóa đơn chưa quyết toán
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/history')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {pendingBills.bills && pendingBills.bills.length > 0 ? (
@@ -568,6 +590,22 @@ const PendingBillsCard = ({ pendingBills, navigate, loading }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/history')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )
@@ -620,14 +658,6 @@ const RecentActivitiesCard = ({ activities, navigate, loading }) => {
           >
             Hoạt động gần đây
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/activity')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {activities && activities.length > 0 ? (
@@ -666,6 +696,22 @@ const RecentActivitiesCard = ({ activities, navigate, loading }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/activity')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )
@@ -733,14 +779,6 @@ const GroupsCard = ({ groups, navigate, loading }) => {
           >
             Nhóm chi tiêu
           </Typography>
-          <Button
-            size="small"
-            startIcon={<ArrowForwardIcon />}
-            onClick={() => navigate('/groups')}
-            sx={{ textTransform: 'none', color: 'text.secondary' }}
-          >
-            Xem tất cả
-          </Button>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {groups && groups.length > 0 ? (
@@ -807,6 +845,22 @@ const GroupsCard = ({ groups, navigate, loading }) => {
             </Typography>
           )}
         </Box>
+        <Button
+          size="small"
+          startIcon={<ArrowForwardIcon />}
+          onClick={() => navigate('/history')}
+          sx={{
+            textTransform: 'none',
+            color: 'text.secondary',
+            alignSelf: 'flex-end',
+            ml: 'auto',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          Xem tất cả
+        </Button>
       </CardContent>
     </Card>
   )

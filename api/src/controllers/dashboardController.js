@@ -4,6 +4,7 @@
  */
 
 import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
 import { userModel, billModel, groupModel, activityModel } from '~/models/index.js'
 import ApiError from '~/utils/APIError.js'
 
@@ -20,39 +21,58 @@ const getDashboardData = async (req, res, next) => {
       throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own dashboard data')
     }
     
+    // Convert userId to ObjectId for consistent comparisons
+    const userIdObj = new ObjectId(userId)
+    
     // Validate user exists
-    const user = await userModel.findOneById(userId)
+    const user = await userModel.findOneById(userIdObj)
     if (!user) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     
     // Get user's bills
-    const userBills = await billModel.getBillsByUser(userId)
+    const userBills = await billModel.getBillsByUser(userIdObj)
     
     // Calculate debt data
-    const debtData = await calculateDebtData(userBills, userId)
+    const debtData = await calculateDebtData(userBills, userIdObj)
     
     // Get pending bills (bills where user hasn't paid yet)
-    const pendingBills = getPendingBills(userBills, userId)
+    const pendingBills = getPendingBills(userBills, userIdObj)
     
     // Get user's groups
-    const userGroups = await groupModel.getGroupsByUser(userId)
+    const userGroups = await groupModel.getGroupsByUser(userIdObj)
     
-    // Get group details with member information
+    // Limit to maximum 5 groups for dashboard
     const groupsWithMembers = await Promise.all(
-      userGroups.map(async (group) => {
+      userGroups.slice(0, 5).map(async (group) => {
+        // Only get first 4 members for display (3 avatars + count)
+        const memberIds = group.members.slice(0, 4)
         const members = await Promise.all(
-          group.members.map(memberId => userModel.findOneById(memberId))
+          memberIds.map(memberId => {
+            // Always convert to string, check validity, then create ObjectId
+            const idStr = String(memberId)
+            if (/^[a-fA-F0-9]{24}$/.test(idStr)) {
+              return userModel.findOneById(new ObjectId(idStr))
+            }
+            // Invalid, skip
+            return null
+          })
         )
         return {
-          ...group,
-          memberDetails: members.filter(member => member) // Filter out null members
+          _id: group._id,
+          groupName: group.groupName,
+          memberDetails: members.filter(member => member).map(m => ({
+            _id: m._id,
+            name: m.name
+          })), // Only include id and name
+          totalMembers: group.members.length,
+          bills: group.bills || []
         }
       })
     )
     
     // Get recent activities for user (excluding login activities)
-    const recentActivities = await activityModel.getActivitiesByUser(userId, 20) // Get more to filter
+    const recentActivities = await activityModel.getActivitiesByUser(userIdObj, 20) // Get more to filter
     
     // Filter out login/logout activities
     const filteredActivities = recentActivities.filter(activity => 
@@ -60,7 +80,7 @@ const getDashboardData = async (req, res, next) => {
     ).slice(0, 10) // Take only 10 after filtering
     
     // Format activities for display
-    const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userId)
+    const formattedActivities = await formatActivitiesForDisplay(filteredActivities, userIdObj)
     
     const dashboardData = {
       user: {
@@ -204,22 +224,34 @@ const calculateDebtData = async (bills, userId) => {
     }
   }
   
+  // Convert to arrays and sort by amount (largest first)
+  const debtArray = Object.entries(debtDetails)
+    .map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    }))
+    .sort((a, b) => b.amount - a.amount)
+  
+  const creditArray = Object.entries(creditDetails)
+    .map(([name, data]) => ({ 
+      name, 
+      amount: data.amount, 
+      billCount: data.billCount 
+    }))
+    .sort((a, b) => b.amount - a.amount)
+  
+  // Return top 2 for each, plus count of others
   return {
     currentMonthSpending: monthlySpending.currentMonthSpending,
     previousMonthSpending: monthlySpending.previousMonthSpending,
     percentageChange: monthlySpending.percentageChange,
     youOwe,
     theyOweYou,
-    debtDetails: Object.entries(debtDetails).map(([name, data]) => ({ 
-      name, 
-      amount: data.amount, 
-      billCount: data.billCount 
-    })),
-    creditDetails: Object.entries(creditDetails).map(([name, data]) => ({ 
-      name, 
-      amount: data.amount, 
-      billCount: data.billCount 
-    }))
+    debtDetails: debtArray.slice(0, 2), // Top 2 people user owes
+    debtOthersCount: Math.max(0, debtArray.length - 2), // Count of remaining people
+    creditDetails: creditArray.slice(0, 2), // Top 2 people who owe user
+    creditOthersCount: Math.max(0, creditArray.length - 2) // Count of remaining people
   }
 }
 
