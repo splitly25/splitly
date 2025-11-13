@@ -45,11 +45,11 @@ const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
   activityType: Joi.string().valid(...Object.values(ACTIVITY_TYPES)).required(),
   
   // User who performed the activity
-  userId: Joi.string().required(),
+  userId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   
   // Resource information
   resourceType: Joi.string().valid('bill', 'group', 'user').required(),
-  resourceId: Joi.string().required(),
+  resourceId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   
   // Activity details and metadata
   details: Joi.object({

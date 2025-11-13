@@ -16,12 +16,16 @@ const createNew = async (reqBody, options = {}) => {
     if (reqBody.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
       const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
-      paymentStatus = reqBody.participants.map(userId => ({
-        userId: userId,
-        amountOwed: amountPerPerson,
-        amountPaid: userId === reqBody.payerId ? amountPerPerson : 0, // Payer already paid
-        paidDate: userId === reqBody.payerId ? Date.now() : null
-      }))
+      paymentStatus = reqBody.participants.map(userId => {
+        // Compare as strings for equality check
+        const isPayerString = userId.toString() === reqBody.payerId.toString();
+        return {
+          userId: userId,
+          amountOwed: amountPerPerson,
+          amountPaid: isPayerString ? amountPerPerson : 0, // Payer already paid
+          paidDate: isPayerString ? Date.now() : null
+        };
+      })
     } else if (reqBody.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
       const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0)
@@ -35,17 +39,22 @@ const createNew = async (reqBody, options = {}) => {
         const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
         
         item.allocatedTo.forEach(userId => {
-          userAmounts[userId] = (userAmounts[userId] || 0) + amountPerPerson
+          const userKey = userId.toString(); // Use string key for object
+          userAmounts[userKey] = (userAmounts[userKey] || 0) + amountPerPerson
         })
       })
       
       // Create payment status array
-      paymentStatus = Object.entries(userAmounts).map(([userId, amount]) => ({
-        userId: userId,
-        amountOwed: Math.round(amount),
-        amountPaid: userId === reqBody.payerId ? Math.round(amount) : 0,
-        paidDate: userId === reqBody.payerId ? Date.now() : null
-      }))
+      paymentStatus = Object.entries(userAmounts).map(([userIdStr, amount]) => {
+        // Compare as strings for equality check
+        const isPayerString = userIdStr === reqBody.payerId.toString();
+        return {
+          userId: userIdStr,
+          amountOwed: Math.round(amount),
+          amountPaid: isPayerString ? Math.round(amount) : 0,
+          paidDate: isPayerString ? Date.now() : null
+        };
+      })
     }
     
     const newBillData = {
@@ -239,7 +248,10 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
 
     // Check if all participants have paid
     const updatedBill = await billModel.findOneById(billId);
-    const allPaid = updatedBill.paymentStatus.every((status) => status.isPaid);
+    const allPaid = updatedBill.paymentStatus.every((status) => {
+      const amountPaid = status.amountPaid || 0;
+      return amountPaid >= status.amountOwed;
+    });
 
     if (allPaid) {
       await billModel.update(billId, { isSettled: true });
