@@ -25,6 +25,7 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
       Joi.object({
         name: Joi.string().required(),
         amount: Joi.number().required(),
+        quantity: Joi.number().min(1).optional(),
         allocatedTo: Joi.array()
           .items(Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)))
           .optional(),

@@ -21,6 +21,7 @@ const createNew = async (req, res, next) => {
         Joi.object({
           name: Joi.string().required(),
           amount: Joi.number().required(),
+          quantity: Joi.number().min(1).optional(),
           allocatedTo: Joi.array().items(Joi.string()).optional(),
         })
       )

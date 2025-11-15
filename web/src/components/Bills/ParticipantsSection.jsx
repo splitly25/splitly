@@ -10,6 +10,7 @@ function ParticipantsSection({
   onOpenParticipantDialog,
   onDeleteParticipant,
   onParticipantAmountChange,
+  onParticipantAmountBlur,
 }) {
   return (
     <Box
@@ -70,6 +71,7 @@ function ParticipantsSection({
             participant={participant}
             showAmountInput={splitType === 'by-person'}
             onAmountChange={(amount) => onParticipantAmountChange(participant.id, amount)}
+            onAmountBlur={onParticipantAmountBlur}
             onDelete={() => onDeleteParticipant(participant.id)}
             canDelete={participants.length > 1}
           />
