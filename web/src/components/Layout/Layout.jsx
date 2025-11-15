@@ -33,7 +33,7 @@ import {
   Chat as ChatIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ChatbotButton from '~/components/Chatbot/ChatbotButton'
 import ChatbotWindow from '../Chatbot/ChatbotWindow'
 import { useDispatch } from 'react-redux'
@@ -69,6 +69,27 @@ const Layout = ({ children }) => {
   // eslint-disable-next-line no-unused-vars
   const [numberOfNotifications, setNumberOfNotifications] = useState(2)
   const [newMessage, setNewMessage] = useState('You have a new message from TingTing Bot!')
+
+  // Check for chatbot payload from navigation state or URL params
+  useEffect(() => {
+    // Check navigation state
+    if (location.state?.chatbotWindowOpen === true) {
+      setChatbotWindowOpen(true)
+      // Clear the state to prevent reopening on future navigations
+      window.history.replaceState({}, document.title)
+    }
+    
+    // Check URL params
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get('chatbotWindowOpen') === 'true') {
+      setChatbotWindowOpen(true)
+      // Remove the param from URL
+      searchParams.delete('chatbotWindowOpen')
+      const newSearch = searchParams.toString()
+      const newUrl = `${location.pathname}${newSearch ? `?${newSearch}` : ''}`
+      window.history.replaceState({}, document.title, newUrl)
+    }
+  }, [location])
 
   // Dynamic chatbot width based on screen size
   const chatbotWidth = isMobile ? '100vw' : isSmallScreen ? '45vw' : '30vw'
