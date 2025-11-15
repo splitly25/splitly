@@ -4,17 +4,16 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import CalculateIcon from '@mui/icons-material/Calculate'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import { Controller } from 'react-hook-form'
 import CustomTextField from '~/components/Form/CustomTextField'
 import { COLORS } from '~/theme'
 import { getInitials } from '~/utils/formatters'
 
 function ByItemSplitDetails({
-  control,
+  formData,
+  onFieldChange,
   participants,
   totalAmount,
   items,
-  setValue,
   onAddItem,
   onDeleteItem,
   onItemChange,
@@ -22,7 +21,7 @@ function ByItemSplitDetails({
 }) {
   const handleAutoCalculateTotal = () => {
     const total = items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
-    setValue('totalAmount', total.toString())
+    onFieldChange('totalAmount', total.toString())
   }
 
   return (
@@ -81,36 +80,17 @@ function ByItemSplitDetails({
 
       {/* Total Amount Input */}
       <Box sx={{ mb: 3 }}>
-        <Controller
-          name="totalAmount"
-          control={control}
-          rules={{
-            required: 'Vui lòng nhập tổng số tiền',
-            validate: (value) => {
-              const numValue = parseFloat(value)
-              if (isNaN(numValue) || numValue <= 0) {
-                return 'Số tiền phải lớn hơn 0'
-              }
-              return true
-            },
+        <CustomTextField
+          label="Tổng số tiền thanh toán"
+          required
+          type="text"
+          placeholder="VD: 100+200 hoặc 500*3 hoặc (100+50)/2"
+          enableAutoCalculate
+          value={formData.totalAmount || ''}
+          onChange={(e) => onFieldChange('totalAmount', e.target.value)}
+          InputProps={{
+            startAdornment: <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />,
           }}
-          render={({ field, fieldState: { error } }) => (
-            <CustomTextField
-              {...field}
-              label="Tổng số tiền thanh toán"
-              required
-              type="text"
-              placeholder="VD: 100+200 hoặc 500*3 hoặc (100+50)/2"
-              enableAutoCalculate
-              error={!!error}
-              helperText={error?.message}
-              InputProps={{
-                startAdornment: (
-                  <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />
-                ),
-              }}
-            />
-          )}
         />
         <Typography
           sx={{

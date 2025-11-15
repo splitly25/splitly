@@ -1,11 +1,10 @@
 import { Box, Typography } from '@mui/material'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
-import { Controller } from 'react-hook-form'
 import CustomTextField from '~/components/Form/CustomTextField'
 import ParticipantCard from '../Form/ParticipantCard'
 
-function EqualSplitDetails({ control, participants, totalAmount }) {
+function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount }) {
   return (
     <Box sx={{ mb: 10 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -37,36 +36,17 @@ function EqualSplitDetails({ control, participants, totalAmount }) {
           padding: '24px',
         })}
       >
-        <Controller
-          name="totalAmount"
-          control={control}
-          rules={{
-            required: 'Vui lòng nhập tổng số tiền',
-            validate: (value) => {
-              const numValue = parseFloat(value)
-              if (isNaN(numValue) || numValue <= 0) {
-                return 'Số tiền phải lớn hơn 0'
-              }
-              return true
-            },
+        <CustomTextField
+          label="Tổng số tiền thanh toán"
+          required
+          type="text"
+          placeholder="VD:100 or 100+200*10..."
+          enableAutoCalculate
+          value={formData.totalAmount || ''}
+          onChange={(e) => onFieldChange('totalAmount', e.target.value)}
+          InputProps={{
+            startAdornment: <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />,
           }}
-          render={({ field, fieldState: { error } }) => (
-            <CustomTextField
-              {...field}
-              label="Tổng số tiền thanh toán"
-              required
-              type="text"
-              placeholder="VD:100 or 100+200*10..."
-              enableAutoCalculate
-              error={!!error}
-              helperText={error?.message}
-              InputProps={{
-                startAdornment: (
-                  <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />
-                ),
-              }}
-            />
-          )}
         />
         <Typography
           sx={{

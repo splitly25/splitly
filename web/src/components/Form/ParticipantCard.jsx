@@ -5,7 +5,14 @@ import CustomTextField from './CustomTextField'
 import { getInitials } from '~/utils/formatters'
 import { formatCurrency } from '~/utils/formatters'
 
-const ParticipantCard = ({ participant, showAmountInput = false, onAmountChange, onDelete, canDelete = true }) => {
+const ParticipantCard = ({
+  participant,
+  showAmountInput = false,
+  onAmountChange,
+  onAmountBlur,
+  onDelete,
+  canDelete = true,
+}) => {
   return (
     <Box
       sx={(theme) => ({
@@ -119,9 +126,9 @@ const ParticipantCard = ({ participant, showAmountInput = false, onAmountChange,
           type="text"
           value={participant.usedAmount || ''}
           onChange={(e) => {
-            const numValue = parseFloat(e.target.value)
-            onAmountChange(isNaN(numValue) ? 0 : numValue)
+            onAmountChange(e.target.value)
           }}
+          onBlur={onAmountBlur}
           placeholder="VD: 100+200 hoặc 500*3 hoặc 1000/4"
           enableAutoCalculate
         />

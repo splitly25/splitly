@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
 import { Box, Typography, Button, IconButton } from '@mui/material'
 import { COLORS } from '~/theme'
@@ -14,463 +14,259 @@ import ParticipantsSection from '~/components/Bills/ParticipantsSection'
 import EqualSplitDetails from '~/components/Bills/EqualSplitDetails'
 import ByPersonSplitDetails from '~/components/Bills/ByPersonSplitDetails'
 import ByItemSplitDetails from '~/components/Bills/ByItemSplitDetails'
-import { createBillAPI, fetchUsersAPI, fetchGroupsAPI } from '~/apis'
-import { useForm } from 'react-hook-form'
+import { useConfirm } from 'material-ui-confirm'
+import {
+  selectActiveBill,
+  selectParticipants,
+  selectItems,
+  selectAvailablePeople,
+  selectAvailableGroups,
+  selectSearchedUsers,
+  selectSearchedGroups,
+  selectIsLoading,
+  selectIsLoadingData,
+  selectIsLoadingSearch,
+  selectSubmitError,
+  updateField,
+  addParticipants,
+  removeParticipant,
+  updateParticipantAmount,
+  addItem,
+  removeItem,
+  updateItem,
+  toggleItemAllocation,
+  calculateAmounts,
+  distributeDifference,
+  initializeBill,
+  resetBill,
+  setSubmitError,
+  fetchInitialDataThunk,
+  loadMoreDataThunk,
+  searchDataThunk,
+  submitBillThunk,
+} from '~/redux/bill/activeBillSlice'
 
 function BillCreate() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const currentUser = useSelector(selectCurrentUser)
+  const confirm = useConfirm()
 
-  // React Hook Form setup
-  const {
-    control,
-    handleSubmit: handleFormSubmit,
-    watch,
-    setValue,
-    getValues,
-  } = useForm({
-    defaultValues: {
-      billName: '',
-      category: 'food',
-      notes: '',
-      creationDate: new Date().toISOString(),
-      paymentDeadline: '',
-      payer: currentUser?._id || '',
-      splitType: 'equal',
-      totalAmount: 0,
-    },
-  })
+  // Redux state
+  const billState = useSelector(selectActiveBill)
+  const participants = useSelector(selectParticipants)
+  const items = useSelector(selectItems)
+  const availablePeople = useSelector(selectAvailablePeople)
+  const availableGroups = useSelector(selectAvailableGroups)
+  const searchedUsers = useSelector(selectSearchedUsers)
+  const searchedGroups = useSelector(selectSearchedGroups)
+  const isLoading = useSelector(selectIsLoading)
+  const isLoadingData = useSelector(selectIsLoadingData)
+  const isLoadingSearch = useSelector(selectIsLoadingSearch)
+  const submitError = useSelector(selectSubmitError)
 
-  // Watch form values
-  const watchedValues = watch()
-  const { splitType, totalAmount } = watchedValues
-
-  // Participants state
-  const [participants, setParticipants] = useState([
-    {
-      id: currentUser?._id,
-      name: currentUser?.name || '',
-      email: currentUser?.email || '',
-      amount: 0,
-      usedAmount: 0,
-    },
-  ])
-
-  // Items state for item-based split
-  const [items, setItems] = useState([
-    {
-      id: Date.now(),
-      name: '',
-      amount: 0,
-      allocatedTo: [],
-    },
-  ])
-
-  // Dialog states
+  // Dialog states (keep local since they're UI-only)
   const [openParticipantDialog, setOpenParticipantDialog] = useState(false)
   const [openPayerDialog, setOpenPayerDialog] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [submitError, setSubmitError] = useState(null)
 
-  // Real data states
-  const [isLoadingData, setIsLoadingData] = useState(true)
-  const [availableGroups, setAvailableGroups] = useState([])
-  const [availablePeople, setAvailablePeople] = useState([])
-  const [searchedUsers, setSearchedUsers] = useState([])
-  const [searchedGroups, setSearchedGroups] = useState([])
-  const [isLoadingSearch, setIsLoadingSearch] = useState(false)
-  const [searchPagination, setSearchPagination] = useState({
-    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
-    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
-  })
-  const [normalPagination, setNormalPagination] = useState({
-    users: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
-    groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
-  })
-
-  // Handler for loading more in normal mode (non-search)
-  const handleLoadMore = async (page = 1, limit = 10, append = true, type = 'both') => {
-    try {
-      setIsLoadingData(true)
-
-      if (type === 'users' || type === 'both') {
-        const usersResponse = await fetchUsersAPI(page, limit, '').catch((err) => {
-          console.error('Error fetching users:', err)
-          return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 } }
-        })
-
-        const transformedUsers = usersResponse.users.map((user) => ({
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-        }))
-
-        if (append) {
-          setAvailablePeople((prev) => [...prev, ...transformedUsers])
-        } else {
-          setAvailablePeople(transformedUsers)
-        }
-
-        setNormalPagination((prev) => ({
-          ...prev,
-          users: {
-            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
-            totalPages: usersResponse.pagination.totalPages || 1,
-            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
-            limit: usersResponse.pagination.limit || limit,
-          },
-        }))
-      }
-
-      if (type === 'groups' || type === 'both') {
-        const groupsResponse = await fetchGroupsAPI(page, limit, '').catch((err) => {
-          console.error('Error fetching groups:', err)
-          return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit: 10 } }
-        })
-
-        const transformedGroups = groupsResponse.groups.map((group) => ({
-          id: group._id,
-          name: group.groupName || group.name,
-          members: (group.members || []).map((member) => ({
-            id: member._id,
-            name: member.name,
-            email: member.email,
-            avatar: member.avatar,
-          })),
-        }))
-
-        if (append) {
-          setAvailableGroups((prev) => [...prev, ...transformedGroups])
-        } else {
-          setAvailableGroups(transformedGroups)
-        }
-
-        setNormalPagination((prev) => ({
-          ...prev,
-          groups: {
-            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
-            totalPages: groupsResponse.pagination.totalPages || 1,
-            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
-            limit: groupsResponse.pagination.limit || limit,
-          },
-        }))
-      }
-    } catch (error) {
-      console.error('Error loading more:', error)
-    } finally {
-      setIsLoadingData(false)
-    }
-  }
-
-  // Unified search handler - fetches both users and groups
-  const handleSearch = async (page = 1, limit = 10, search = '', append = false, type = 'both') => {
-    if (!search.trim()) {
-      setSearchedUsers([])
-      setSearchedGroups([])
-      return
-    }
-
-    try {
-      setIsLoadingSearch(true)
-
-      // Fetch based on type parameter
-      if (type === 'users' || type === 'both') {
-        const usersResponse = await fetchUsersAPI(page, limit, search).catch((err) => {
-          console.error('Error fetching users:', err)
-          return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit } }
-        })
-
-        // Transform users data
-        const transformedUsers = usersResponse.users.map((user) => ({
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-        }))
-
-        if (append) {
-          setSearchedUsers((prev) => [...prev, ...transformedUsers])
-        } else {
-          setSearchedUsers(transformedUsers)
-        }
-
-        setSearchPagination((prev) => ({
-          ...prev,
-          users: {
-            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
-            totalPages: usersResponse.pagination.totalPages || 1,
-            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
-            limit: usersResponse.pagination.limit || limit,
-          },
-        }))
-      }
-
-      if (type === 'groups' || type === 'both') {
-        const groupsResponse = await fetchGroupsAPI(page, limit, search).catch((err) => {
-          console.error('Error fetching groups:', err)
-          return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit } }
-        })
-
-        // Transform groups data
-        const transformedGroups = groupsResponse.groups.map((group) => ({
-          id: group._id,
-          name: group.groupName || group.name,
-          members: (group.members || []).map((member) => ({
-            id: member._id,
-            name: member.name,
-            email: member.email,
-            avatar: member.avatar,
-          })),
-        }))
-
-        if (append) {
-          setSearchedGroups((prev) => [...prev, ...transformedGroups])
-        } else {
-          setSearchedGroups(transformedGroups)
-        }
-
-        setSearchPagination((prev) => ({
-          ...prev,
-          groups: {
-            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
-            totalPages: groupsResponse.pagination.totalPages || 1,
-            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
-            limit: groupsResponse.pagination.limit || limit,
-          },
-        }))
-      }
-    } catch (error) {
-      console.error('Error searching:', error)
-      if (!append) {
-        if (type === 'users' || type === 'both') setSearchedUsers([])
-        if (type === 'groups' || type === 'both') setSearchedGroups([])
-      }
-    } finally {
-      setIsLoadingSearch(false)
-    }
-  }
-
-  // Fetch initial users and groups with pagination
+  // Initialize bill on mount
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!currentUser?._id) return
-
-      try {
-        setIsLoadingData(true)
-
-        // Fetch first page of users and groups in parallel
-        const [usersResponse, groupsResponse] = await Promise.all([
-          fetchUsersAPI(1, 10, '').catch((err) => {
-            console.error('Error fetching users:', err)
-            return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit: 10 } }
-          }),
-          fetchGroupsAPI(1, 10, '').catch((err) => {
-            console.error('Error fetching groups:', err)
-            return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit: 10 } }
-          }),
-        ])
-
-        // Transform users data
-        const transformedUsers = usersResponse.users.map((user) => ({
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-        }))
-
-        // Transform groups data
-        const transformedGroups = groupsResponse.groups.map((group) => ({
-          id: group._id,
-          name: group.groupName || group.name,
-          members: (group.members || []).map((member) => ({
-            id: member._id,
-            name: member.name,
-            email: member.email,
-            avatar: member.avatar,
-          })),
-        }))
-
-        setAvailablePeople(transformedUsers)
-        setAvailableGroups(transformedGroups)
-
-        setNormalPagination({
-          users: {
-            currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
-            totalPages: usersResponse.pagination.totalPages || 1,
-            total: usersResponse.pagination.totalUsers || usersResponse.pagination.total || 0,
-            limit: usersResponse.pagination.limit || 10,
-          },
-          groups: {
-            currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
-            totalPages: groupsResponse.pagination.totalPages || 1,
-            total: groupsResponse.pagination.total || groupsResponse.pagination.totalGroups || 0,
-            limit: groupsResponse.pagination.limit || 10,
-          },
-        })
-      } catch (error) {
-        console.error('Error fetching initial data:', error)
-        setSubmitError('Không thể tải danh sách nhóm và thành viên')
-      } finally {
-        setIsLoadingData(false)
-      }
-    }
-
-    fetchInitialData()
-  }, [currentUser?._id])
-
-  const handleAddParticipants = (newParticipants) => {
-    const participantsToAdd = newParticipants.map((p) => ({
-      id: p.id,
-      name: p.name,
-      email: p.email,
-      amount: 0,
-      usedAmount: 0,
-    }))
-
-    // Filter out duplicates
-    const existingIds = participants.map((p) => p.id)
-    const uniqueParticipants = participantsToAdd.filter((p) => !existingIds.includes(p.id))
-
-    setParticipants([...participants, ...uniqueParticipants])
-  }
-
-  // Get the selected payer's name for display
-  const getPayerName = () => {
-    const payerId = getValues('payer')
-    const payer = participants.find((p) => p.id === payerId)
-    return payer ? payer.name : 'Chọn người ứng tiền'
-  }
-
-  const handleDeleteParticipant = (id) => {
-    setParticipants(participants.filter((p) => p.id !== id))
-    if (getValues('payer') === id) {
-      setValue('payer', currentUser?._id || '')
-    }
-  }
-
-  const handleMarkAsPayer = (id) => {
-    setValue('payer', id)
-  }
-
-  // Money amount change handler
-  const handleParticipantAmountChange = (id, amount) => {
-    setParticipants(participants.map((p) => (p.id === id ? { ...p, usedAmount: amount } : p)))
-  }
-
-  // Item management handlers for item-based split
-  const handleAddItem = () => {
-    setItems([
-      ...items,
-      {
-        id: Date.now(),
-        name: '',
-        amount: 0,
-        allocatedTo: [],
-      },
-    ])
-  }
-
-  const handleDeleteItem = (id) => {
-    setItems(items.filter((item) => item.id !== id))
-  }
-
-  const handleItemChange = (id, field, value) => {
-    setItems(items.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
-  }
-
-  const handleItemAllocationToggle = (itemId, participantId) => {
-    setItems(
-      items.map((item) => {
-        if (item.id === itemId) {
-          const allocatedTo = item.allocatedTo.includes(participantId)
-            ? item.allocatedTo.filter((id) => id !== participantId)
-            : [...item.allocatedTo, participantId]
-          return { ...item, allocatedTo }
-        }
-        return item
+    dispatch(
+      initializeBill({
+        currentUserId: currentUser?._id,
+        currentUserName: currentUser?.name,
+        currentUserEmail: currentUser?.email,
       })
     )
-  }
+    dispatch(fetchInitialDataThunk())
 
-  const handleCalculate = () => {
-    const total = parseFloat(totalAmount) || 0
-    if (splitType === 'equal' && participants.length > 0) {
-      const perPerson = total / participants.length
-      setParticipants(participants.map((p) => ({ ...p, amount: perPerson })))
-    } else if (splitType === 'by-person') {
-      // Calculate based on used amounts
-      const totalUsed = participants.reduce((sum, p) => sum + (p.usedAmount || 0), 0)
-      if (totalUsed > 0) {
-        setParticipants(
-          participants.map((p) => ({
-            ...p,
-            amount: (p.usedAmount / totalUsed) * total,
-          }))
-        )
-      }
-    } else if (splitType === 'by-item') {
-      // Calculate based on item allocations
-      const participantAmounts = {}
-      participants.forEach((p) => {
-        participantAmounts[p.id] = 0
-      })
-
-      items.forEach((item) => {
-        const itemAmount = parseFloat(item.amount) || 0
-        const allocatedCount = item.allocatedTo.length
-        if (allocatedCount > 0) {
-          const perPerson = itemAmount / allocatedCount
-          item.allocatedTo.forEach((participantId) => {
-            if (participantAmounts[participantId] !== undefined) {
-              participantAmounts[participantId] += perPerson
-            }
-          })
-        }
-      })
-
-      setParticipants(
-        participants.map((p) => ({
-          ...p,
-          amount: participantAmounts[p.id] || 0,
-        }))
-      )
+    // Cleanup on unmount
+    return () => {
+      dispatch(resetBill())
     }
-  }
+  }, [dispatch, currentUser])
 
-  useEffect(() => {
-    handleCalculate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [splitType, totalAmount, participants.length, items])
+  // eslint-disable-next-line no-unused-vars
+  const triggerCalculation = useCallback(() => {
+    dispatch(calculateAmounts())
+  }, [dispatch])
 
-  const handleSubmit = async (formData) => {
+  // Handle form field updates
+  const handleFieldChange = useCallback(
+    (field, value) => {
+      dispatch(updateField({ field, value }))
+
+      // Auto-calculate on totalAmount or splitType change
+      if (field === 'totalAmount' || field === 'splitType') {
+        // Debounce calculation for totalAmount
+        if (field === 'totalAmount') {
+          const timer = setTimeout(() => {
+            dispatch(calculateAmounts())
+          }, 300)
+          return () => clearTimeout(timer)
+        } else {
+          dispatch(calculateAmounts())
+        }
+      }
+    },
+    [dispatch]
+  )
+
+  // Participant handlers
+  const handleAddParticipants = useCallback(
+    (newParticipants) => {
+      dispatch(addParticipants(newParticipants))
+      dispatch(calculateAmounts())
+    },
+    [dispatch]
+  )
+
+  const handleDeleteParticipant = useCallback(
+    (id) => {
+      dispatch(removeParticipant(id))
+
+      // If deleted participant was payer, reset to current user
+      if (billState.payer === id) {
+        dispatch(updateField({ field: 'payer', value: currentUser?._id || '' }))
+      }
+
+      dispatch(calculateAmounts())
+    },
+    [dispatch, billState.payer, currentUser]
+  )
+
+  const handleParticipantAmountChange = useCallback(
+    (id, amount) => {
+      dispatch(updateParticipantAmount({ id, amount }))
+      // Calculate on blur, not on every keystroke
+    },
+    [dispatch]
+  )
+
+  const handleParticipantAmountBlur = useCallback(() => {
+    dispatch(calculateAmounts())
+  }, [dispatch])
+
+  const handleMarkAsPayer = useCallback(
+    (id) => {
+      dispatch(updateField({ field: 'payer', value: id }))
+    },
+    [dispatch]
+  )
+
+  // Item handlers
+  const handleAddItem = useCallback(() => {
+    dispatch(addItem())
+  }, [dispatch])
+
+  const handleDeleteItem = useCallback(
+    (id) => {
+      dispatch(removeItem(id))
+      dispatch(calculateAmounts())
+    },
+    [dispatch]
+  )
+
+  const handleItemChange = useCallback(
+    (id, field, value) => {
+      dispatch(updateItem({ id, field, value }))
+
+      // Calculate on amount change after short delay
+      if (field === 'amount') {
+        const timer = setTimeout(() => {
+          dispatch(calculateAmounts())
+        }, 300)
+        return () => clearTimeout(timer)
+      }
+    },
+    [dispatch]
+  )
+
+  const handleItemAllocationToggle = useCallback(
+    (itemId, participantId) => {
+      dispatch(toggleItemAllocation({ itemId, participantId }))
+      dispatch(calculateAmounts())
+    },
+    [dispatch]
+  )
+
+  // Load more and search handlers
+  const handleLoadMore = useCallback(
+    async (page, limit, append, type) => {
+      await dispatch(loadMoreDataThunk({ page, limit, type }))
+    },
+    [dispatch]
+  )
+
+  const handleSearch = useCallback(
+    async (page, limit, search, append, type) => {
+      await dispatch(searchDataThunk({ page, limit, search, type }))
+    },
+    [dispatch]
+  )
+
+  // Get payer name
+  const getPayerName = useCallback(() => {
+    const payer = participants.find((p) => p.id === billState.payer)
+    return payer ? payer.name : 'Chọn người ứng tiền'
+  }, [participants, billState.payer])
+
+  // Submit handler
+  const handleSubmit = async () => {
     try {
-      setIsLoading(true)
-      setSubmitError(null)
+      dispatch(setSubmitError(null))
 
-      if (!formData.totalAmount || formData.totalAmount <= 0) {
-        setSubmitError('Vui lòng nhập số tiền hợp lệ')
+      if (!billState.totalAmount || billState.totalAmount <= 0) {
+        dispatch(setSubmitError('Vui lòng nhập số tiền hợp lệ'))
         return
       }
 
-      // Base bill data for all split types
+      // Validate total amount matches sum for by-person split
+      if (billState.splitType === 'by-person') {
+        const totalAmountValue = parseFloat(billState.totalAmount) || 0
+        const sumOfParticipants = participants.reduce((sum, p) => sum + (p.amount || 0), 0)
+        const difference = Math.abs(totalAmountValue - sumOfParticipants)
+
+        // Allow small rounding errors (less than 1 currency unit)
+        if (difference >= 1) {
+          try {
+            await confirm({
+              title: 'Tổng tiền không khớp',
+              description: `Tổng tiền (${totalAmountValue.toLocaleString('vi-VN')}₫) không bằng tổng số tiền của thành viên (${sumOfParticipants.toLocaleString('vi-VN')}₫). Chênh lệch: ${difference.toLocaleString('vi-VN')}₫. Bạn muốn chia đều số tiền chênh lệch cho các thành viên?`,
+              confirmationText: 'Chia đều chênh lệch',
+              cancellationText: 'Hủy để sửa',
+              dialogProps: { maxWidth: 'sm' },
+            })
+
+            // User chose to distribute the difference equally
+            const shouldAdd = totalAmountValue > sumOfParticipants
+            dispatch(distributeDifference({ difference, shouldAdd }))
+
+            // Wait a bit for state to update
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          } catch {
+            // User cancelled
+            return
+          }
+        }
+      }
+
+      // Build bill data
       const billData = {
-        billName: formData.billName,
+        billName: billState.billName,
         creatorId: currentUser?._id,
-        payerId: formData.payer,
-        totalAmount: parseFloat(formData.totalAmount),
-        paymentDate: formData.creationDate,
-        description: formData.notes,
-        category: formData.category,
+        payerId: billState.payer,
+        totalAmount: parseFloat(billState.totalAmount),
+        paymentDate: billState.creationDate,
+        description: billState.notes,
+        category: billState.category,
         participants: participants.map((p) => String(p.id)),
       }
 
-      // Add type-specific fields based on splitType
-      if (formData.splitType === 'equal') {
-        // Equal split - only needs participants
+      // Add split type specific data
+      if (billState.splitType === 'equal') {
         billData.splittingMethod = 'equal'
-      } else if (formData.splitType === 'by-item') {
-        // Item-based split - needs items array
+      } else if (billState.splitType === 'by-item') {
         billData.splittingMethod = 'item-based'
         billData.items = items
           .filter((item) => item.name && item.amount > 0 && item.allocatedTo.length > 0)
@@ -481,11 +277,10 @@ function BillCreate() {
           }))
 
         if (billData.items.length === 0) {
-          setSubmitError('Vui lòng thêm ít nhất một món hàng cho phương thức chia theo món')
+          dispatch(setSubmitError('Vui lòng thêm ít nhất một món hàng cho phương thức chia theo món'))
           return
         }
-      } else if (formData.splitType === 'by-person') {
-        // People-based split - needs paymentStatus array
+      } else if (billState.splitType === 'by-person') {
         billData.splittingMethod = 'people-based'
         billData.paymentStatus = participants.map((p) => ({
           userId: String(p.id),
@@ -493,19 +288,20 @@ function BillCreate() {
         }))
       }
 
-      await createBillAPI(billData)
-      navigate('/history')
+      // Submit
+      const result = await dispatch(submitBillThunk(billData))
+
+      if (submitBillThunk.fulfilled.match(result)) {
+        navigate('/history')
+      }
     } catch (error) {
       console.error('Error creating bill:', error)
-      setSubmitError(error.response?.data?.message || 'Lỗi khi tạo hóa đơn. Vui lòng thử lại.')
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     navigate(-1)
-  }
+  }, [navigate])
 
   return (
     <Box
@@ -567,7 +363,8 @@ function BillCreate() {
 
         {/* General Information Section */}
         <GeneralInformationSection
-          control={control}
+          formData={billState}
+          onFieldChange={handleFieldChange}
           getPayerName={getPayerName}
           onOpenPayerDialog={() => setOpenPayerDialog(true)}
         />
@@ -575,32 +372,39 @@ function BillCreate() {
         {/* Participants Section */}
         <ParticipantsSection
           participants={participants}
-          splitType={splitType}
+          splitType={billState.splitType}
           onOpenParticipantDialog={() => setOpenParticipantDialog(true)}
           onDeleteParticipant={handleDeleteParticipant}
           onParticipantAmountChange={handleParticipantAmountChange}
+          onParticipantAmountBlur={handleParticipantAmountBlur}
         />
-        {/* Split Details Section */}
-        {splitType === 'equal' && (
-          <EqualSplitDetails control={control} participants={participants} totalAmount={totalAmount} />
-        )}
 
-        {splitType === 'by-person' && (
-          <ByPersonSplitDetails
-            control={control}
+        {/* Split Details Section */}
+        {billState.splitType === 'equal' && (
+          <EqualSplitDetails
+            formData={billState}
+            onFieldChange={handleFieldChange}
             participants={participants}
-            totalAmount={totalAmount}
-            setValue={setValue}
+            totalAmount={billState.totalAmount}
           />
         )}
 
-        {splitType === 'by-item' && (
-          <ByItemSplitDetails
-            control={control}
+        {billState.splitType === 'by-person' && (
+          <ByPersonSplitDetails
+            formData={billState}
+            onFieldChange={handleFieldChange}
             participants={participants}
-            totalAmount={totalAmount}
+            totalAmount={billState.totalAmount}
+          />
+        )}
+
+        {billState.splitType === 'by-item' && (
+          <ByItemSplitDetails
+            formData={billState}
+            onFieldChange={handleFieldChange}
+            participants={participants}
+            totalAmount={billState.totalAmount}
             items={items}
-            setValue={setValue}
             onAddItem={handleAddItem}
             onDeleteItem={handleDeleteItem}
             onItemChange={handleItemChange}
@@ -650,7 +454,7 @@ function BillCreate() {
         </Button>
         <Button
           startIcon={<CheckCircleIcon sx={{ display: { xs: 'none', sm: 'block' } }} />}
-          onClick={handleFormSubmit(handleSubmit)}
+          onClick={handleSubmit}
           disabled={isLoading}
           sx={{
             background: COLORS.gradientPrimary,
@@ -687,10 +491,10 @@ function BillCreate() {
         onLoadMore={handleLoadMore}
         searchedUsers={searchedUsers}
         searchedGroups={searchedGroups}
-        searchPagination={searchPagination}
-        normalPagination={normalPagination}
+        searchPagination={billState.searchPagination}
+        normalPagination={billState.normalPagination}
         isLoadingSearch={isLoadingSearch}
-        currentPayerId={getValues('payer')}
+        currentPayerId={billState.payer}
         onMarkAsPayer={handleMarkAsPayer}
       />
 
@@ -698,7 +502,7 @@ function BillCreate() {
       <SelectPayerDialog
         open={openPayerDialog}
         onClose={() => setOpenPayerDialog(false)}
-        onSelect={(person) => setValue('payer', person.id)}
+        onSelect={(person) => dispatch(updateField({ field: 'payer', value: person.id }))}
         availablePeople={participants}
         isLoading={isLoadingData}
       />
