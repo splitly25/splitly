@@ -1,5 +1,6 @@
 import { TextField } from '@mui/material'
 import { useAutoCalculate } from '~/hooks/useAutoCaculate'
+import { removeLeadingZeros } from '~/utils/formatters'
 
 const CustomTextField = ({ label, required, enableAutoCalculate, onChange, onBlur, value, ...props }) => {
   // Use the auto-calculate hook
@@ -12,6 +13,25 @@ const CustomTextField = ({ label, required, enableAutoCalculate, onChange, onBlu
       onChange(syntheticEvent)
     }
   })
+
+  const handleChange = (e) => {
+    let newValue = e.target.value
+
+    // Only apply removeLeadingZeros for number-like inputs
+    if (enableAutoCalculate || props.type === 'number' || props.type === 'text') {
+      if (/^[\d+\-*/().\s]*$/.test(newValue)) {
+        newValue = removeLeadingZeros(newValue)
+      }
+    }
+    const newEvent = {
+      ...e,
+      target: {
+        ...e.target,
+        value: newValue,
+      },
+    }
+    if (onChange) onChange(newEvent)
+  }
 
   const handleBlur = (e) => {
     // If auto-calculate is enabled, use the hook's handler
@@ -77,7 +97,7 @@ const CustomTextField = ({ label, required, enableAutoCalculate, onChange, onBlu
       }}
       fullWidth
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
       onBlur={handleBlur}
       {...props}
     />

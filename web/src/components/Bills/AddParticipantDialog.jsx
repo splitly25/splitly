@@ -75,7 +75,9 @@ const AddButton = styled(Button)(() => ({
   },
 }))
 
-const PayerButton = styled(Button)(({ theme, isPayer }) => ({
+const PayerButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isPayer',
+})(({ theme, isPayer }) => ({
   background: isPayer ? COLORS.gradientPrimary : 'transparent',
   color: isPayer ? '#FFFFFF' : theme.palette.text.primary,
   border: isPayer ? 'none' : `1px solid ${theme.palette.divider}`,
@@ -840,6 +842,7 @@ const AddParticipantDialog = ({
 
                     return (
                       <Box
+                        key={group.id}
                         sx={(theme) => ({
                           border: `0.8px solid ${isFullySelected ? theme.palette.primary.main : theme.palette.divider}`,
                           borderRadius: '8px',
@@ -861,7 +864,6 @@ const AddParticipantDialog = ({
                             minHeight: 'auto',
                           },
                         })}
-                        key={group.id}
                       >
                         <Box sx={{ flex: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>

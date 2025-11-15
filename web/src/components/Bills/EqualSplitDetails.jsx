@@ -1,10 +1,9 @@
-import { Box, Typography, Avatar } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import { Controller } from 'react-hook-form'
 import CustomTextField from '~/components/Form/CustomTextField'
-import { COLORS } from '~/theme'
-import { getInitials } from '~/utils/formatters'
+import ParticipantCard from '../Form/ParticipantCard'
 
 function EqualSplitDetails({ control, participants, totalAmount }) {
   return (
@@ -57,7 +56,7 @@ function EqualSplitDetails({ control, participants, totalAmount }) {
               label="Tổng số tiền thanh toán"
               required
               type="text"
-              placeholder="VD: 100+200 hoặc 500*3 hoặc (100+50)/2"
+              placeholder="VD:100 or 100+200*10..."
               enableAutoCalculate
               error={!!error}
               helperText={error?.message}
@@ -76,7 +75,7 @@ function EqualSplitDetails({ control, participants, totalAmount }) {
             mt: 1,
           }}
         >
-          Hỗ trợ phép tính: + (cộng), - (trừ), * (nhân), / (chia), () (ngoặc)
+          Hỗ trợ: + (cộng), - (trừ), * (nhân), / (chia), () (ngoặc)
         </Typography>
       </Box>
 
@@ -98,50 +97,14 @@ function EqualSplitDetails({ control, participants, totalAmount }) {
       {/* Calculated Amounts - All Participants */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {participants.map((participant) => (
-          <Box
+          <ParticipantCard
             key={participant.id}
-            sx={(theme) => ({
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F5F5F5',
-              borderRadius: '16px',
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            })}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar
-                sx={{
-                  width: 40,
-                  height: 40,
-                  background: COLORS.gradientPrimary,
-                  fontSize: '16px',
-                  fontWeight: 400,
-                  color: '#FFFFFF',
-                }}
-              >
-                {getInitials(participant.name)}
-              </Avatar>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: 'text.primary',
-                }}
-              >
-                {participant.name}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                color: 'text.primary',
-              }}
-            >
-              {participant.amount?.toFixed(0) || 0} ₫
-            </Typography>
-          </Box>
+            participant={participant}
+            showAmountInput={false}
+            onAmountChange={() => {}}
+            onDelete={() => {}}
+            canDelete={false}
+          />
         ))}
       </Box>
 
