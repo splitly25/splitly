@@ -36,16 +36,18 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import ChatbotButton from '~/components/Chatbot/ChatbotButton'
 import ChatbotWindow from '../Chatbot/ChatbotWindow'
-import { useDispatch } from 'react-redux'
-import { logoutUserAPI } from '~/redux/user/userSlice'
+import { useDispatch, useSelector } from 'react-redux'
+import { logoutUserAPI, selectCurrentUser } from '~/redux/user/userSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import NotificationsIcon from '@mui/icons-material/Notifications'
+import { getInitials } from '~/utils/formatters'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
 const SIDEBAR_WIDTH_COLLAPSED = 80
 
 const Layout = ({ children }) => {
+  const currentUser = useSelector(selectCurrentUser)
   const navigate = useNavigate()
   const location = useLocation()
   const theme = useTheme()
@@ -277,7 +279,7 @@ const Layout = ({ children }) => {
             fontWeight: 400,
           }}
         >
-          NA
+          {getInitials(currentUser?.name)}
         </Avatar>
         {isExpanded && (
           <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -292,7 +294,7 @@ const Layout = ({ children }) => {
                 textOverflow: 'ellipsis',
               }}
             >
-              Nguyễn Văn A
+              {currentUser?.name}
             </Typography>
             <Typography
               variant="caption"
@@ -304,7 +306,7 @@ const Layout = ({ children }) => {
                 textOverflow: 'ellipsis',
               }}
             >
-              nguyenvana@example.com
+              {currentUser?.email}
             </Typography>
           </Box>
         )}
