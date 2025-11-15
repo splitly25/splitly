@@ -319,6 +319,77 @@ function BillCreate() {
     fetchInitialData()
   }, [currentUser?._id])
 
+  // Auto-fill form from payload (navigation state or URL params)
+  useEffect(() => {
+    // Check for form data in navigation state
+    const stateData = navigate.state?.billFormData || window.history.state?.usr?.billFormData
+    
+    // Check for form data in URL params
+    const searchParams = new URLSearchParams(window.location.search)
+    const urlData = searchParams.get('billFormData')
+    
+    let formData = null
+    
+    if (stateData) {
+      formData = stateData
+    } else if (urlData) {
+      try {
+        formData = JSON.parse(decodeURIComponent(urlData))
+      } catch (error) {
+        console.error('Error parsing billFormData from URL:', error)
+      }
+    }
+    
+    if (formData) {
+      // Fill form fields
+      if (formData.billName) setValue('billName', formData.billName)
+      if (formData.category) setValue('category', formData.category)
+      if (formData.notes) setValue('notes', formData.notes)
+      if (formData.totalAmount) setValue('totalAmount', parseFloat(formData.totalAmount))
+      if (formData.splitType) setValue('splitType', formData.splitType)
+      if (formData.paymentDeadline) setValue('paymentDeadline', formData.paymentDeadline)
+      if (formData.creationDate) setValue('creationDate', formData.creationDate)
+      
+      // Fill participants if provided
+      if (formData.participants && Array.isArray(formData.participants) && formData.participants.length > 0) {
+        const formattedParticipants = formData.participants.map(p => ({
+          id: p.id || p._id,
+          name: p.name || '',
+          email: p.email || '',
+          amount: p.amount || 0,
+          usedAmount: p.usedAmount || 0,
+        }))
+        setParticipants(formattedParticipants)
+      }
+      
+      // Fill payer if provided
+      if (formData.payer) {
+        setValue('payer', formData.payer)
+      }
+      
+      // Fill items for item-based split
+      if (formData.items && Array.isArray(formData.items) && formData.items.length > 0) {
+        setItems(formData.items.map(item => ({
+          id: item.id || Date.now() + Math.random(),
+          name: item.name || '',
+          amount: item.amount || 0,
+          allocatedTo: item.allocatedTo || [],
+        })))
+      }
+      
+      // Clear the payload to prevent re-filling on future navigations
+      if (stateData) {
+        window.history.replaceState({}, document.title)
+      }
+      if (urlData) {
+        searchParams.delete('billFormData')
+        const newSearch = searchParams.toString()
+        const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}`
+        window.history.replaceState({}, document.title, newUrl)
+      }
+    }
+  }, [setValue])
+
   const handleAddParticipants = (newParticipants) => {
     const participantsToAdd = newParticipants.map((p) => ({
       id: p.id,
