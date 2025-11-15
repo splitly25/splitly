@@ -129,7 +129,7 @@ const AddParticipantDialog = ({
 
     const timer = setTimeout(() => {
       if (searchQuery.trim()) {
-        onSearch(1, 10, searchQuery, false) // Fetch first page, replace data
+        onSearch(1, 10, searchQuery, false, 'both') // Fetch first page, replace data, search both users and groups
       }
     }, 500)
     return () => clearTimeout(timer)

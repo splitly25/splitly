@@ -73,6 +73,7 @@
     {
       name: String (required),
       amount: Number (required),
+      quantity: Number (optional, default 1),
       allocatedTo: [String] (array of user ObjectIds)
     }
   ],

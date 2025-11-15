@@ -21,6 +21,7 @@ const initialState = {
     {
       id: Date.now(),
       name: '',
+      quantity: 1,
       amount: 0,
       allocatedTo: [],
     },
@@ -99,26 +100,27 @@ export const loadMoreDataThunk = createAsyncThunk(
 
 export const searchDataThunk = createAsyncThunk(
   'activeBill/searchData',
-  async ({ page, limit, search, type }, { rejectWithValue }) => {
+  async ({ page, limit, search, type, append = false }, { rejectWithValue }) => {
     try {
+      const searchType = type || 'both'
       let usersResponse = null
       let groupsResponse = null
 
-      if (type === 'users' || type === 'both') {
+      if (searchType === 'users' || searchType === 'both') {
         usersResponse = await fetchUsersAPI(page, limit, search).catch((err) => {
           console.error('Error fetching users:', err)
           return { users: [], pagination: { currentPage: 1, totalPages: 1, totalUsers: 0, limit } }
         })
       }
 
-      if (type === 'groups' || type === 'both') {
+      if (searchType === 'groups' || searchType === 'both') {
         groupsResponse = await fetchGroupsAPI(page, limit, search).catch((err) => {
           console.error('Error fetching groups:', err)
           return { groups: [], pagination: { page: 1, totalPages: 1, total: 0, limit } }
         })
       }
 
-      return { usersResponse, groupsResponse, type }
+      return { usersResponse, groupsResponse, type: searchType, append }
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -128,7 +130,6 @@ export const searchDataThunk = createAsyncThunk(
 export const submitBillThunk = createAsyncThunk('activeBill/submitBill', async (billData, { rejectWithValue }) => {
   try {
     const response = await createBillAPI(billData)
-    toast.success('Hóa đơn đã được tạo thành công!')
     return response
   } catch (error) {
     const errorMessage = error.response?.data?.message || 'Lỗi khi tạo hóa đơn. Vui lòng thử lại.'
@@ -181,6 +182,7 @@ export const activeBillSlice = createSlice({
       state.items.push({
         id: Date.now(),
         name: '',
+        quantity: 1,
         amount: 0,
         allocatedTo: [],
       })
@@ -233,10 +235,12 @@ export const activeBillSlice = createSlice({
         })
 
         state.items.forEach((item) => {
-          const itemAmount = parseFloat(item.amount) || 0
+          const quantity = parseFloat(item.quantity) || 0
+          const unitPrice = parseFloat(item.amount) || 0
+          const itemTotalAmount = quantity * unitPrice
           const allocatedCount = item.allocatedTo.length
           if (allocatedCount > 0) {
-            const perPerson = itemAmount / allocatedCount
+            const perPerson = itemTotalAmount / allocatedCount
             item.allocatedTo.forEach((participantId) => {
               if (participantAmounts[participantId] !== undefined) {
                 participantAmounts[participantId] += perPerson
@@ -255,7 +259,49 @@ export const activeBillSlice = createSlice({
       const { difference, shouldAdd } = action.payload
       const differencePerPerson = difference / state.participants.length
       state.participants.forEach((p) => {
-        p.amount = p.amount + (shouldAdd ? differencePerPerson : -differencePerPerson)
+        const currentUsedAmount = parseFloat(p.usedAmount) || 0
+        p.usedAmount = currentUsedAmount + (shouldAdd ? differencePerPerson : -differencePerPerson)
+      })
+    },
+
+    distributeItemDifference: (state, action) => {
+      const { difference, shouldAdd } = action.payload
+      // Only distribute if there are items
+      if (state.items.length === 0) return
+
+      const differencePerItem = difference / state.items.length
+      state.items.forEach((item) => {
+        const currentAmount = parseFloat(item.amount) || 0
+        const quantity = parseFloat(item.quantity) || 1
+        // Calculate new unit price
+        const currentTotal = currentAmount * quantity
+        const newTotal = currentTotal + (shouldAdd ? differencePerItem : -differencePerItem)
+        item.amount = newTotal / quantity
+      })
+
+      // Recalculate participant amounts after distribution
+      const participantAmounts = {}
+      state.participants.forEach((p) => {
+        participantAmounts[p.id] = 0
+      })
+
+      state.items.forEach((item) => {
+        const quantity = parseFloat(item.quantity) || 0
+        const unitPrice = parseFloat(item.amount) || 0
+        const itemTotalAmount = quantity * unitPrice
+        const allocatedCount = item.allocatedTo.length
+        if (allocatedCount > 0) {
+          const perPerson = itemTotalAmount / allocatedCount
+          item.allocatedTo.forEach((participantId) => {
+            if (participantAmounts[participantId] !== undefined) {
+              participantAmounts[participantId] += perPerson
+            }
+          })
+        }
+      })
+
+      state.participants.forEach((p) => {
+        p.amount = participantAmounts[p.id] || 0
       })
     },
 
@@ -267,6 +313,7 @@ export const activeBillSlice = createSlice({
         {
           id: Date.now(),
           name: '',
+          quantity: 1,
           amount: 0,
           allocatedTo: [],
         },
@@ -388,7 +435,7 @@ export const activeBillSlice = createSlice({
       state.isLoadingSearch = true
     })
     builder.addCase(searchDataThunk.fulfilled, (state, action) => {
-      const { usersResponse, groupsResponse, type } = action.payload
+      const { usersResponse, groupsResponse, type, append } = action.payload
 
       if (usersResponse && (type === 'users' || type === 'both')) {
         const transformedUsers = usersResponse.users.map((user) => ({
@@ -397,7 +444,8 @@ export const activeBillSlice = createSlice({
           email: user.email,
           avatar: user.avatar,
         }))
-        state.searchedUsers = transformedUsers
+        // Append to existing results if append is true, otherwise replace
+        state.searchedUsers = append ? [...state.searchedUsers, ...transformedUsers] : transformedUsers
         state.searchPagination.users = {
           currentPage: usersResponse.pagination.currentPage || usersResponse.pagination.page || 1,
           totalPages: usersResponse.pagination.totalPages || 1,
@@ -417,7 +465,8 @@ export const activeBillSlice = createSlice({
             avatar: member.avatar,
           })),
         }))
-        state.searchedGroups = transformedGroups
+        // Append to existing results if append is true, otherwise replace
+        state.searchedGroups = append ? [...state.searchedGroups, ...transformedGroups] : transformedGroups
         state.searchPagination.groups = {
           currentPage: groupsResponse.pagination.page || groupsResponse.pagination.currentPage || 1,
           totalPages: groupsResponse.pagination.totalPages || 1,
@@ -459,6 +508,7 @@ export const {
   toggleItemAllocation,
   calculateAmounts,
   distributeDifference,
+  distributeItemDifference,
   resetBill,
   initializeBill,
   setSubmitError,

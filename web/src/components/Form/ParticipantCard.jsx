@@ -86,32 +86,35 @@ const ParticipantCard = ({
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography
-              sx={{
-                fontSize: '14px',
-                color: 'text.secondary',
-                lineHeight: 1.4,
-                mb: 0.5,
-              }}
-            >
-              Số tiền
-            </Typography>
-            <Chip
-              sx={(theme) => ({
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F5F5F5',
-                color: theme.palette.text.primary,
-                fontSize: '14px',
-                fontWeight: 500,
-                height: '26px',
-                borderRadius: '16px',
-                '& .MuiChip-label': {
-                  padding: '0 8px',
-                },
-              })}
-              label={formatCurrency(participant.amount)}
-            />
-          </Box>
+          {!showAmountInput && (
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  color: 'text.secondary',
+                  lineHeight: 1.4,
+                  mb: 0.5,
+                }}
+              >
+                Số tiền
+              </Typography>
+              <Chip
+                sx={(theme) => ({
+                  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F5F5F5',
+                  color: theme.palette.text.primary,
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  height: '26px',
+                  borderRadius: '16px',
+                  '& .MuiChip-label': {
+                    padding: '0 8px',
+                  },
+                })}
+                label={formatCurrency(participant.amount)}
+              />
+            </Box>
+          )}
+
           {canDelete && (
             <IconButton size="small" onClick={onDelete} sx={{ ml: 1, color: 'error.main' }}>
               <DeleteIcon fontSize="small" />

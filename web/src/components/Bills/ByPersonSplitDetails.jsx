@@ -1,15 +1,15 @@
-import { Box, Typography, Avatar, Button } from '@mui/material'
+import { Box, Typography, Button } from '@mui/material'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import CalculateIcon from '@mui/icons-material/Calculate'
 import CustomTextField from '~/components/Form/CustomTextField'
-import { COLORS } from '~/theme'
-import { getInitials } from '~/utils/formatters'
+import ParticipantCard from '../Form/ParticipantCard'
 
-function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmount }) {
-  const handleAutoCalculateTotal = () => {
-    const total = participants.reduce((sum, p) => sum + (parseFloat(p.usedAmount) || 0), 0)
-    onFieldChange('totalAmount', total.toString())
+function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmount, onValidateAmounts }) {
+  const handleValidateTotal = async () => {
+    if (onValidateAmounts) {
+      await onValidateAmounts()
+    }
   }
 
   return (
@@ -40,7 +40,7 @@ function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmou
         </Box>
         <Button
           startIcon={<CalculateIcon />}
-          onClick={handleAutoCalculateTotal}
+          onClick={handleValidateTotal}
           sx={(theme) => ({
             minWidth: { xs: '48px', sm: '140px' },
             borderRadius: '16px',
@@ -61,7 +61,7 @@ function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmou
           })}
         >
           <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-            Tự động tính tổng
+            Kiểm tra tổng tiền
           </Box>
         </Button>
       </Box>
@@ -106,53 +106,17 @@ function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmou
         </Typography>
       </Box>
 
-      {/* Calculated Amounts - All Participants */}
+      {/* Participant Cards */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {participants.map((participant) => (
-          <Box
+          <ParticipantCard
             key={participant.id}
-            sx={(theme) => ({
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F5F5F5',
-              borderRadius: '16px',
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            })}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar
-                sx={{
-                  width: 40,
-                  height: 40,
-                  background: COLORS.gradientPrimary,
-                  fontSize: '16px',
-                  fontWeight: 400,
-                  color: '#FFFFFF',
-                }}
-              >
-                {getInitials(participant.name)}
-              </Avatar>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: 'text.primary',
-                }}
-              >
-                {participant.name}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                color: 'text.primary',
-              }}
-            >
-              {participant.amount?.toFixed(0) || 0} ₫
-            </Typography>
-          </Box>
+            participant={participant}
+            showAmountInput={false}
+            onAmountChange={() => {}}
+            onDelete={() => {}}
+            canDelete={false}
+          />
         ))}
       </Box>
 
