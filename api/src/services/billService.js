@@ -623,19 +623,19 @@ You are an advanced OCR model specialized in extracting structured information f
 Your goal is to accurately read the text in the image and return a clean, structured JSON object representing the bill details. 
 Extract as much information as possible, including:
 
-- bill_name: The title or store name of the bill
-- date: The date of the transaction (if visible)
-- notes: Any additional notes or remarks written on the bill
+- billName: The title or store name of the bill
+- paymentDate: The date of the transaction (if visible)
+- description: Any additional notes or remarks written on the bill
 - items: A list of purchased products, each with:
   - name: Product or service name
   - quantity: Quantity of each item
-  - unit_price: Price per unit
-  - total_price: Total price per item
+  - unitPrice: Price per unit
+  - totalPrice: Total price per item
 - subtotal: The total amount before taxes or discounts
 - tax: Tax amount (if applicable)
 - discount: Discount amount (if applicable)
-- total_amount: Final total to be paid
-- payment_method: How the payment was made (cash, card, etc.)
+- totalAmount: Final total to be paid
+- paymentMethod: How the payment was made (cash, card, etc.)
 
 Return only valid JSON. Do not include explanations or extra text.
       `,
