@@ -344,9 +344,16 @@ function BillCreate() {
 
   const handleDeleteParticipant = (id) => {
     setParticipants(participants.filter((p) => p.id !== id))
+    if (getValues('payer') === id) {
+      setValue('payer', currentUser?._id || '')
+    }
   }
 
-  // Money amount change handler 
+  const handleMarkAsPayer = (id) => {
+    setValue('payer', id)
+  }
+
+  // Money amount change handler
   const handleParticipantAmountChange = (id, amount) => {
     setParticipants(participants.map((p) => (p.id === id ? { ...p, usedAmount: amount } : p)))
   }
@@ -683,6 +690,8 @@ function BillCreate() {
         searchPagination={searchPagination}
         normalPagination={normalPagination}
         isLoadingSearch={isLoadingSearch}
+        currentPayerId={getValues('payer')}
+        onMarkAsPayer={handleMarkAsPayer}
       />
 
       {/* Select Payer Dialog */}

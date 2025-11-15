@@ -75,6 +75,23 @@ const AddButton = styled(Button)(() => ({
   },
 }))
 
+const PayerButton = styled(Button)(({ theme, isPayer }) => ({
+  background: isPayer ? COLORS.gradientPrimary : 'transparent',
+  color: isPayer ? '#FFFFFF' : theme.palette.text.primary,
+  border: isPayer ? 'none' : `1px solid ${theme.palette.divider}`,
+  borderRadius: '99px',
+  textTransform: 'none',
+  fontSize: '14px',
+  fontWeight: 500,
+  padding: '6px 16px',
+  height: '32px',
+  minWidth: '70px',
+  '&:hover': {
+    background: isPayer ? COLORS.gradientPrimary : theme.palette.action.hover,
+    opacity: isPayer ? 0.9 : 1,
+  },
+}))
+
 const AddParticipantDialog = ({
   open,
   onClose,
@@ -97,6 +114,8 @@ const AddParticipantDialog = ({
     groups: { currentPage: 1, totalPages: 1, total: 0, limit: 10 },
   },
   isLoadingSearch = false,
+  currentPayerId = null,
+  onMarkAsPayer,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   // Format: { id: string, name: string, email: string, groups: string[] }
@@ -406,6 +425,7 @@ const AddParticipantDialog = ({
                         <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
                           {participant.email}
                         </Typography>
+
                         {participant.groups && participant.groups.length > 0 && (
                           <>
                             <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>•</Typography>
@@ -431,20 +451,29 @@ const AddParticipantDialog = ({
                         )}
                       </Box>
                     </Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => onRemove(participant.id)}
-                      sx={{
-                        width: '32px',
-                        height: '32px',
-                        color: 'error.main',
-                        '&:hover': {
-                          backgroundColor: 'error.light',
-                        },
-                      }}
-                    >
-                      <CloseIcon sx={{ width: '16px', height: '16px' }} />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      {/* Mark as payer button */}
+                      <PayerButton
+                        isPayer={currentPayerId === participant.id}
+                        onClick={() => onMarkAsPayer(participant.id)}
+                      >
+                        {currentPayerId === participant.id ? 'Payer' : 'Mark'}
+                      </PayerButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => onRemove(participant.id)}
+                        sx={{
+                          width: '32px',
+                          height: '32px',
+                          color: 'error.main',
+                          '&:hover': {
+                            backgroundColor: 'error.light',
+                          },
+                        }}
+                      >
+                        <CloseIcon sx={{ width: '16px', height: '16px' }} />
+                      </IconButton>
+                    </Box>
                   </PersonRow>
                 ))}
               </Box>
@@ -529,20 +558,29 @@ const AddParticipantDialog = ({
                           )}
                         </Box>
                       </Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleTogglePerson(person)}
-                        sx={{
-                          width: '32px',
-                          height: '32px',
-                          color: 'error.main',
-                          '&:hover': {
-                            backgroundColor: 'error.light',
-                          },
-                        }}
-                      >
-                        <CloseIcon sx={{ width: '16px', height: '16px' }} />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {/* Mark as payer button */}
+                        <PayerButton
+                          isPayer={currentPayerId === person.id}
+                          onClick={() => onMarkAsPayer(person.id)}
+                        >
+                          {currentPayerId === person.id ? 'Payer' : 'Mark as Payer'}
+                        </PayerButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleTogglePerson(person)}
+                          sx={{
+                            width: '32px',
+                            height: '32px',
+                            color: 'error.main',
+                            '&:hover': {
+                              backgroundColor: 'error.light',
+                            },
+                          }}
+                        >
+                          <CloseIcon sx={{ width: '16px', height: '16px' }} />
+                        </IconButton>
+                      </Box>
                     </PersonRow>
                   ))}
               </Box>
