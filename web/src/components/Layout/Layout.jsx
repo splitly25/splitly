@@ -409,6 +409,7 @@ const Layout = ({ children }) => {
       <MenuItem
         onClick={() => {
           // TODO: Implement OCR scan functionality
+          handleNavigate('/ocr')
           handleCreateMenuClose()
         }}
         sx={{

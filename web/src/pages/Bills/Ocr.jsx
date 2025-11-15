@@ -1,160 +1,161 @@
-import { Box, Typography, Button, Container, Paper, IconButton, CircularProgress, Alert, Snackbar } from '@mui/material';
-import { useState, useRef } from 'react';
-import Layout from '~/components/Layout/Layout';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ImageIcon from '@mui/icons-material/Image';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import CloseIcon from '@mui/icons-material/Close';
-import { useNavigate } from 'react-router-dom';
-import colors from 'tailwindcss/colors';
+import { Box, Typography, Button, Container, Paper, IconButton, CircularProgress, Alert, Snackbar } from '@mui/material'
+import { useState, useRef } from 'react'
+import Layout from '~/components/Layout/Layout'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ImageIcon from '@mui/icons-material/Image'
+import CameraAltIcon from '@mui/icons-material/CameraAlt'
+import CloseIcon from '@mui/icons-material/Close'
+import { useNavigate } from 'react-router-dom'
+import colors from 'tailwindcss/colors'
 
-import {sendOcrBillAPI} from '~/apis'
+import { sendOcrBillAPI } from '~/apis'
 
 const Ocr = () => {
-  const navigate = useNavigate();
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [analysis, setAnalysis] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState(null);
-  const [showSnackbar, setShowSnackbar] = useState(false);
-  const fileInputRef = useRef(null);
+  const navigate = useNavigate()
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [analysis, setAnalysis] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [error, setError] = useState(null)
+  const [showSnackbar, setShowSnackbar] = useState(false)
+  const fileInputRef = useRef(null)
+  const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
 
   // Using hardcoded user ID - should come from authentication context
-  const currentUserId = '69097a08cfc3fcbcfb0f5b72';
+  const currentUserId = '69097a08cfc3fcbcfb0f5b72'
 
   const validateFile = (file) => {
     // Check file type
     if (!file.type.match('image.*')) {
-      throw new Error('Chỉ chấp nhận file ảnh (JPG, PNG, JPEG)');
+      throw new Error('Chỉ chấp nhận file ảnh (JPG, PNG, JPEG)')
     }
 
     // Check file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    const maxSize = 10 * 1024 * 1024 // 10MB in bytes
     if (file.size > maxSize) {
-      throw new Error('Kích thước file không được vượt quá 10MB');
+      throw new Error('Kích thước file không được vượt quá 10MB')
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleFileSelect = (event) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
       try {
-        validateFile(file);
-        setImageFile(file);
-        const reader = new FileReader();
+        validateFile(file)
+        setImageFile(file)
+        const reader = new FileReader()
         reader.onloadend = () => {
-          setSelectedFile(reader.result);
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-        setAnalysis(''); // Clear previous analysis
-        setError(null);
+          setSelectedFile(reader.result)
+          setImagePreview(reader.result)
+        }
+        reader.readAsDataURL(file)
+        setAnalysis('') // Clear previous analysis
+        setError(null)
       } catch (err) {
-        setError(err.message);
-        setShowSnackbar(true);
+        setError(err.message)
+        setShowSnackbar(true)
       }
     }
-  };
+  }
 
   const handleUploadImage = async () => {
     if (!imageFile) {
-      setError('Vui lòng chọn một ảnh trước');
-      setShowSnackbar(true);
-      return;
+      setError('Vui lòng chọn một ảnh trước')
+      setShowSnackbar(true)
+      return
     }
 
-    setIsUploading(true);
-    setError(null);
+    setIsUploading(true)
+    setError(null)
 
     try {
       // Convert image to base64
-      const reader = new FileReader();
+      const reader = new FileReader()
       const imageData = await new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Không thể đọc file ảnh'));
-        reader.readAsDataURL(imageFile);
-      });
+        reader.onloadend = () => resolve(reader.result)
+        reader.onerror = () => reject(new Error('Không thể đọc file ảnh'))
+        reader.readAsDataURL(imageFile)
+      })
 
       // Call OCR API
-      const result = await sendOcrBillAPI(imageData, currentUserId);
-      
+      const result = await sendOcrBillAPI(imageData, currentUserId)
+
       if (result && result.response) {
-        setAnalysis(result.response.result.message.content);
-        console.log('OCR Result:', result.response);
+        setAnalysis(result.response.result.message.content)
+        console.log('OCR Result:', result.response)
         // You can navigate to bill creation page or show results here
         // navigate('/bills/create', { state: { ocrData: result.response } });
       } else {
-        throw new Error('Không nhận được kết quả từ server');
+        throw new Error('Không nhận được kết quả từ server')
       }
     } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.message || 'Có lỗi xảy ra khi xử lý ảnh. Vui lòng thử lại.');
-      setShowSnackbar(true);
+      console.error('Upload error:', err)
+      setError(err.message || 'Có lỗi xảy ra khi xử lý ảnh. Vui lòng thử lại.')
+      setShowSnackbar(true)
     } finally {
-      setIsUploading(false);
+      setIsUploading(false)
     }
-  };
+  }
 
   const handleDragOver = (event) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
+    event.preventDefault()
+    setIsDragging(true)
+  }
 
   const handleDragLeave = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
+    event.preventDefault()
+    setIsDragging(false)
+  }
 
   const handleDrop = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-    const file = event.dataTransfer.files?.[0];
+    event.preventDefault()
+    setIsDragging(false)
+    const file = event.dataTransfer.files?.[0]
     if (file) {
       try {
-        validateFile(file);
-        setImageFile(file);
-        const reader = new FileReader();
+        validateFile(file)
+        setImageFile(file)
+        const reader = new FileReader()
         reader.onloadend = () => {
-          setSelectedFile(reader.result);
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-        setAnalysis('');
-        setError(null);
+          setSelectedFile(reader.result)
+          setImagePreview(reader.result)
+        }
+        reader.readAsDataURL(file)
+        setAnalysis('')
+        setError(null)
       } catch (err) {
-        setError(err.message);
-        setShowSnackbar(true);
+        setError(err.message)
+        setShowSnackbar(true)
       }
     }
-  };
+  }
 
   const handleChooseFile = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
   const handleRemoveImage = () => {
-    setSelectedFile(null);
-    setImageFile(null);
-    setImagePreview(null);
-    setAnalysis('');
-    setError(null);
+    setSelectedFile(null)
+    setImageFile(null)
+    setImagePreview(null)
+    setAnalysis('')
+    setError(null)
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = ''
     }
-  };
+  }
 
   const handleCloseSnackbar = () => {
-    setShowSnackbar(false);
-  };
+    setShowSnackbar(false)
+  }
 
   return (
     <Layout>
@@ -387,7 +388,7 @@ const Ocr = () => {
                 startIcon={<ImageIcon />}
                 onClick={handleChooseFile}
                 sx={{
-                  backgroundColor: colors.pink[400],
+                  background: hoverGradient,
                   color: 'white',
                   px: 4,
                   py: 1.5,
@@ -396,7 +397,7 @@ const Ocr = () => {
                   fontWeight: 600,
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   '&:hover': {
-                    backgroundColor: colors.pink[500],
+                    backgroundColor: hoverGradient,
                   },
                 }}
               >
@@ -471,7 +472,7 @@ const Ocr = () => {
                 >
                   <ImageIcon sx={{ color: 'white', fontSize: 20 }} />
                 </Box>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: colors.gray[900] }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: hoverGradient }}>
                   Ảnh đã chọn
                 </Typography>
               </Box>
@@ -548,7 +549,7 @@ const Ocr = () => {
                 disabled={isUploading}
                 startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
                 sx={{
-                  background: `linear-gradient(135deg, ${colors.pink[400]} 0%, ${colors.purple[500]} 100%)`,
+                  background: hoverGradient,
                   color: 'white',
                   px: 6,
                   py: 1.5,
@@ -579,7 +580,17 @@ const Ocr = () => {
                   border: `1px solid ${colors.blue[200]}`,
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 600, color: colors.blue[900], mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: colors.blue[900],
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
                   <AutoAwesomeIcon fontSize="small" /> Mẹo để quét chính xác:
                 </Typography>
                 <Box component="ul" sx={{ margin: 0, paddingLeft: 2.5 }}>
@@ -601,8 +612,26 @@ const Ocr = () => {
 
             {/* Analysis Results */}
             {analysis && (
-              <Box sx={{ mt: 4, p: 3, backgroundColor: colors.green[50], borderRadius: '12px', border: `1px solid ${colors.green[200]}` }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: colors.green[900], mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  mt: 4,
+                  p: 3,
+                  backgroundColor: colors.green[50],
+                  borderRadius: '12px',
+                  border: `1px solid ${colors.green[200]}`,
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    color: colors.green[900],
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
                   <CheckCircleIcon /> Kết quả nhận diện
                 </Typography>
                 <Typography
@@ -621,78 +650,9 @@ const Ocr = () => {
             )}
           </Paper>
         )}
-
-        {/* Example Invoices Section */}
-        <Box>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              color: colors.gray[900],
-              mb: 3,
-            }}
-          >
-            Ví dụ hóa đơn hợp lệ
-          </Typography>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, 1fr)',
-                md: 'repeat(3, 1fr)',
-              },
-              gap: 3,
-            }}
-          >
-            {[1, 2, 3].map((item) => (
-              <Paper
-                key={item}
-                elevation={0}
-                sx={{
-                  height: 200,
-                  borderRadius: '12px',
-                  backgroundColor: colors.green[100],
-                  border: `1px solid ${colors.green[200]}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                  },
-                }}
-              >
-                <Typography variant="body2" sx={{ color: colors.gray[600] }}>
-                  Mẫu hóa đơn {item}
-                </Typography>
-              </Paper>
-            ))}
-          </Box>
-        </Box>
-
-        {/* Error Snackbar */}
-        <Snackbar
-          open={showSnackbar}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity="error"
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {error}
-          </Alert>
-        </Snackbar>
       </Box>
     </Layout>
-  );
-};
+  )
+}
 
-export default Ocr;
+export default Ocr
