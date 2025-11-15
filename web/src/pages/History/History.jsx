@@ -1,6 +1,8 @@
-import Layout from '~/components/Layout';
-import { useEffect, useState } from 'react';
-import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from '~/apis';
+import Layout from '~/components/Layout'
+import { useEffect, useState } from 'react'
+import { selectCurrentUser } from '~/redux/user/userSlice'
+import { useSelector } from 'react-redux'
+import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from '~/apis'
 import {
   Box,
   TextField,
@@ -17,30 +19,30 @@ import {
   Chip,
   Card,
   CardContent,
-} from '@mui/material';
-import { FilterAlt as FilterListIcon, Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
+} from '@mui/material'
+import { FilterAlt as FilterListIcon, Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material'
 
 const History = () => {
-  const [page, setPage] = useState(1);
-  const [searchText, setSearchText] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [historyData, setHistoryData] = useState([]);
-  const [totalPage, setTotalPage] = useState(1);
-  const [totalBills, setTotalBills] = useState(0);
-  const [statusFilter, setStatusFilter] = useState('all'); // all, paid, unpaid, pending
+  const [page, setPage] = useState(1)
+  const [searchText, setSearchText] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [historyData, setHistoryData] = useState([])
+  const [totalPage, setTotalPage] = useState(1)
+  const [totalBills, setTotalBills] = useState(0)
+  const [statusFilter, setStatusFilter] = useState('all') // all, paid, unpaid, pending
 
   // Filter states
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [filterByPayer, setFilterByPayer] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [filterByPayer, setFilterByPayer] = useState(false)
   const [activeFilters, setActiveFilters] = useState({
     fromDate: '',
     toDate: '',
     payer: false,
-  });
+  })
 
   const tableHeader = [
     { id: 1, title: 'Ngày thanh toán' },
@@ -49,35 +51,34 @@ const History = () => {
     { id: 4, title: 'Người ứng tiền' },
     { id: 5, title: 'Người tham gia' },
     { id: 6, title: 'Đã quyết toán' },
-  ];
+  ]
 
   // Status tabs configuration
   const statusTabs = [
     { id: 'all', label: 'Tất cả' },
     { id: 'paid', label: 'Đã thanh toán' },
     { id: 'unpaid', label: 'Chưa thanh toán' },
-  ];
+  ]
 
-  // For now, using a hardcoded user ID - this should come from authentication context
-  const currentUserId = '69097a08cfc3fcbcfb0f5b72'; // This should be from auth context
+  const currentUser = useSelector(selectCurrentUser)
+  const currentUserId = currentUser?._id
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchText);
-      setPage(1); // Reset to page 1 when search changes
-    }, 500); // 500ms delay
+      setDebouncedSearch(searchText)
+      setPage(1) // Reset to page 1 when search changes
+    }, 500) // 500ms delay
 
-    return () => clearTimeout(timer);
-  }, [searchText]);
+    return () => clearTimeout(timer)
+  }, [searchText])
 
   // Fetch history data when page, search, or filters change
   useEffect(() => {
     const fetchHistoryData = async () => {
       try {
-        setLoading(true);
-
-        let responseData;
+        setLoading(true)
+        let responseData
 
         // Priority: Filter > Search > Default
         if (activeFilters.fromDate || activeFilters.toDate || activeFilters.payer) {
@@ -85,133 +86,133 @@ const History = () => {
           responseData = await fetchHistoryFilterAPI(
             currentUserId,
             page,
-            10,
+            5,
             activeFilters.fromDate,
             activeFilters.toDate,
             activeFilters.payer
-          );
+          )
         } else if (debouncedSearch) {
           // Use search endpoint
-          responseData = await fetchHistorySearchingAPI(currentUserId, page, 10, debouncedSearch, '');
+          responseData = await fetchHistorySearchingAPI(currentUserId, page, 5, debouncedSearch, '')
         } else {
           // Use regular endpoint
-          responseData = await fetchHistoryDataAPI(currentUserId, page, 10, '', '');
+          responseData = await fetchHistoryDataAPI(currentUserId, page, 5, '', '')
         }
 
-        setHistoryData(responseData.bills || []);
-        setTotalPage(responseData.pagination?.totalPages || 1);
-        setTotalBills(responseData.pagination?.total || 0);
+        setHistoryData(responseData.bills || [])
+        setTotalPage(responseData.pagination?.totalPages || 1)
+        setTotalBills(responseData.pagination?.total || 0)
 
-        setError(null);
+        setError(null)
       } catch (err) {
-        console.error('Error fetching history data', err);
-        setError('Failed to load history data');
-        setHistoryData([]);
+        console.error('Error fetching history data', err)
+        setError('Failed to load history data')
+        setHistoryData([])
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchHistoryData();
-  }, [currentUserId, page, debouncedSearch, activeFilters]);
+    fetchHistoryData()
+  }, [currentUserId, page, debouncedSearch, activeFilters])
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN').format(amount);
-  };
+    return new Intl.NumberFormat('vi-VN').format(amount)
+  }
 
   const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleDateString('vi-VN');
-  };
+    if (!timestamp) return 'N/A'
+    return new Date(timestamp).toLocaleDateString('vi-VN')
+  }
 
   const handlePageChange = (event, value) => {
-    setPage(value);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    setPage(value)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const handleSearchChange = (event) => {
-    setSearchText(event.target.value);
-  };
+    setSearchText(event.target.value)
+  }
 
   const handleSearchClear = () => {
-    setSearchText('');
-    setDebouncedSearch('');
-    setPage(1);
-  };
+    setSearchText('')
+    setDebouncedSearch('')
+    setPage(1)
+  }
 
   const handleFilterClick = (event) => {
-    setFilterAnchorEl(event.currentTarget);
-  };
+    setFilterAnchorEl(event.currentTarget)
+  }
 
   const handleFilterClose = () => {
-    setFilterAnchorEl(null);
-  };
+    setFilterAnchorEl(null)
+  }
 
   const handleApplyFilters = () => {
     setActiveFilters({
       fromDate,
       toDate,
       payer: filterByPayer,
-    });
-    setPage(1);
-    handleFilterClose();
-  };
+    })
+    setPage(1)
+    handleFilterClose()
+  }
 
   const handleResetFilters = () => {
-    setFromDate('');
-    setToDate('');
-    setFilterByPayer(false);
+    setFromDate('')
+    setToDate('')
+    setFilterByPayer(false)
     setActiveFilters({
       fromDate: '',
       toDate: '',
       payer: false,
-    });
-    setPage(1);
-  };
+    })
+    setPage(1)
+  }
 
   const formatDateForInput = (dateString) => {
-    if (!dateString) return '';
-    const [day, month, year] = dateString.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  };
+    if (!dateString) return ''
+    const [day, month, year] = dateString.split('/')
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
 
   const formatDateForAPI = (dateString) => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
-  };
+    if (!dateString) return ''
+    const [year, month, day] = dateString.split('-')
+    return `${day}/${month}/${year}`
+  }
 
   const handleStatusFilterChange = (status) => {
-    setStatusFilter(status);
-    setPage(1);
-  };
+    setStatusFilter(status)
+    setPage(1)
+  }
 
   const getStatusBadge = (bill) => {
     if (bill.settled) {
-      return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' };
+      return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' }
     }
     // You can add more logic here based on bill properties
-    return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' };
-  };
+    return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' }
+  }
 
   const getCategoryLabel = (bill) => {
     // Extract category from bill data, defaulting to "Ăn uống" if not available
-    return bill.category || 'Ăn uống';
-  };
+    return bill.category || 'Ăn uống'
+  }
 
   // Filter data by status
   const getFilteredData = () => {
-    if (statusFilter === 'all') return historyData;
-    if (statusFilter === 'paid') return historyData.filter((bill) => bill.settled);
-    if (statusFilter === 'unpaid') return historyData.filter((bill) => !bill.settled);
+    if (statusFilter === 'all') return historyData
+    if (statusFilter === 'paid') return historyData.filter((bill) => bill.settled)
+    if (statusFilter === 'unpaid') return historyData.filter((bill) => !bill.settled)
     // For pending, you might need additional logic based on your data structure
-    return historyData;
-  };
+    return historyData
+  }
 
-  const filteredHistoryData = getFilteredData();
-  const openFilterPopover = Boolean(filterAnchorEl);
-  const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer;
-  const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)';
+  const filteredHistoryData = getFilteredData()
+  const openFilterPopover = Boolean(filterAnchorEl)
+  const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer
+  const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
 
   if (error) {
     return (
@@ -222,7 +223,7 @@ const History = () => {
           </Typography>
         </Box>
       </Layout>
-    );
+    )
   }
 
   return (
@@ -517,11 +518,12 @@ const History = () => {
         ) : (
           <Box className="space-y-4">
             {filteredHistoryData.map((bill) => {
-              const statusBadge = getStatusBadge(bill);
+              const statusBadge = getStatusBadge(bill)
               return (
                 <Card
                   key={bill.id}
                   sx={{
+                    background: '#fff',
                     borderRadius: '16px',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease',
@@ -532,105 +534,99 @@ const History = () => {
                   }}
                 >
                   <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-                    <Box className="flex flex-col sm:flex-row gap-4">
+                    <Box className="flex flex-col sm:flex-row justify-between gap-4">
                       {/* Left: Avatar */}
-                      <Box className="flex-shrink-0">
-                        <Avatar
-                          sx={{
-                            width: { xs: 48, sm: 56 },
-                            height: { xs: 48, sm: 56 },
-                            background: hoverGradient,
-                            fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                            fontWeight: 700,
-                          }}
-                        >
-                          {bill.billName.charAt(0).toUpperCase()}
-                        </Avatar>
-                      </Box>
-
-                      {/* Middle: Bill Info */}
-                      <Box className="flex-grow">
-                        {/* Bill Name and Status */}
-                        <Box className="flex flex-wrap items-center gap-2 mb-2">
-                          <Typography
+                      <div className='flex gap-4'>
+                        <Box className="flex-shrink-0">
+                          <Avatar
                             sx={{
-                              fontSize: { xs: '1rem', sm: '1.125rem' },
+                              width: { xs: 48, sm: 56 },
+                              height: { xs: 48, sm: 56 },
+                              background: hoverGradient,
+                              fontSize: { xs: '1.25rem', sm: '1.5rem' },
                               fontWeight: 700,
-                              color: '#1F2937',
                             }}
                           >
-                            {bill.billName}
-                          </Typography>
-                          <Chip
-                            label={statusBadge.label}
-                            size="small"
-                            sx={{
-                              backgroundColor: statusBadge.bgColor,
-                              color: statusBadge.color,
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              height: '24px',
-                            }}
-                          />
+                            {bill.payer.name.charAt(0).toUpperCase()}
+                          </Avatar>
                         </Box>
 
-                        {/* Date, Category, and Participants */}
-                        <Box className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600 mb-3">
-                          {/* Date */}
-                          <Box className="flex items-center gap-1">
-                            <CalendarIcon sx={{ fontSize: '1rem', color: '#9CA3AF' }} />
-                            <Typography sx={{ fontSize: '0.875rem' }}>{formatDate(bill.paymentDate)}</Typography>
-                          </Box>
-
-                          {/* Category */}
-                          <Typography
-                            sx={{
-                              fontSize: '0.875rem',
-                              color: '#6B7280',
-                            }}
-                          >
-                            • {getCategoryLabel(bill)}
-                          </Typography>
-
-                          {/* Participants */}
-                          <Box className="flex items-center gap-1">
-                            <AvatarGroup
-                              max={4}
+                        {/* Middle: Bill Info */}
+                        <Box className="flex-grow">
+                          {/* Bill Name and Status */}
+                          <Box className="flex flex-wrap items-center gap-2 mb-2">
+                            <Typography
                               sx={{
-                                '& .MuiAvatar-root': {
-                                  width: 24,
-                                  height: 24,
-                                  fontSize: '0.75rem',
-                                  backgroundColor: '#D1D5DB',
-                                  color: '#6B7280',
-                                  border: '2px solid white',
-                                },
+                                fontSize: { xs: '1rem', sm: '1.125rem' },
+                                fontWeight: 700,
+                                color: '#1F2937',
                               }}
                             >
-                              {bill.participants.map((participant, idx) => (
-                                <Avatar key={idx}>{participant.name.charAt(0)}</Avatar>
-                              ))}
-                            </AvatarGroup>
-                            {bill.participants.length > 1 && (
-                              <Typography sx={{ fontSize: '0.875rem', color: '#9CA3AF' }}>
-                                +{bill.participants.length - 1}
-                              </Typography>
-                            )}
+                              {bill.billName}
+                            </Typography>
+                            <Chip
+                              label={statusBadge.label}
+                              size="small"
+                              sx={{
+                                backgroundColor: statusBadge.bgColor,
+                                color: statusBadge.color,
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                height: '24px',
+                              }}
+                            />
+                          </Box>
+
+                          {/* Date, Category, and Participants */}
+                          <Box className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600 mb-3">
+                            {/* Date */}
+                            <Box className="flex items-center gap-1">
+                              <CalendarIcon sx={{ fontSize: '1rem', color: '#9CA3AF' }} />
+                              <Typography sx={{ fontSize: '0.875rem' }}>{formatDate(bill.paymentDate)}</Typography>
+                            </Box>
+
+                            {/* Category */}
+                            <Typography
+                              sx={{
+                                fontSize: '0.875rem',
+                                color: '#6B7280',
+                              }}
+                            >
+                              • {getCategoryLabel(bill)}
+                            </Typography>
+
+                            {/* Participants */}
+                            <Box className="flex items-center gap-1">
+                              <AvatarGroup
+                                max={4}
+                                sx={{
+                                  '& .MuiAvatar-root': {
+                                    width: 24,
+                                    height: 24,
+                                    fontSize: '0.75rem',
+                                    backgroundColor: '#D1D5DB',
+                                    color: '#6B7280',
+                                    border: '2px solid white',
+                                  },
+                                }}
+                              >
+                                {bill.participants.map((participant, idx) => (
+                                  <Avatar key={idx}>{participant.name.charAt(0)}</Avatar>
+                                ))}
+                              </AvatarGroup>
+                              {bill.participants.length > 1 && (
+                                <Typography sx={{ fontSize: '0.875rem', color: '#9CA3AF' }}>
+                                  +{bill.participants.length - 1}
+                                </Typography>
+                              )}
+                            </Box>
                           </Box>
                         </Box>
-                      </Box>
+                      </div>
 
                       {/* Right: Amount and Payer */}
                       <Box className="flex flex-col items-end justify-between sm:min-w-[180px]">
-                        <Typography
-                          sx={{
-                            fontSize: { xs: '1.125rem', sm: '1.25rem' },
-                            fontWeight: 700,
-                            color: '#1F2937',
-                          }}
-                        >
-                          {formatCurrency(bill.totalAmount)} đ
-                        </Typography>
+                        <p className="md:text-xl font-bold text-[#1F2937]">{formatCurrency(bill.totalAmount)} đ</p>
                         <Box className="text-right">
                           <Typography
                             sx={{
@@ -655,7 +651,7 @@ const History = () => {
                     </Box>
                   </CardContent>
                 </Card>
-              );
+              )
             })}
           </Box>
         )}
@@ -694,7 +690,7 @@ const History = () => {
         )}
       </Box>
     </Layout>
-  );
-};
+  )
+}
 
-export default History;
+export default History
