@@ -12,6 +12,7 @@ import Debt from './pages/Debt'
 import AccountVerification from './pages/Auth/AccountVerification'
 import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
 import { Ocr, Bills } from "./pages/Bills"
+import BillDetail from './pages/Bills/BillDetail'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -32,6 +33,7 @@ function App() {
         <Route path="/boards/:boardId" element={<Board />} />
         <Route path="/create" element={<Bills />} />
         <Route path="/ocr" element={<Ocr />} />
+        <Route path="/bills/:billId" element={<BillDetail />} />
       </Route>
 
       {/* Authentication Routes */}

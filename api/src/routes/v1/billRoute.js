@@ -9,9 +9,9 @@ Router.route('/').post(authMiddleware.isAuthorized, billValidation.createNew, bi
 
 Router.route('/user/:userId').get(authMiddleware.isAuthorized, billController.getBillsByUserId)
 
-Router.route('/')
-  .post(billValidation.createNew, billController.createNew)
+Router.route('/:billId').get(authMiddleware.isAuthorized, billController.getBillById)
 
 Router.route('/scan')
   .post(billValidation.scan, billController.scan)
+  
 export const billRoute = Router
