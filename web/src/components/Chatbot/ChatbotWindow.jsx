@@ -8,6 +8,7 @@ import TingTingGif from '~/assets/tingting.gif';
 import TingTingPng from '~/assets/tingting.png';
 import { toast } from 'react-toastify'
 import { getAssistantResponseAPI } from '~/apis';
+import { getInitials } from '~/utils/formatters';
 
 const ChatbotWindow = ({ isOpen, setIsOpen }) => {
   const currentUser = useSelector(selectCurrentUser)
@@ -49,7 +50,6 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN')
     };
 
-    const currentInput = inputMessage.trim();
     setInputMessage('');
     
     // Add user message immediately
@@ -87,11 +87,12 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
       {/* Messages Area */}
       <div className="flex-1 bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] px-1 pb-1 rounded-b-2xl flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto pt-4 px-4 pb-4 bg-[#FEEBEE] flex flex-col gap-3">
-          {/* Welcome message when no messages */}
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full py-8">
-              <div className="w-24 h-24 rounded-full bg-[#E89AC7] flex items-center justify-center mb-4">
+        <div className="flex-1 overflow-y-auto pt-4 px-4 pb-4 bg-[#FEEBEE]">
+          <div className="min-h-full flex flex-col justify-end gap-3">
+            {/* Welcome message when no messages */}
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center flex-1 py-8">
+                <div className="w-24 h-24 rounded-full bg-[#E89AC7] flex items-center justify-center mb-4">
                 <img
                   src={TingTingGif}
                   alt="TingTing"
@@ -109,6 +110,8 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
             </div>
           )}
 
+          
+
           {/* Messages List */}
           {messages.map((message) => (
             <div
@@ -118,7 +121,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
               }`}
             >
               {/* Assistant avatar - left side */}
-              {message.role === 'assistant' && (
+              {(message.role === 'assistant' || message.role === 'notification') && (
                 <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center flex-shrink-0 mb-1">
                   <img
                     src={TingTingPng}
@@ -151,7 +154,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
               {/* User avatar - right side */}
               {message.role === 'user' && (
                 <div className="w-7 h-7 rounded-full bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] flex items-center justify-center flex-shrink-0 mb-1">
-                  <span className="text-xs font-semibold text-white">PH</span>
+                  <span className="text-xs font-semibold text-white">{getInitials(currentUser.name)}</span>
                 </div>
               )}
             </div>
@@ -180,6 +183,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
           )}
           
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Suggestion Buttons - Above Input */}

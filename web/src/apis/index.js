@@ -176,14 +176,16 @@ export const confirmPaymentAPI = async (token, isConfirmed) => {
 
 export const getAssistantResponseAPI = async (userId, messages) => {
   // remove id and time field
+  const leng = messages.length;
   messages = messages.map(({ id, time, ...rest }) => rest);
+  messages = filter(messages, (msg) => msg.role !== 'notification')
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
     userId,
     messages
   })
 
   const result = {
-    id: messages.length + 1,
+    id: leng + 1,
     time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
     ...response.data.response
   }
