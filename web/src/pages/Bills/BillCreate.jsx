@@ -66,6 +66,10 @@ function BillCreate() {
     },
   ])
 
+  // Page Context
+  const { updatePageContext, clearPageContext } = useChatbot()
+
+
   // Dialog states
   const [openParticipantDialog, setOpenParticipantDialog] = useState(false)
   const [openPayerDialog, setOpenPayerDialog] = useState(false)
@@ -251,6 +255,21 @@ function BillCreate() {
     }
   }
 
+  // Update page context whenever form data changes
+  useEffect(() => {
+    updatePageContext({
+      page: 'Tạo hóa đơn mới',
+      formData: watchedValues,
+      participants: participants,
+      items: items,
+    })
+
+    // Cleanup when component unmounts
+    return () => {
+      clearPageContext()
+    }
+  }, [watchedValues, participants, items, updatePageContext, clearPageContext])
+
   // Fetch initial users and groups with pagination
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -323,13 +342,13 @@ function BillCreate() {
   useEffect(() => {
     // Check for form data in navigation state
     const stateData = navigate.state?.billFormData || window.history.state?.usr?.billFormData
-    
+
     // Check for form data in URL params
     const searchParams = new URLSearchParams(window.location.search)
     const urlData = searchParams.get('billFormData')
-    
+
     let formData = null
-    
+
     if (stateData) {
       formData = stateData
     } else if (urlData) {
@@ -339,7 +358,7 @@ function BillCreate() {
         console.error('Error parsing billFormData from URL:', error)
       }
     }
-    
+
     if (formData) {
       // Fill form fields
       if (formData.billName) setValue('billName', formData.billName)
@@ -349,7 +368,7 @@ function BillCreate() {
       if (formData.splitType) setValue('splitType', formData.splitType)
       if (formData.paymentDeadline) setValue('paymentDeadline', formData.paymentDeadline)
       if (formData.creationDate) setValue('creationDate', formData.creationDate)
-      
+
       // Fill participants if provided
       if (formData.participants && Array.isArray(formData.participants) && formData.participants.length > 0) {
         const formattedParticipants = formData.participants.map(p => ({
@@ -361,12 +380,12 @@ function BillCreate() {
         }))
         setParticipants(formattedParticipants)
       }
-      
+
       // Fill payer if provided
       if (formData.payer) {
         setValue('payer', formData.payer)
       }
-      
+
       // Fill items for item-based split
       if (formData.items && Array.isArray(formData.items) && formData.items.length > 0) {
         setItems(formData.items.map(item => ({
@@ -376,7 +395,7 @@ function BillCreate() {
           allocatedTo: item.allocatedTo || [],
         })))
       }
-      
+
       // Clear the payload to prevent re-filling on future navigations
       if (stateData) {
         window.history.replaceState({}, document.title)

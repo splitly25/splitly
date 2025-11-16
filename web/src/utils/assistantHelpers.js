@@ -191,3 +191,8 @@ export const formatDateToDDMMYYYY = (date) => {
   return `${day}/${month}/${year}`
 }
 
+// json to markdown
+export const jsonToMarkdown = (jsonObject) => {
+  const jsonString = JSON.stringify(jsonObject, null, 2)
+  return `\`\`\`json\n${jsonString}\n\`\`\``
+}
