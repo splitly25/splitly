@@ -9,6 +9,7 @@ import TingTingPng from '~/assets/tingting.png';
 import { toast } from 'react-toastify'
 import { getAssistantResponseAPI } from '~/apis';
 import { getInitials } from '~/utils/formatters';
+import { useChatbot } from '~/context/ChatbotContext';
 
 const ChatbotWindow = ({ isOpen, setIsOpen }) => {
   const currentUser = useSelector(selectCurrentUser)
