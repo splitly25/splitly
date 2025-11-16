@@ -265,11 +265,12 @@ function BillCreate() {
       items: items,
     })
 
-    // Cleanup when component unmounts
-    return () => {
-      clearPageContext()
-    }
-  }, [watchedValues, participants, items, updatePageContext, clearPageContext])
+    // // Cleanup when component unmounts
+    // return () => {
+    //   clearPageContext()
+    // }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedValues, participants, items])
 
   // Fetch initial users and groups with pagination
   useEffect(() => {
