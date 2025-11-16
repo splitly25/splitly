@@ -18,6 +18,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
   });
   const [inputMessage, setInputMessage] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+    const { pageContext, getPageContextSummary } = useChatbot();
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
