@@ -8,12 +8,12 @@ const Chatbot = ({ isOpen, setIsOpen, numberOfNotifications, newMessage, setNewM
     };
 
     useEffect(() => {
-        if (newMessage != "" && !isOpen) {
-            setShowMessage(true);
-            setTimeout(() => {
+        if (!isOpen) {
+            if (newMessage !== "") {
+                setShowMessage(true);
+            } else {
                 setShowMessage(false);
-                setNewMessage("");
-            }, 5000); // Hide message after 5 seconds
+            }
         }
     }, [newMessage, isOpen]);
 

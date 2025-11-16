@@ -14,26 +14,29 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { persistStore } from 'redux-persist'
 const persistor = persistStore(store)
 import { injectStore } from '~/utils/authorizeAxios.js'
+import { ChatbotProvider } from '~/context/ChatbotContext.jsx'
 injectStore(store)
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <ThemeProvider theme={theme}>
-          <ConfirmProvider
-            defaultOptions={{
-              dialogActionsProps: { maxWidth: 'xs' },
-              confirmationButtonProps: { variant: 'outlined' },
-              cancellationButtonProps: { color: 'inherit' },
-              buttonOrder: ['confirm', 'cancel'],
-            }}
-          >
-            <CssBaseline enableColorScheme />
-            <App />
-            <ToastContainer />
-          </ConfirmProvider>
-        </ThemeProvider>
+        <ChatbotProvider>
+          <ThemeProvider theme={theme}>
+            <ConfirmProvider
+              defaultOptions={{
+                dialogActionsProps: { maxWidth: 'xs' },
+                confirmationButtonProps: { variant: 'outlined' },
+                cancellationButtonProps: { color: 'inherit' },
+                buttonOrder: ['confirm', 'cancel'],
+              }}
+            >
+              <CssBaseline enableColorScheme />
+              <App />
+              <ToastContainer />
+            </ConfirmProvider>
+          </ThemeProvider>
+        </ChatbotProvider>
       </PersistGate>
     </Provider>
   </BrowserRouter>

@@ -1,6 +1,7 @@
 import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
 import { toast } from 'react-toastify'
+import { filter } from 'lodash'
 
 export const fetchDashboardDataAPI = async (userId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/dashboard/${userId}`)
@@ -167,4 +168,29 @@ export const confirmPaymentAPI = async (token, isConfirmed) => {
     isConfirmed
   })
   return response.data
+}
+
+// ============================================
+// Assistant APIs
+// ============================================
+
+export const getAssistantResponseAPI = async (userId, messages) => {
+  // remove id and time field
+  const leng = messages.length;
+  messages = messages.map(({ id, time, ...rest }) => rest);
+  messages = filter(messages, (msg) => msg.role !== 'notification')
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
+    userId,
+    messages
+  })
+
+  const result = {
+    id: leng + 1,
+    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
+    ...response.data.response
+  }
+
+  console.log("Assistant API Response:", result);
+  
+  return result;
 }

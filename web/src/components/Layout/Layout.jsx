@@ -33,7 +33,7 @@ import {
   Chat as ChatIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ChatbotButton from '~/components/Chatbot/ChatbotButton'
 import ChatbotWindow from '../Chatbot/ChatbotWindow'
 import { useDispatch, useSelector } from 'react-redux'
@@ -41,6 +41,7 @@ import { logoutUserAPI, selectCurrentUser } from '~/redux/user/userSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import NotificationsIcon from '@mui/icons-material/Notifications'
+import { useChatbot } from '~/context/ChatbotContext'
 import { getInitials } from '~/utils/formatters'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
@@ -66,11 +67,35 @@ const Layout = ({ children }) => {
   const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState(null)
   const createMenuOpen = Boolean(createMenuAnchorEl)
 
-  // Chatbot handler
-  const [chatbotWindowOpen, setChatbotWindowOpen] = useState(false)
-  // eslint-disable-next-line no-unused-vars
-  const [numberOfNotifications, setNumberOfNotifications] = useState(2)
-  const [newMessage, setNewMessage] = useState('You have a new message from TingTing Bot!')
+  // Use Chatbot Context
+  const {
+    chatbotWindowOpen,
+    setChatbotWindowOpen,
+    numberOfNotifications,
+    newMessage,
+    setNewMessage,
+  } = useChatbot()
+
+  // Check for chatbot payload from navigation state or URL params
+  useEffect(() => {
+    // Check navigation state
+    if (location.state?.chatbotWindowOpen === true) {
+      setChatbotWindowOpen(true)
+      // Clear the state to prevent reopening on future navigations
+      window.history.replaceState({}, document.title)
+    }
+    
+    // Check URL params
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get('chatbotWindowOpen') === 'true') {
+      setChatbotWindowOpen(true)
+      // Remove the param from URL
+      searchParams.delete('chatbotWindowOpen')
+      const newSearch = searchParams.toString()
+      const newUrl = `${location.pathname}${newSearch ? `?${newSearch}` : ''}`
+      window.history.replaceState({}, document.title, newUrl)
+    }
+  }, [location])
 
   // Dynamic chatbot width based on screen size
   const chatbotWidth = isMobile ? '100vw' : isSmallScreen ? '45vw' : '30vw'
