@@ -28,9 +28,19 @@ const scan = async (req, res, next) => {
   } catch (error) {next(error)}
 }
 
+const getBillById = async (req, res, next) => {
+  try {
+    const { billId } = req.params
+    const bill = await billService.getBillById(billId)
+    res.status(StatusCodes.OK).json(bill)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const billController = {
   createNew, 
   scan,
-  createNew,
   getBillsByUserId,
+  getBillById,
 }

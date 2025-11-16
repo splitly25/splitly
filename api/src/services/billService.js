@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-catch */
 import { billModel } from '~/models/billModel.js';
 import { activityModel } from '~/models/activityModel.js';
+import { userModel } from '~/models/userModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
 
 const createNew = async (reqBody) => {
@@ -174,13 +175,79 @@ const getBillsByCreator = async (creatorId) => {
 };
 
 /**
- * Get bill by ID
+ * Get bill by ID (basic)
  * @param {string} billId - Bill ID
- * @returns {Promise<Object>} Bill object
+ * @returns {Promise<Object>} Bill data
  */
 const findOneById = async (billId) => {
   try {
     return await billModel.findOneById(billId);
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get bill by ID with populated user data
+ * @param {string} billId - Bill ID
+ * @returns {Promise<Object>} Bill data with populated user information
+ */
+const getBillById = async (billId) => {
+  try {
+    const bill = await billModel.findOneById(billId);
+    
+    if (!bill) {
+      throw new Error('Bill not found');
+    }
+
+    // Populate payer information
+    const payer = await userModel.findOneById(bill.payerId.toString());
+    
+    // Populate participants information
+    const participantsWithDetails = await Promise.all(
+      bill.paymentStatus.map(async (payment) => {
+        const user = await userModel.findOneById(payment.userId.toString());
+        return {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          amount: payment.amountOwed,
+          paid: payment.amountPaid >= payment.amountOwed,
+          amountPaid: payment.amountPaid,
+          paidDate: payment.paidDate,
+          role: payment.userId.toString() === bill.payerId.toString() ? 'payer' : 'participant',
+        };
+      })
+    );
+
+    // Calculate if bill is settled
+    const isSettled = bill.paymentStatus.every(
+      (payment) => payment.amountPaid >= payment.amountOwed
+    );
+
+    // Format response
+    return {
+      _id: bill._id,
+      billName: bill.billName,
+      description: bill.description || '',
+      category: bill.category || 'Khác',
+      totalAmount: bill.totalAmount,
+      settled: isSettled,
+      paymentDate: bill.paymentDate || bill.createdAt,
+      paymentDeadline: bill.paymentDeadline || null,
+      payer: {
+        _id: payer._id,
+        name: payer.name,
+        email: payer.email,
+        avatar: payer.avatar,
+      },
+      participants: participantsWithDetails,
+      splittingMethod: bill.splittingMethod,
+      items: bill.items || [],
+      createdAt: bill.createdAt,
+      updatedAt: bill.updatedAt,
+    };
   } catch (error) {
     throw error;
   }
@@ -686,6 +753,7 @@ export const billService = {
   getBillsByUserWithPagination,
   getBillsByCreator,
   findOneById,
+  getBillById,
   update,
   markAsPaid,
   optOutUser,

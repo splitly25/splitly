@@ -111,6 +111,12 @@ export const fetchUserBillsAPI = async (userId) => {
   return response.data
 }
 
+// Get a specific bill by ID
+export const fetchBillByIdAPI = async (billId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/bills/${billId}`)
+  return response.data
+}
+
 // ============================================
 // GROUP APIs
 // ============================================
