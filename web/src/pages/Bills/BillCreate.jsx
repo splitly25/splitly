@@ -16,6 +16,7 @@ import ByPersonSplitDetails from '~/components/Bills/ByPersonSplitDetails'
 import ByItemSplitDetails from '~/components/Bills/ByItemSplitDetails'
 import { createBillAPI, fetchUsersAPI, fetchGroupsAPI } from '~/apis'
 import { useForm } from 'react-hook-form'
+import { useChatbot } from '~/context/ChatbotContext'
 
 function BillCreate() {
   const navigate = useNavigate()
