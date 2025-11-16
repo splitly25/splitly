@@ -178,13 +178,14 @@ export const activeBillSlice = createSlice({
     },
 
     // Item management
-    addItem: (state) => {
+    addItem: (state, action) => {
+      const itemData = action.payload || {}
       state.items.push({
-        id: Date.now(),
-        name: '',
-        quantity: 1,
-        amount: 0,
-        allocatedTo: [],
+        id: itemData.id || Date.now() + Math.random(), // Ensure unique ID
+        name: itemData.name || '',
+        quantity: itemData.quantity || 1,
+        amount: itemData.amount || 0,
+        allocatedTo: itemData.allocatedTo || [],
       })
     },
 
