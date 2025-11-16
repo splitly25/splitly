@@ -12,8 +12,19 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
+import { submitPaymentRequestAPI } from '~/apis'
 
-const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
+const handlePaymentSubmit = async (paymentData) => {
+  try {
+    await submitPaymentRequestAPI(currentUserId, paymentData)
+    await refetch()
+  } catch (error) {
+    console.error('Payment submission failed:', error)
+    throw error
+  }
+}
+
+const PaymentDialog = ({ open, onClose, creditor }) => {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
@@ -83,7 +94,7 @@ const PaymentDialog = ({ open, onClose, creditor, onSubmit }) => {
   const handleConfirmPayment = async () => {
     setLoading(true)
     try {
-      await onSubmit({
+      await handlePaymentSubmit({
         creditorId: creditor.userId,
         amount: parseFloat(amount),
         note: note.trim()

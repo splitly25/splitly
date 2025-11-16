@@ -12,12 +12,27 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
+import authorizedAxiosInstance from '~/utils/authorizeAxios'
+import { API_ROOT } from '~/utils/constants'
 
-const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onSubmit, loading }) => {
+const handleConfirmPaymentSubmit = async ({userId, refetch, formData}) => {
+  try {
+    await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/confirm-payment`, formData)
+    // setConfirmDialogOpen(false)
+    // setSelectedDebtor(null)
+    await refetch()
+  } catch (err) {
+    console.error('Error confirming payment:', err)
+    alert('Xác nhận thanh toán thất bại!')
+  }
+}
+
+const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bills, refetch }) => {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState({})
   const [showConfirmation, setShowConfirmation] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -55,24 +70,31 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
 
   const handleConfirmPayment = async () => {
     try {
-      await onSubmit({
-        debtorId: debtor.userId,
-        amount: parseInt(amount, 10),
-        bills: bills.map(b => ({ billId: b.billId, amount: b.remainingAmount })),
-        note,
-        isConfirmed: true
+      setConfirmLoading(true)
+      await handleConfirmPaymentSubmit(
+      {
+        userId: myId,
+        refetch,
+        formData: {
+          debtorId: debtor.userId,
+          amount: parseInt(amount, 10),
+          bills: bills.map(b => ({ billId: b.billId, amount: b.remainingAmount })),
+          note,
+          isConfirmed: true
+        }
       })
-      
+    } catch (error) {
+      console.error('Payment confirmation error:', error)
+      setErrors({ submit: error.message || 'Có lỗi xảy ra. Vui lòng thử lại.' })
+      setShowConfirmation(false)
+    } finally {
+      setConfirmLoading(false)
       // Reset form
       setAmount('')
       setNote('')
       setErrors({})
       setShowConfirmation(false)
       onClose()
-    } catch (error) {
-      console.error('Payment confirmation error:', error)
-      setErrors({ submit: error.message || 'Có lỗi xảy ra. Vui lòng thử lại.' })
-      setShowConfirmation(false)
     }
   }
 
@@ -81,7 +103,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
   }
 
   const handleClose = () => {
-    if (!loading) {
+    if (!confirmLoading) {
       setAmount('')
       setNote('')
       setErrors({})
@@ -112,7 +134,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
         {/* Close Button */}
         <IconButton
           onClick={handleClose}
-          disabled={loading}
+          disabled={confirmLoading}
           sx={{
             position: 'absolute',
             right: 16,
@@ -165,7 +187,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
             onChange={handleAmountChange}
             placeholder="0"
             error={!!errors.amount}
-            disabled={loading}
+            disabled={confirmLoading}
             InputProps={{
               endAdornment: <InputAdornment position="end" sx={{ color: 'text.secondary' }}>₫</InputAdornment>,
               sx: {
@@ -201,7 +223,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="Nhập ghi chú..."
-            disabled={loading}
+            disabled={confirmLoading}
             multiline
             minRows={2}
             InputProps={{
@@ -257,7 +279,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             onClick={handleClose}
-            disabled={loading}
+            disabled={confirmLoading}
             fullWidth
             sx={{
               py: 1,
@@ -278,7 +300,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
           </Button>
           <Button
             onClick={handleConfirmClick}
-            disabled={loading}
+            disabled={confirmLoading}
             fullWidth
             startIcon={<CheckCircleIcon />}
             sx={{
@@ -299,7 +321,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
             }}
             variant="contained"
           >
-            {loading ? <CircularProgress size={20} /> : 'Xác nhận'}
+            {confirmLoading ? <CircularProgress size={20} /> : 'Xác nhận'}
           </Button>
         </Box>
         </>
@@ -327,7 +349,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
               <Box sx={{ display: 'flex', gap: 1.5 }}>
                 <Button
                   onClick={handleCancelConfirmation}
-                  disabled={loading}
+                  disabled={confirmLoading}
                   fullWidth
                   sx={{
                     py: 1.2,
@@ -348,7 +370,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
                 </Button>
                 <Button
                   onClick={handleConfirmPayment}
-                  disabled={loading}
+                  disabled={confirmLoading}
                   fullWidth
                   sx={{
                     py: 1.2,
@@ -368,7 +390,7 @@ const ConfirmPaymentDialog = ({ open, onClose, debtor, defaultAmount, bills, onS
                   }}
                   variant="contained"
                 >
-                  {loading ? 'Đang xử lý...' : 'Đã nhận'}
+                  {confirmLoading ? 'Đang xử lý...' : 'Đã nhận'}
                 </Button>
               </Box>
             </Box>
