@@ -26,10 +26,6 @@ import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 import PaymentDialog from './PaymentDialog'
 import ConfirmPaymentDialog from './ConfirmPaymentDialog'
-import axios from 'axios'
-import { submitPaymentRequestAPI } from '~/apis'
-import authorizedAxiosInstance from '~/utils/authorizeAxios'
-import { API_ROOT } from '~/utils/constants'
 
 // Summary Card Component
 const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
@@ -229,7 +225,6 @@ const Debt = () => {
   const [selectedCreditor, setSelectedCreditor] = useState(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState(null)
-  const [confirmLoading, setConfirmLoading] = useState(false)
   
   // Get current user from Redux store
   const currentUser = useSelector(selectCurrentUser)
@@ -250,30 +245,6 @@ const Debt = () => {
   const handleConfirmPayment = (debtor) => {
     setSelectedDebtor(debtor)
     setConfirmDialogOpen(true)
-  }
-
-  const handleConfirmPaymentSubmit = async (formData) => {
-    setConfirmLoading(true)
-    try {
-      await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${currentUserId}/confirm-payment`, formData)
-      setConfirmDialogOpen(false)
-      setSelectedDebtor(null)
-      await refetch()
-    } catch (err) {
-      alert('Xác nhận thanh toán thất bại!')
-    } finally {
-      setConfirmLoading(false)
-    }
-  }
-
-  const handlePaymentSubmit = async (paymentData) => {
-    try {
-      await submitPaymentRequestAPI(currentUserId, paymentData)
-      await refetch()
-    } catch (error) {
-      console.error('Payment submission failed:', error)
-      throw error
-    }
   }
 
   if (!currentUserId) {
@@ -413,18 +384,17 @@ const Debt = () => {
         open={paymentDialogOpen}
         onClose={() => setPaymentDialogOpen(false)}
         creditor={selectedCreditor}
-        onSubmit={handlePaymentSubmit}
       />
 
       {/* Confirm Payment Dialog */}
       <ConfirmPaymentDialog
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
+        myId={currentUserId}
         debtor={selectedDebtor}
         defaultAmount={selectedDebtor?.totalAmount}
         bills={selectedDebtor?.bills || []}
-        onSubmit={handleConfirmPaymentSubmit}
-        loading={confirmLoading}
+        refetch={refetch}
       />
     </Layout>
   )
