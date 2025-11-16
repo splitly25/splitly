@@ -41,6 +41,7 @@ import { logoutUserAPI } from '~/redux/user/userSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import NotificationsIcon from '@mui/icons-material/Notifications'
+import { useChatbot } from '~/context/ChatbotContext'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
 const SIDEBAR_WIDTH_COLLAPSED = 80
@@ -64,11 +65,14 @@ const Layout = ({ children }) => {
   const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState(null)
   const createMenuOpen = Boolean(createMenuAnchorEl)
 
-  // Chatbot handler
-  const [chatbotWindowOpen, setChatbotWindowOpen] = useState(false)
-  // eslint-disable-next-line no-unused-vars
-  const [numberOfNotifications, setNumberOfNotifications] = useState(2)
-  const [newMessage, setNewMessage] = useState('You have a new message from TingTing Bot!')
+  // Use Chatbot Context
+  const {
+    chatbotWindowOpen,
+    setChatbotWindowOpen,
+    numberOfNotifications,
+    newMessage,
+    setNewMessage,
+  } = useChatbot()
 
   // Check for chatbot payload from navigation state or URL params
   useEffect(() => {
