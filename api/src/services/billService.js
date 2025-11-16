@@ -624,13 +624,14 @@ Your goal is to accurately read the text in the image and return a clean, struct
 Extract as much information as possible, including:
 
 - billName: The title or store name of the bill
-- paymentDate: The date of the transaction (if visible)
+- paymentDate: The date "dd/mm/yyyy" of the transaction (if visible).
 - description: Any additional notes or remarks written on the bill
+- category: The category of the bill. It must be one of the following: "food", "utilities", "entertainment", "transportation", "shopping", "others".
 - items: A list of purchased products, each with:
   - name: Product or service name
   - quantity: Quantity of each item
   - unitPrice: Price per unit
-  - totalPrice: Total price per item
+  - amount: Total price per item
 - subtotal: The total amount before taxes or discounts
 - tax: Tax amount (if applicable)
 - discount: Discount amount (if applicable)

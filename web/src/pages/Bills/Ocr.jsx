@@ -1,5 +1,7 @@
 import { Box, Typography, Button, Container, Paper, IconButton, CircularProgress, Alert, Snackbar } from '@mui/material'
 import { useState, useRef } from 'react'
+import { useSelector } from 'react-redux'
+import { selectCurrentUser } from '~/redux/user/userSlice'
 import Layout from '~/components/Layout/Layout'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
@@ -12,9 +14,11 @@ import { useNavigate } from 'react-router-dom'
 import colors from 'tailwindcss/colors'
 
 import { sendOcrBillAPI } from '~/apis'
+import { parseAssistantBillData } from '~/utils/assistantHelpers'
 
 const Ocr = () => {
   const navigate = useNavigate()
+  const currentUser = useSelector(selectCurrentUser)
   const [selectedFile, setSelectedFile] = useState(null)
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -28,7 +32,7 @@ const Ocr = () => {
   const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
 
   // Using hardcoded user ID - should come from authentication context
-  const currentUserId = '69097a08cfc3fcbcfb0f5b72'
+  // const currentUserId = '69097a08cfc3fcbcfb0f5b72'
 
   const validateFile = (file) => {
     // Check file type
@@ -86,13 +90,22 @@ const Ocr = () => {
       })
 
       // Call OCR API
-      const result = await sendOcrBillAPI(imageData, currentUserId)
+      const result = await sendOcrBillAPI(imageData, currentUser._id)
 
       if (result && result.response) {
-        setAnalysis(result.response.result.message.content)
+        const rawContent = result.response.result.message.content
+        setAnalysis(rawContent)
         console.log('OCR Result:', result.response)
-        // You can navigate to bill creation page or show results here
-        // navigate('/bills/create', { state: { ocrData: result.response } });
+
+        const billData = parseAssistantBillData(currentUser._id, rawContent)
+
+        // Navigate to bill creation page with parsed data
+        navigate('/create', {
+          state: {
+            chatbotWindowOpen: true,
+            billFormData: billData,
+          }
+        })
       } else {
         throw new Error('Không nhận được kết quả từ server')
       }
