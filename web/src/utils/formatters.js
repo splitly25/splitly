@@ -31,3 +31,9 @@ export const getInitials = (name) => {
   }
   return name.substring(0, 2).toUpperCase()
 }
+
+// helper remove leading 0
+export const removeLeadingZeros = (value) => {
+  if (typeof value !== 'string') return value
+  return value.replace(/^0+(?=\d)/, '')
+}
