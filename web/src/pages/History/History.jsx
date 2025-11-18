@@ -2,7 +2,6 @@ import Layout from '~/components/Layout'
 import { useEffect, useState } from 'react'
 import { selectCurrentUser } from '~/redux/user/userSlice'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
 import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from '~/apis'
 import {
   Box,
@@ -24,7 +23,6 @@ import {
 import { FilterAlt as FilterListIcon, Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material'
 
 const History = () => {
-  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [searchText, setSearchText] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -524,13 +522,11 @@ const History = () => {
               return (
                 <Card
                   key={bill.id}
-                  onClick={() => navigate(`/bills/${bill._id || bill.id}`)}
                   sx={{
                     background: '#fff',
                     borderRadius: '16px',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease',
-                    cursor: 'pointer',
                     '&:hover': {
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                       transform: 'translateY(-2px)',

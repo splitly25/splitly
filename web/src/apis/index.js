@@ -94,6 +94,11 @@ export const fetchUsersAPI = async (page = 1, limit = 10, search = '') => {
   return response.data
 }
 
+export const editUserAPI = async(data) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/editProfile`, data)
+  return response.data
+}
+
 // ============================================
 // BILL APIs
 // ============================================
@@ -199,4 +204,9 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   console.log("Assistant API Response:", result);
   
   return result;
+}
+
+export const updateUserProfileAPI = async (userId, profileData) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/${userId}/profile`, profileData)
+  return response.data
 }

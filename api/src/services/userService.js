@@ -305,7 +305,6 @@ const update = async (userId, updateData, updatedBy) => {
         console.warn('Failed to log user update activity:', activityError.message)
       }
     }
-
     return result
   } catch (error) {
     throw error
@@ -363,6 +362,39 @@ const findOrCreateUserByEmail = async (email, options = {}) => {
   }
 }
 
+/**
+ * Edit user profile
+ * @param {string} userId - User ID
+ * @param {Object} profileData - Profile data to update (name, phone, bankAccount, bankName)
+ * @returns {Promise<Object>} Updated user
+ */
+const editProfile = async (userId, profileData) => {
+  try {
+    // Validate that user exists
+    const existingUser = await userModel.findOneById(userId)
+    if (!existingUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Prepare update data - only include provided fields
+    const updateData = {
+      updatedAt: Date.now(),
+    }
+
+    if (profileData.name !== undefined) updateData.name = profileData.name
+    if (profileData.phone !== undefined) updateData.phone = profileData.phone
+    if (profileData.bankAccount !== undefined) updateData.bankAccount = profileData.bankAccount
+    if (profileData.bankName !== undefined) updateData.bankName = profileData.bankName
+
+    // Use the update function with activity logging
+    const updatedUser = await update(userId, updateData, userId)
+
+    return pickUser(updatedUser)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
@@ -376,4 +408,5 @@ export const userService = {
   deleteOneById,
   findOrCreateUserByEmail,
   fetchUsers,
+  editProfile
 }

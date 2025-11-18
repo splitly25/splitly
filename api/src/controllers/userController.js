@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/userService.js'
 import ms from 'ms'
+import { chain } from 'lodash'
 
 const createNew = async (req, res, next) => {
   try {
@@ -86,6 +87,17 @@ const getUserByEmail = async (req, res, next) => {
   }
 }
 
+const editProfile = async (req, res, next) => {
+  try {
+    const userId = req.params.userId
+    const profileData = req.body
+    const profile = await userService.editProfile(userId, profileData)
+    res.status(StatusCodes.OK).json(profile)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -95,4 +107,5 @@ export const userController = {
   getUserById,
   getUserByEmail,
   fetchUsers,
+  editProfile
 }
