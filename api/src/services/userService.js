@@ -7,7 +7,8 @@ import bcryptjs from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { pickUser } from '~/utils/formatters'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
-import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider'
+import { NodemailerProvider } from '~/providers/NodemailerProvider'
+import { verificationEmailTemplate } from '~/utils/emailTemplates'
 import { JwtProvider } from '~/providers/JwtProvider'
 import { env } from '~/config/environment'
 
@@ -19,17 +20,74 @@ import { env } from '~/config/environment'
  */
 const createNew = async (reqBody, options = {}) => {
   try {
-    const existingUser = await userModel.findOneByEmail(reqBody.email)
+    const normalizedEmail = reqBody.email.toLowerCase().trim()
+    const existingUser = await userModel.findOneByEmail(normalizedEmail)
+
     if (existingUser) {
+      // If existing user is a guest, upgrade them to a member
+      if (existingUser.isGuest || existingUser.userType === userModel.USER_TYPE.GUEST) {
+        const nameFromEmail = normalizedEmail.split('@')[0]
+        const updateData = {
+          password: bcryptjs.hashSync(reqBody.password, 10),
+          name: reqBody.name || existingUser.name || nameFromEmail,
+          verifyToken: uuidv4(),
+          isGuest: false,
+          userType: userModel.USER_TYPE.MEMBER,
+          isVerified: false,
+          updatedAt: Date.now(),
+        }
+
+        await userModel.update(existingUser._id.toString(), updateData)
+        const updatedUser = await userModel.findOneById(existingUser._id.toString())
+
+        // Log account upgrade activity
+        try {
+          await activityModel.logUserActivity(
+            activityModel.ACTIVITY_TYPES.USER_UPDATED,
+            existingUser._id.toString(),
+            existingUser._id.toString(),
+            {
+              userEmail: updatedUser.email,
+              userName: updatedUser.name,
+              ipAddress: options.ipAddress,
+              userAgent: options.userAgent,
+              description: `Guest account upgraded to member: ${updatedUser.email}`,
+            }
+          )
+        } catch (activityError) {
+          console.warn('Failed to log account upgrade activity:', activityError.message)
+        }
+
+        // Send verification email with beautiful template
+        const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${updatedUser.email}&token=${updatedUser.verifyToken}`
+        const emailContent = verificationEmailTemplate(updatedUser.name, verificationLink)
+
+        try {
+          await NodemailerProvider.sendEmail(
+            updatedUser.email,
+            emailContent.subject,
+            emailContent.text,
+            emailContent.html
+          )
+        } catch (emailError) {
+          console.error('Failed to send verification email:', emailError.message)
+        }
+
+        return pickUser(updatedUser)
+      }
+
+      // If it's already a member (guest=false), throw conflict error
       throw new ApiError(StatusCodes.CONFLICT, 'Email already in use')
     }
 
-    const nameFromEmail = reqBody.email.split('@')[0]
+    const nameFromEmail = normalizedEmail.split('@')[0]
     const newUser = {
-      email: reqBody.email,
+      email: normalizedEmail,
       password: bcryptjs.hashSync(reqBody.password, 10),
       name: reqBody.name || nameFromEmail,
       verifyToken: uuidv4(),
+      userType: userModel.USER_TYPE.MEMBER,
+      isGuest: false,
     }
 
     const createdUser = await userModel.createNew(newUser)
@@ -53,20 +111,19 @@ const createNew = async (reqBody, options = {}) => {
       console.warn('Failed to log user creation activity:', activityError.message)
     }
 
+    // Send verification email with beautiful template
     const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${getNewUser.email}&token=${getNewUser.verifyToken}`
-    const emailSubject = 'Please verify your email'
-    const textContent = `Here is your verification link: ${verificationLink}\n\nThank you for registering!`
-    const htmlContent = `
-      <h3>Here is your verification link:</h3>
-      <h3><a href="${verificationLink}">${verificationLink}</a></h3>
-      <h3>Thank you for registering!</h3>
-    `
+    const emailContent = verificationEmailTemplate(getNewUser.name, verificationLink)
 
     try {
-      await BrevoEmailProvider.sendEmail(getNewUser.email, emailSubject, textContent, htmlContent)
+      await NodemailerProvider.sendEmail(
+        getNewUser.email,
+        emailContent.subject,
+        emailContent.text,
+        emailContent.html
+      )
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError.message)
-      // Continue execution - user is created successfully even if email fails
     }
 
     return pickUser(getNewUser)
@@ -363,6 +420,45 @@ const findOrCreateUserByEmail = async (email, options = {}) => {
   }
 }
 
+const createGuestUser = async (reqBody) => {
+  try {
+    const normalizedEmail = reqBody.email.toLowerCase().trim()
+    const existingUser = await userModel.findOneByEmail(normalizedEmail)
+
+    // If user already exists, return the existing user instead of creating a duplicate
+    if (existingUser) {
+      // If it's already a guest, just return it
+      if (existingUser.isGuest || existingUser.userType === userModel.USER_TYPE.GUEST) {
+        return pickUser(existingUser)
+      }
+      // If it's a verified member, throw error
+      if (existingUser.isVerified) {
+        throw new ApiError(StatusCodes.CONFLICT, 'This email is already registered and verified')
+      }
+      // If it's an unverified member, return the existing user
+      return pickUser(existingUser)
+    }
+
+    const nameFromEmail = normalizedEmail.split('@')[0]
+    const newUser = {
+      email: normalizedEmail,
+      name: reqBody.name || nameFromEmail,
+      isGuest: true,
+      userType: userModel.USER_TYPE.GUEST,
+      password: bcryptjs.hashSync(uuidv4(), 10), // Hash the random password
+      isVerified: false, // Guest users are not verified
+      verifyToken: null, // No verification token for guests
+    }
+
+    const createdUser = await userModel.createNew(newUser)
+    const getNewUser = await userModel.findOneById(createdUser.insertedId.toString())
+
+    return pickUser(getNewUser)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const userService = {
   createNew,
   verifyAccount,
@@ -376,4 +472,5 @@ export const userService = {
   deleteOneById,
   findOrCreateUserByEmail,
   fetchUsers,
+  createGuestUser,
 }
