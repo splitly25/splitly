@@ -86,6 +86,15 @@ const getUserByEmail = async (req, res, next) => {
   }
 }
 
+const createGuestUser = async (req, res, next) => {
+  try {
+    const result = await userService.createGuestUser(req.body)
+    res.status(StatusCodes.CREATED).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -95,4 +104,5 @@ export const userController = {
   getUserById,
   getUserByEmail,
   fetchUsers,
+  createGuestUser,
 }

@@ -354,6 +354,8 @@ export const activeBillSlice = createSlice({
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        userType: user.userType,
+        isGuest: user.isGuest,
       }))
 
       // Transform groups
@@ -365,6 +367,8 @@ export const activeBillSlice = createSlice({
           name: member.name,
           email: member.email,
           avatar: member.avatar,
+          userType: member.userType,
+          isGuest: member.isGuest,
         })),
       }))
 
@@ -400,6 +404,8 @@ export const activeBillSlice = createSlice({
           name: user.name,
           email: user.email,
           avatar: user.avatar,
+          userType: user.userType,
+          isGuest: user.isGuest,
         }))
         state.availablePeople = [...state.availablePeople, ...transformedUsers]
         state.normalPagination.users = {
@@ -419,6 +425,8 @@ export const activeBillSlice = createSlice({
             name: member.name,
             email: member.email,
             avatar: member.avatar,
+            userType: member.userType,
+            isGuest: member.isGuest,
           })),
         }))
         state.availableGroups = [...state.availableGroups, ...transformedGroups]
@@ -444,6 +452,8 @@ export const activeBillSlice = createSlice({
           name: user.name,
           email: user.email,
           avatar: user.avatar,
+          userType: user.userType,
+          isGuest: user.isGuest,
         }))
         // Append to existing results if append is true, otherwise replace
         state.searchedUsers = append ? [...state.searchedUsers, ...transformedUsers] : transformedUsers
@@ -464,6 +474,8 @@ export const activeBillSlice = createSlice({
             name: member.name,
             email: member.email,
             avatar: member.avatar,
+            userType: member.userType,
+            isGuest: member.isGuest,
           })),
         }))
         // Append to existing results if append is true, otherwise replace
