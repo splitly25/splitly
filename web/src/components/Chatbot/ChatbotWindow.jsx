@@ -226,7 +226,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
       </div>
 
       {/* Custom animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;
