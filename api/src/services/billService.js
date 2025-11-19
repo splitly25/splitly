@@ -2,7 +2,11 @@
 import { billModel } from '~/models/billModel.js';
 import { activityModel } from '~/models/activityModel.js';
 import { userModel } from '~/models/userModel.js';
+import { paymentModel } from '~/models/paymentModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
+import { JwtProvider } from '~/providers/JwtProvider.js';
+import { env } from '~/config/environment.js';
+import { randomUUID } from 'crypto';
 
 const createNew = async (reqBody) => {
   try {
@@ -128,8 +132,26 @@ const createNew = async (reqBody) => {
 
       // Send emails to each participant (except payer)
       const emailPromises = participantsToEmail.map(async (participant) => {
-        // Generate a temporary opt-out token (bill ID for now, can be enhanced later)
-        const optOutToken = createdBill.insertedId.toString()
+        // Create JWT token for bill payment
+        const payload = {
+          creditorId: reqBody.payerId,
+          debtorId: participant._id,
+          bills: [{
+            billId: createdBill.insertedId.toString(),
+            billName: reqBody.billName,
+            amount: participant.amount
+          }],
+          totalAmount: participant.amount,
+          type: 'bill_payment'
+        }
+        const paymentToken = await JwtProvider.generateToken(payload, env.ACCESS_JWT_SECRET_KEY, '30d') // 30 days for bill payments
+
+        // Create payment record for bill payment
+        await paymentModel.createNew({
+          token: paymentToken,
+          creditorId: reqBody.payerId,
+          debtorId: participant._id
+        })
 
         console.log(`Sending email to ${participant.email} (${participant.name}) for bill ${reqBody.billName}`)
 
@@ -146,7 +168,8 @@ const createNew = async (reqBody) => {
             name: p.name,
             amount: p.amount
           })),
-          optOutToken
+          optOutToken: createdBill.insertedId.toString(),
+          paymentToken
         })
       })
 

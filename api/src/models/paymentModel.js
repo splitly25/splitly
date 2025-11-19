@@ -13,12 +13,6 @@ const PAYMENT_SCHEMA = Joi.object({
   token: Joi.string().required(),
   creditorId: Joi.object().instance(ObjectId).required(),
   debtorId: Joi.object().instance(ObjectId).required(),
-  bills: Joi.array().items(Joi.object({
-    billId: Joi.string().required(),
-    billName: Joi.string().required(),
-    amount: Joi.number().required()
-  })).required(),
-  totalAmount: Joi.number().required(),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   usedAt: Joi.date().timestamp('javascript').optional(),
   _destroy: Joi.boolean().default(false)
