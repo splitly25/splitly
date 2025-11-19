@@ -1,5 +1,5 @@
 /**
- * Payment Reminder Model
+ * Payment Model
  * Tracks payment reminder tokens for debtors to pay creditors
  */
 
@@ -7,9 +7,9 @@ import Joi from 'joi'
 import { GET_DB } from '~/config/mongodb.js'
 import { ObjectId } from 'mongodb'
 
-const PAYMENT_REMINDER_COLLECTION_NAME = 'payment_reminders'
+const PAYMENT_COLLECTION_NAME = 'payment_reminders'
 
-const PAYMENT_REMINDER_SCHEMA = Joi.object({
+const PAYMENT_SCHEMA = Joi.object({
   token: Joi.string().required(),
   creditorId: Joi.object().instance(ObjectId).required(),
   debtorId: Joi.object().instance(ObjectId).required(),
@@ -49,8 +49,8 @@ const convertIdsToObjectId = (data) => {
 const createNew = async (data) => {
   try {
     const convertedData = convertIdsToObjectId(data)
-    const validData = await PAYMENT_REMINDER_SCHEMA.validateAsync(convertedData, { abortEarly: false })
-    const result = await GET_DB().collection(PAYMENT_REMINDER_COLLECTION_NAME).insertOne({
+    const validData = await PAYMENT_SCHEMA.validateAsync(convertedData, { abortEarly: false })
+    const result = await GET_DB().collection(PAYMENT_COLLECTION_NAME).insertOne({
       ...validData,
       createdAt: Date.now()
     })
@@ -66,7 +66,7 @@ const createNew = async (data) => {
 const findByToken = async (token) => {
   try {
     const result = await GET_DB()
-      .collection(PAYMENT_REMINDER_COLLECTION_NAME)
+      .collection(PAYMENT_COLLECTION_NAME)
       .findOne({ token, _destroy: false })
     return result
   } catch (error) {
@@ -80,7 +80,7 @@ const findByToken = async (token) => {
 const markAsUsed = async (token) => {
   try {
     const result = await GET_DB()
-      .collection(PAYMENT_REMINDER_COLLECTION_NAME)
+      .collection(PAYMENT_COLLECTION_NAME)
       .updateOne(
         { token, _destroy: false },
         { $set: { usedAt: Date.now() } }
@@ -103,9 +103,9 @@ const isTokenUsed = async (token) => {
   }
 }
 
-export const paymentReminderModel = {
-  PAYMENT_REMINDER_COLLECTION_NAME,
-  PAYMENT_REMINDER_SCHEMA,
+export const paymentModel = {
+  PAYMENT_COLLECTION_NAME,
+  PAYMENT_SCHEMA,
   createNew,
   findByToken,
   markAsUsed,

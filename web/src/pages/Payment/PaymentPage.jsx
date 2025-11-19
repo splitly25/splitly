@@ -17,7 +17,7 @@ import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-m
 import { formatCurrency } from '~/utils/formatters'
 import { submitReminderPaymentAPI } from '~/apis'
 
-const PaymentReminderPage = () => {
+const PaymentPage = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const token = searchParams.get('token')
@@ -127,7 +127,7 @@ const PaymentReminderPage = () => {
       })
 
       // Show success and redirect
-      navigate('/payment/remind/success')
+      navigate('/payment/pay/success')
     } catch (error) {
       console.error('Payment submission error:', error)
       setErrors({ submit: error.message || 'Có lỗi xảy ra. Vui lòng thử lại.' })
@@ -613,4 +613,4 @@ const PaymentReminderPage = () => {
   )
 }
 
-export default PaymentReminderPage
+export default PaymentPage

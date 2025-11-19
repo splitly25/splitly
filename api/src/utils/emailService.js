@@ -727,7 +727,7 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           ` : ''}
 
           <p style="font-size: 12px; margin-top: 12px; font-style: italic;">
-          Bạn chỉ muốn thanh toán một phần? <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
+          Bạn chỉ muốn thanh toán một phần? <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
         ` : ''}
         
@@ -735,7 +735,7 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận với ${creditorName}.
         </p>
         <div class="login-button">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">
             Xác nhận thanh toán
           </a>
         </div>

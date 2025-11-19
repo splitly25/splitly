@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 
-const PaymentRemindSuccess = () => {
+const PaymentSuccess = () => {
   const navigate = useNavigate()
 
   return (
@@ -65,4 +65,4 @@ const PaymentRemindSuccess = () => {
   )
 }
 
-export default PaymentRemindSuccess
+export default PaymentSuccess
