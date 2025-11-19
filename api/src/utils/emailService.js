@@ -735,7 +735,7 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
         </p>
         <div class="login-button">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">
             Xác nhận thanh toán
           </a>
         </div>
@@ -771,10 +771,11 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendBillCreationEmail = async ({ participantEmail, participantName, payerName, billName, billDescription, totalAmount, participantAmount, items, participants, optOutToken }) => {
+export const sendBillCreationEmail = async ({ participantEmail, participantName, payerName, billName, billDescription, totalAmount, participantAmount, items, participants, optOutToken, paymentToken }) => {
   try {
     // Only send email if SMTP is configured
     if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      console.log('SMTP not configured, skipping bill creation email to', participantEmail)
       return false
     }
 
@@ -815,12 +816,18 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
     <div class="participants-section">
       <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Người tham gia</h3>
       <div class="participants-list">
-        ${participants.map(p => `
-          <div class="participant-row">
-            <span class="participant-name">${p.name}</span>
-            <span class="participant-amount">${p.amount.toLocaleString('vi-VN')}₫</span>
-          </div>
-        `).join('')}
+        <table class="participants-table">
+          ${participants.map(p => `
+            <tr class="participant-row">
+              <td class="participant-name">${p.name}</td>
+              <td class="participant-amount">${p.amount.toLocaleString('vi-VN')}</td>
+            </tr>
+          `).join('')}
+          <tr class="participant-row" style="border-top: 2px solid #e2e8f0; font-weight: 700;">
+            <td class="participant-name">Tổng cộng</td>
+            <td class="participant-amount">${totalAmount.toLocaleString('vi-VN')}₫</td>
+          </tr>
+        </table>
       </div>
     </div>
     ` : ''
@@ -913,36 +920,27 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
       border-radius: 12px;
       padding: 15px;
     }
-    .item-row, .participant-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
+    .participants-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .participant-row {
       border-bottom: 1px solid #e2e8f0;
     }
-    .item-row:last-child, .participant-row:last-child {
+    .participant-row:last-child {
       border-bottom: none;
-    }
-    .item-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .item-name {
-      font-weight: 600;
-      color: #1e293b;
-    }
-    .item-quantity {
-      color: #64748b;
-      font-size: 14px;
-    }
-    .item-amount, .participant-amount {
-      font-weight: 700;
-      color: #667eea;
     }
     .participant-name {
       font-weight: 500;
       color: #1e293b;
+      text-align: left;
+      padding: 10px 0;
+    }
+    .participant-amount {
+      font-weight: 700;
+      color: #667eea;
+      text-align: right;
+      padding: 10px 0;
     }
     .total-card {
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
@@ -982,30 +980,6 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
       font-size: 24px;
       font-weight: 700;
     }
-    .action-buttons {
-      text-align: center;
-      margin: 35px 0;
-    }
-    .action-button {
-      display: inline-block;
-      padding: 14px 30px;
-      border-radius: 16px;
-      font-weight: 600;
-      font-size: 16px;
-      text-decoration: none;
-      margin: 0 8px 12px 8px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s;
-    }
-    .pay-button {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .opt-out-button {
-      background: #f1f5f9;
-      color: #64748b;
-      border: 2px solid #e2e8f0;
-    }
     .footer {
       margin-top: 40px;
       padding-top: 30px;
@@ -1042,26 +1016,18 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
         ${participantsHtml}
 
         <div class="total-card">
-          <div class="total-label">Tổng tiền hóa đơn</div>
-          <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
+          <div class="total-label">Số tiền bạn cần thanh toán cho ${payerName}</div>
+          <div class="total-amount">${participantAmount.toLocaleString('vi-VN')}₫</div>
         </div>
 
-        <div class="amount-highlight">
-          <div class="amount-highlight-text">Số tiền bạn cần thanh toán cho ${payerName}</div>
-          <div class="amount-highlight-value">${participantAmount.toLocaleString('vi-VN')}₫</div>
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${paymentToken}"
+             style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 18px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            Thanh toán ngay
+          </a>
         </div>
 
-        <div class="action-buttons">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?bill=${optOutToken}"
-             class="action-button pay-button">
-            💰 Thanh toán ngay
-          </a>
-          <br>
-          <a href="#"
-             class="action-button opt-out-button">
-            🚪 Không tham gia (Opt out)
-          </a>
-        </div>
+        <p>Bạn không tham gia hóa đơn này? <a href="${env.WEB_URL || 'http://localhost:5173'}/bill/opt-out?token=${optOutToken}">Nhấn vào đây để từ chối.</a></p>
 
         <div class="footer">
           <p>Trân trọng,<br><strong>Splitly Team</strong></p>

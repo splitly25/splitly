@@ -66,14 +66,14 @@ export const remindPaymentAPI = async (remindData) => {
 export const getReminderByTokenAPI = async (token) => {
   // Use regular axios for public API
   const axios = (await import('axios')).default
-  const response = await axios.get(`${API_ROOT}/v1/debts/reminder/${token}`)
+  const response = await axios.get(`${API_ROOT}/v1/debts/payment/${token}`)
   return response.data
 }
 
 export const submitReminderPaymentAPI = async (paymentData) => {
   // Use regular axios for public API
   const axios = (await import('axios')).default
-  const response = await axios.post(`${API_ROOT}/v1/debts/reminder-payment`, paymentData)
+  const response = await axios.post(`${API_ROOT}/v1/debts/payment/submit`, paymentData)
   return response.data
 }
 
