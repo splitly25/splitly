@@ -185,18 +185,21 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   const leng = messages.length;
   messages = messages.map(({ id, time, ...rest }) => rest);
   messages = filter(messages, (msg) => msg.role !== 'notification')
+
+  console.log("Sending messages to Assistant API:", messages);
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
     userId,
     messages
   })
 
-  const result = {
+
+  const assistantResponse = {
     id: leng + 1,
     time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
     ...response.data.response
   }
 
-  console.log("Assistant API Response:", result);
+  console.log("Assistant API Response:", response);
   
-  return result;
+  return { response: assistantResponse, navigation: response.data.navigation };
 }
