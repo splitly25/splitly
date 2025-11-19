@@ -775,6 +775,7 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
   try {
     // Only send email if SMTP is configured
     if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      console.log('SMTP not configured, skipping bill creation email to', participantEmail)
       return false
     }
 

@@ -107,41 +107,68 @@ const createNew = async (reqBody) => {
 
       // Get payer info
       const payer = await userModel.findOneById(reqBody.payerId.toString())
+      if (!payer) {
+        console.warn('Payer not found, skipping email notifications')
+        return getNewBill
+      }
+
+      // Get populated bill data with participant details
+      const populatedBill = await getBillById(createdBill.insertedId.toString())
+
+      // Filter participants (exclude payer)
+      const participantsToEmail = populatedBill.participants
+        .filter(participant => participant._id.toString() !== reqBody.payerId.toString())
+
+      console.log(`Sending bill creation emails to ${participantsToEmail.length} participants`)
+
+      if (participantsToEmail.length === 0) {
+        console.log('No participants to email (all are payers or no participants found)')
+        return getNewBill
+      }
 
       // Send emails to each participant (except payer)
-      const emailPromises = getNewBill.participants
-        .filter(participant => participant._id.toString() !== reqBody.payerId.toString())
-        .map(async (participant) => {
-          // Generate a temporary opt-out token (bill ID for now, can be enhanced later)
-          const optOutToken = createdBill.insertedId.toString()
+      const emailPromises = participantsToEmail.map(async (participant) => {
+        // Generate a temporary opt-out token (bill ID for now, can be enhanced later)
+        const optOutToken = createdBill.insertedId.toString()
 
-          return sendBillCreationEmail({
-            participantEmail: participant.email,
-            participantName: participant.name,
-            payerName: payer.name,
-            billName: reqBody.billName,
-            billDescription: reqBody.description || '',
-            totalAmount: reqBody.totalAmount,
-            participantAmount: participant.amount,
-            items: reqBody.items || [],
-            participants: getNewBill.participants.map(p => ({
-              name: p.name,
-              amount: p.amount
-            })),
-            optOutToken
-          })
+        console.log(`Sending email to ${participant.email} (${participant.name}) for bill ${reqBody.billName}`)
+
+        return sendBillCreationEmail({
+          participantEmail: participant.email,
+          participantName: participant.name,
+          payerName: payer.name,
+          billName: reqBody.billName,
+          billDescription: reqBody.description || '',
+          totalAmount: reqBody.totalAmount,
+          participantAmount: participant.amount,
+          items: reqBody.items || [],
+          participants: populatedBill.participants.map(p => ({
+            name: p.name,
+            amount: p.amount
+          })),
+          optOutToken
         })
+      })
 
       // Send all emails concurrently
       const emailResults = await Promise.allSettled(emailPromises)
       const successCount = emailResults.filter(result => result.status === 'fulfilled' && result.value).length
       const failCount = emailResults.length - successCount
 
+      console.log(`Bill creation email results: ${successCount} sent, ${failCount} failed`)
+
+      // Log any failures
+      emailResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Email failed for ${participantsToEmail[index].email}:`, result.reason)
+        }
+      })
+
       if (successCount > 0) {
         console.log(`Bill creation emails sent successfully: ${successCount} sent, ${failCount} failed`)
       }
     } catch (emailError) {
-      console.warn('Failed to send bill creation emails:', emailError.message)
+      console.error('Failed to send bill creation emails:', emailError)
     }
 
     return getNewBill
