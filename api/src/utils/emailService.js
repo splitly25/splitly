@@ -708,6 +708,10 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
               <td class="bank-label">Chủ tài khoản:</td>
               <td class="bank-value">${creditorName}</td>
             </tr>
+            <tr>
+              <td class="bank-label">Số tiền thanh toán:</td>
+              <td class="bank-value">${totalAmount.toLocaleString('vi-VN')}₫</td>
+            </tr>
           </table>
           
           ${qrCodeUrl ? `
@@ -721,16 +725,18 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
             </table>
           </div>
           ` : ''}
+
+          <p style="font-size: 12px; margin-top: 12px; font-style: italic;">
+          Bạn chỉ muốn thanh toán một phần? <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
         ` : ''}
         
         <p class="action-text">
-          Vui lòng thanh toán để cập nhật trạng thái các hóa đơn.
+          Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận với ${creditorName}.
         </p>
-        
         <div class="login-button">
           <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">
-            Tôi đã thanh toán
+            Xác nhận thanh toán
           </a>
         </div>
         

@@ -12,19 +12,9 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
-import { submitPaymentRequestAPI, submitReminderPaymentAPI } from '~/apis'
+import { submitPaymentRequestAPI } from '~/apis'
 
-const handlePaymentSubmit = async (paymentData) => {
-  try {
-    await submitPaymentRequestAPI(currentUserId, paymentData)
-    await refetch()
-  } catch (error) {
-    console.error('Payment submission failed:', error)
-    throw error
-  }
-}
-
-const PaymentDialog = ({ open, onClose, creditor }) => {
+const PaymentDialog = ({ open, onClose, creditor, currentUserId, refetch }) => {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
@@ -94,20 +84,12 @@ const PaymentDialog = ({ open, onClose, creditor }) => {
   const handleConfirmPayment = async () => {
     setLoading(true)
     try {
-      if (isReminder) {
-        // For reminder payment, use the token-based API
-        await submitReminderPaymentAPI({
-          token,
-          amount: parseFloat(amount),
-          note: note.trim()
-        })
-      } else {
-        await handlePaymentSubmit({
-          creditorId: creditor._id || creditor.userId,
-          amount: parseFloat(amount),
-          note: note.trim()
-        })
-      }
+      await submitPaymentRequestAPI(currentUserId, {
+        creditorId: creditor._id || creditor.userId,
+        amount: parseFloat(amount),
+        note: note.trim()
+      })
+      await refetch()
       
       // Reset form
       setAmount('')
@@ -349,33 +331,31 @@ const PaymentDialog = ({ open, onClose, creditor }) => {
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1 }}>
-              {!isReminder && (
-                <Button
-                  onClick={handleClose}
-                  disabled={loading}
-                  fullWidth
-                  sx={{
-                    py: 1,
-                    borderRadius: '18px',
-                    textTransform: 'none',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: 'text.primary',
+              <Button
+                onClick={handleClose}
+                disabled={loading}
+                fullWidth
+                sx={{
+                  py: 1,
+                  borderRadius: '18px',
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: 'text.primary',
+                  borderColor: 'divider',
+                  '&:hover': {
                     borderColor: 'divider',
-                    '&:hover': {
-                      borderColor: 'divider',
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                    }
-                  }}
-                  variant="outlined"
-                >
-                  Để sau
-                </Button>
-              )}
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+                variant="outlined"
+              >
+                Để sau
+              </Button>
               <Button
                 onClick={handlePaymentClick}
                 disabled={loading}
-                fullWidth={!isReminder}
+                fullWidth
                 startIcon={<CheckCircleIcon />}
                 sx={{
                   py: 1,

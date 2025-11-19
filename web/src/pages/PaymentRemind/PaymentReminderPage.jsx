@@ -316,6 +316,54 @@ const PaymentReminderPage = () => {
                   </Typography>
                 </Box>
 
+                {/* Bills List */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, mb: 2, fontSize: '14px' }}
+                  >
+                    Chi tiết nợ cần thanh toán
+                  </Typography>
+                  <Box sx={{ bgcolor: '#f8fafc', borderRadius: '12px', p: 2 }}>
+                    {reminderData?.bills?.map((bill, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          py: 1,
+                          borderBottom: index < reminderData.bills.length - 1 ? '1px solid #e2e8f0' : 'none'
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontSize: '14px' }}>
+                          {bill.billName}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
+                          {formatCurrency(bill.amount)}
+                        </Typography>
+                      </Box>
+                    ))}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        pt: 2,
+                        mt: 1,
+                        borderTop: '2px solid #e2e8f0'
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
+                        Tổng cộng
+                      </Typography>
+                      <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px', color: 'primary.main' }}>
+                        {formatCurrency(reminderData?.totalAmount || 0)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
                 {/* Amount Input */}
                 <Box sx={{ mb: 3 }}>
                   <Typography

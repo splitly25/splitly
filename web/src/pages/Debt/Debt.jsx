@@ -387,6 +387,8 @@ const Debt = () => {
         open={paymentDialogOpen}
         onClose={() => setPaymentDialogOpen(false)}
         creditor={selectedCreditor}
+        currentUserId={currentUserId}
+        refetch={refetch}
       />
 
       {/* Confirm Payment Dialog */}
