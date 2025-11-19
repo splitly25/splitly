@@ -445,7 +445,7 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills }) => {
+export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills, creditorBankName, creditorBankAccount }) => {
   try {
     // Only send email if SMTP is configured
     if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
@@ -468,6 +468,12 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
 
     // Calculate total amount
     const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0)
+
+    // Generate QR code URL if bank info is available
+    let qrCodeUrl = ''
+    if (creditorBankName && creditorBankAccount && totalAmount > 0) {
+      qrCodeUrl = `https://img.vietqr.io/image/${creditorBankName}-${creditorBankAccount}-qr_only.png?amount=${totalAmount}`
+    }
 
     // Modern HTML email template for reminder
     const htmlContent = `
@@ -584,6 +590,51 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
       margin: 25px 0;
       text-align: center;
     }
+    .bank-info {
+      background: #f5f5f5;
+      border-radius: 18px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bank-info-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+    .bank-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      table-layout: auto;
+    }
+    .bank-table td {
+      padding: 4px 0;
+    }
+    .bank-label {
+      font-size: 14px;
+      color: #64748b;
+      padding-right: 2px;
+      white-space: nowrap;
+    }
+    .bank-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .qr-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .qr-code {
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: white;
+      padding: 8px;
+    }
     .login-button {
       text-align: center;
       margin: 30px 0;
@@ -640,6 +691,38 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           <div class="total-label">Tổng số tiền cần thanh toán</div>
           <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
         </div>
+        
+        ${creditorBankName && creditorBankAccount ? `
+        <div class="bank-info">
+          <div class="bank-info-title">Thông tin chuyển khoản</div>
+          <table class="bank-table">
+            <tr>
+              <td class="bank-label">Ngân hàng:</td>
+              <td class="bank-value">${creditorBankName}</td>
+            </tr>
+            <tr>
+              <td class="bank-label">Số tài khoản:</td>
+              <td class="bank-value">${creditorBankAccount}</td>
+            </tr>
+            <tr>
+              <td class="bank-label">Chủ tài khoản:</td>
+              <td class="bank-value">${creditorName}</td>
+            </tr>
+          </table>
+          
+          ${qrCodeUrl ? `
+          <div class="qr-section">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center" valign="middle" style="padding: 20px 0; min-height: 220px;">
+                  <img src="${qrCodeUrl}" alt="QR Code thanh toán" class="qr-code" />
+                </td>
+              </tr>
+            </table>
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
         
         <p class="action-text">
           Vui lòng thanh toán để cập nhật trạng thái các hóa đơn.

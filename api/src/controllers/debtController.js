@@ -192,7 +192,9 @@ const remindPayment = async (req, res, next) => {
       debtorEmail: debtor.email,
       debtorName: debtor.name,
       creditorName: creditor.name,
-      bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount }))
+      bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount })),
+      creditorBankName: creditor.bankName,
+      creditorBankAccount: creditor.bankAccount
     })
 
     res.status(StatusCodes.OK).json({
