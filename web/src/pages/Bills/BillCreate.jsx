@@ -46,7 +46,6 @@ import {
   searchDataThunk,
   submitBillThunk,
 } from '~/redux/bill/activeBillSlice'
-import { useChatbot } from '~/context/ChatbotContext'
 
 function BillCreate() {
   const navigate = useNavigate()
@@ -137,7 +136,7 @@ function BillCreate() {
 
       // Fill participants if provided
       if (formData.participants && Array.isArray(formData.participants) && formData.participants.length > 0) {
-        const formattedParticipants = formData.participants.map(p => ({
+        const formattedParticipants = formData.participants.map((p) => ({
           id: p.id || p._id,
           name: p.name || '',
           email: p.email || '',
@@ -154,13 +153,15 @@ function BillCreate() {
 
       // Fill items for item-based split
       if (formData.items && Array.isArray(formData.items) && formData.items.length > 0) {
-        formData.items.forEach(itemData => {
-          dispatch(addItem({
-            name: itemData.name || '',
-            amount: itemData.unitPrice || 0,
-            quantity: itemData.quantity || 1,
-            allocatedTo: itemData.allocatedTo || [],
-          }))
+        formData.items.forEach((itemData) => {
+          dispatch(
+            addItem({
+              name: itemData.name || '',
+              amount: itemData.unitPrice || 0,
+              quantity: itemData.quantity || 1,
+              allocatedTo: itemData.allocatedTo || [],
+            })
+          )
         })
       }
 
@@ -500,70 +501,66 @@ function BillCreate() {
 
   // Submit handler
   const handleSubmit = async () => {
-    try {
-      dispatch(setSubmitError(null))
+    dispatch(setSubmitError(null))
 
-      if (!billState.totalAmount || billState.totalAmount <= 0) {
-        dispatch(setSubmitError('Vui lòng nhập số tiền hợp lệ'))
+    if (!billState.totalAmount || billState.totalAmount <= 0) {
+      dispatch(setSubmitError('Vui lòng nhập số tiền hợp lệ'))
+      return
+    }
+
+    // validation?
+    // if (billState.splitType === 'by-person') {
+    //   const isValid = await validateByPersonAmounts()
+    //   if (!isValid) return
+    // }
+    // if (billState.splitType === 'by-item') {
+    //   const isValid = await validateByItemAmounts()
+    //   if (!isValid) return
+    // }
+
+    // Build bill data
+    const billData = {
+      billName: billState.billName,
+      creatorId: currentUser?._id,
+      payerId: billState.payer,
+      totalAmount: parseFloat(billState.totalAmount),
+      paymentDate: billState.creationDate,
+      description: billState.notes,
+      category: billState.category,
+      participants: participants.map((p) => String(p.id)),
+    }
+
+    // Add split type specific data
+    if (billState.splitType === 'equal') {
+      billData.splittingMethod = 'equal'
+    } else if (billState.splitType === 'by-item') {
+      billData.splittingMethod = 'item-based'
+      billData.items = items
+        .filter((item) => item.name && item.amount > 0 && item.allocatedTo.length > 0)
+        .map((item) => ({
+          name: item.name,
+          amount: parseFloat(item.amount),
+          quantity: parseFloat(item.quantity) || 1,
+          allocatedTo: item.allocatedTo.map((id) => String(id)),
+        }))
+
+      if (billData.items.length === 0) {
+        dispatch(setSubmitError('Vui lòng thêm ít nhất một món hàng cho phương thức chia theo món'))
         return
       }
+    } else if (billState.splitType === 'by-person') {
+      billData.splittingMethod = 'people-based'
+      billData.paymentStatus = participants.map((p) => ({
+        userId: String(p.id),
+        amountOwed: parseFloat(p.amount || 0),
+      }))
+    }
 
-      // validation?
-      // if (billState.splitType === 'by-person') {
-      //   const isValid = await validateByPersonAmounts()
-      //   if (!isValid) return
-      // }
-      // if (billState.splitType === 'by-item') {
-      //   const isValid = await validateByItemAmounts()
-      //   if (!isValid) return
-      // }
+    // Submit
+    const result = await dispatch(submitBillThunk(billData))
 
-      // Build bill data
-      const billData = {
-        billName: billState.billName,
-        creatorId: currentUser?._id,
-        payerId: billState.payer,
-        totalAmount: parseFloat(billState.totalAmount),
-        paymentDate: billState.creationDate,
-        description: billState.notes,
-        category: billState.category,
-        participants: participants.map((p) => String(p.id)),
-      }
-
-      // Add split type specific data
-      if (billState.splitType === 'equal') {
-        billData.splittingMethod = 'equal'
-      } else if (billState.splitType === 'by-item') {
-        billData.splittingMethod = 'item-based'
-        billData.items = items
-          .filter((item) => item.name && item.amount > 0 && item.allocatedTo.length > 0)
-          .map((item) => ({
-            name: item.name,
-            amount: parseFloat(item.amount),
-            quantity: parseFloat(item.quantity) || 1,
-            allocatedTo: item.allocatedTo.map((id) => String(id)),
-          }))
-
-        if (billData.items.length === 0) {
-          dispatch(setSubmitError('Vui lòng thêm ít nhất một món hàng cho phương thức chia theo món'))
-          return
-        }
-      } else if (billState.splitType === 'by-person') {
-        billData.splittingMethod = 'people-based'
-        billData.paymentStatus = participants.map((p) => ({
-          userId: String(p.id),
-          amountOwed: parseFloat(p.amount || 0),
-        }))
-      }
-
-      // Submit
-      const result = await dispatch(submitBillThunk(billData))
-
-      if (submitBillThunk.fulfilled.match(result)) {
-        navigate('/history')
-      }
-    } catch (error) {
-      console.error('Error creating bill:', error)
+    if (submitBillThunk.fulfilled.match(result)) {
+      navigate('/history')
     }
   }
 

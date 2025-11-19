@@ -294,11 +294,9 @@ function ByItemSplitDetails({
           />
         ))}
       </Box>
-
-      <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 1.5 }} />
-
+  
       {/* Total */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
         <Typography
           sx={{
             fontSize: '18px',

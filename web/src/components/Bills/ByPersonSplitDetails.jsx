@@ -92,9 +92,9 @@ function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmou
       </Box>
 
       <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 3, mb: 3 }} />
-
+        
       {/* Auto Calculate Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography
           sx={{
             fontSize: '16px',
@@ -120,10 +120,8 @@ function ByPersonSplitDetails({ formData, onFieldChange, participants, totalAmou
         ))}
       </Box>
 
-      <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 1.5 }} />
-
       {/* Total */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
         <Typography
           sx={{
             fontSize: '18px',

@@ -3,7 +3,6 @@ import { Route, Routes, Navigate } from 'react-router-dom'
 import NotFound from './pages/404/NotFound'
 import Auth from './pages/Auth/Auth'
 import Dashboard from './pages/Dashboard'
-import Groups from './pages/Groups'
 import History from './pages/History'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from './redux/user/userSlice'
@@ -13,6 +12,7 @@ import AccountVerification from './pages/Auth/AccountVerification'
 import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
 import { Ocr, Bills } from "./pages/Bills"
 import BillDetail from './pages/Bills/BillDetail'
+import Group from './pages/Groups/Group'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -27,7 +27,8 @@ function App() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/groups" element={<Groups />} />
+        <Route path="/groups" element={<Group />} />
+        {/* <Route path="/groups/:groupId" element={<GroupDetail />} /> */}
         <Route path="/history" element={<History />} />
         <Route path="/debt" element={<Debt />} />
         <Route path="/boards/:boardId" element={<Board />} />

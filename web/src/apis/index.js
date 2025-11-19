@@ -157,6 +157,34 @@ export const fetchGroupsAPI = async (page = 1, limit = 10, search = '') => {
   return response.data
 }
 
+export const createGroupAPI = async (groupData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/groups`, groupData)
+  toast.success('Nhóm đã được tạo thành công!')
+  return response.data
+}
+
+export const updateGroupAPI = async (groupId, groupData) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}`, groupData)
+  toast.success('Nhóm đã được cập nhật thành công!')
+  return response.data
+}
+
+export const deleteGroupAPI = async (groupId) => {
+  const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/groups/${groupId}`)
+  toast.success('Nhóm đã được xóa thành công!')
+  return response.data
+}
+
+export const updateGroupMembersAPI = async (groupId, memberIds) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}/members`, { memberIds })
+  return response.data
+}
+
+export const getGroupAndMembersAPI = async (groupId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/getGroupAndMembers/${groupId}`)
+  return response.data
+}
+
 // OCR Bill
 export const sendOcrBillAPI = async (imageData, userId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills/scan`, {
