@@ -57,6 +57,26 @@ export const submitPaymentRequestAPI = async (userId, paymentData) => {
   return response.data
 }
 
+export const remindPaymentAPI = async (remindData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/remind-payment`, remindData)
+  toast.success('Nhắc nhở thanh toán đã được gửi thành công!', { theme: 'colored' })
+  return response.data
+}
+
+export const getReminderByTokenAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/debts/reminder/${token}`)
+  return response.data
+}
+
+export const submitReminderPaymentAPI = async (paymentData) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.post(`${API_ROOT}/v1/debts/reminder-payment`, paymentData)
+  return response.data
+}
+
 // ============================================
 // USERS APIs
 // ============================================
@@ -172,13 +192,17 @@ export const sendOcrBillAPI = async (imageData, userId) => {
 
 // Verify payment confirmation token
 export const verifyPaymentTokenAPI = async (token) => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
   return response.data
 }
 
 // Confirm or reject payment
 export const confirmPaymentAPI = async (token, isConfirmed) => {
-  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
     token,
     isConfirmed,
   })

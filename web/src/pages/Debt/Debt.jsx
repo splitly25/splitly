@@ -26,6 +26,7 @@ import { formatCurrency } from '~/utils/formatters'
 import { useDebt } from '~/hooks/useDebt'
 import PaymentDialog from './PaymentDialog'
 import ConfirmPaymentDialog from './ConfirmPaymentDialog'
+import RemindDialog from './RemindDialog'
 
 // Summary Card Component
 const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
@@ -225,6 +226,8 @@ const Debt = () => {
   const [selectedCreditor, setSelectedCreditor] = useState(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState(null)
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false)
+  const [selectedRemindDebtor, setSelectedRemindDebtor] = useState(null)
   
   // Get current user from Redux store
   const currentUser = useSelector(selectCurrentUser)
@@ -238,8 +241,8 @@ const Debt = () => {
   }
 
   const handleRemindClick = (debtor) => {
-    console.log('Remind:', debtor)
-    // TODO: Implement remind functionality
+    setSelectedRemindDebtor(debtor)
+    setRemindDialogOpen(true)
   }
 
   const handleConfirmPayment = (debtor) => {
@@ -384,6 +387,8 @@ const Debt = () => {
         open={paymentDialogOpen}
         onClose={() => setPaymentDialogOpen(false)}
         creditor={selectedCreditor}
+        currentUserId={currentUserId}
+        refetch={refetch}
       />
 
       {/* Confirm Payment Dialog */}
@@ -395,6 +400,14 @@ const Debt = () => {
         defaultAmount={selectedDebtor?.totalAmount}
         bills={selectedDebtor?.bills || []}
         refetch={refetch}
+      />
+
+      {/* Remind Dialog */}
+      <RemindDialog
+        open={remindDialogOpen}
+        onClose={() => setRemindDialogOpen(false)}
+        debtor={selectedRemindDebtor}
+        creditorId={currentUserId}
       />
     </Layout>
   )
