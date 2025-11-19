@@ -12,7 +12,7 @@ import { pickUser } from '~/utils/formatters'
  * @param {string} creatorId - Creator user ID
  * @returns {Promise<Object>} Created group
  */
-const createNew = async (reqBody, creatorId) => {
+const createNew = async (creatorId, reqBody) => {
   try {
     // Ensure creator is in members list
     const members = reqBody.members || []
@@ -93,13 +93,6 @@ const findOneById = async (groupId) => {
   }
 }
 
-/**
- * Update group with activity logging
- * @param {string} groupId - Group ID
- * @param {Object} updateData - Data to update
- * @param {string} updatedBy - User ID who updates
- * @returns {Promise<Object>} Updated group
- */
 const update = async (groupId, updateData, updatedBy) => {
   try {
     // Get original group data for activity logging
@@ -317,6 +310,26 @@ const fetchGroups = async (page = 1, limit = 10, search = '') => {
   }
 }
 
+const updateGroup = async (groupId, reqBody) => {
+  try {
+    const updateData = {
+      ...reqBody,
+    }
+    const updatedGroup = await groupModel.update(groupId, updateData)
+    return updatedGroup
+  } catch (error) {
+    throw error
+  }
+}
+
+const deleteGroup = async (groupId) => {
+  try {
+    await groupModel.deleteOneById(groupId)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const groupService = {
   createNew,
   getAll,
@@ -331,4 +344,6 @@ export const groupService = {
   getAllGroupsAndMembers,
   getGroupsByUserId,
   fetchGroups,
+  updateGroup,
+  deleteGroup,
 }
