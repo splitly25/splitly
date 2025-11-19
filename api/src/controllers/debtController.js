@@ -186,6 +186,17 @@ const remindPayment = async (req, res, next) => {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
 
+    // Create reminder token
+    const { paymentReminderModel } = await import('~/models/paymentReminderModel.js')
+    const token = `remind_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    await paymentReminderModel.createNew({
+      token,
+      creditorId,
+      debtorId,
+      bills: debt.bills.map(b => ({ billId: b.billId, billName: b.billName, amount: b.remainingAmount })),
+      totalAmount: debt.bills.reduce((sum, b) => sum + b.remainingAmount, 0)
+    })
+
     // Send reminder email
     const { sendPaymentReminderEmail } = await import('~/utils/emailService.js')
     const emailSent = await sendPaymentReminderEmail({
@@ -194,7 +205,8 @@ const remindPayment = async (req, res, next) => {
       creditorName: creditor.name,
       bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount })),
       creditorBankName: creditor.bankName,
-      creditorBankAccount: creditor.bankAccount
+      creditorBankAccount: creditor.bankAccount,
+      reminderToken: token
     })
 
     res.status(StatusCodes.OK).json({
@@ -207,11 +219,104 @@ const remindPayment = async (req, res, next) => {
   }
 }
 
+/**
+ * Get payment reminder details by token (public)
+ */
+const getReminderByToken = async (req, res, next) => {
+  try {
+    const { token } = req.params
+
+    const { paymentReminderModel } = await import('~/models/paymentReminderModel.js')
+    const reminder = await paymentReminderModel.findByToken(token)
+
+    if (!reminder) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Reminder not found or expired')
+    }
+
+    // Get user info
+    const [creditor, debtor] = await Promise.all([
+      (await import('~/models/userModel.js')).userModel.findOneById(reminder.creditorId),
+      (await import('~/models/userModel.js')).userModel.findOneById(reminder.debtorId)
+    ])
+
+    if (!creditor || !debtor) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Check if token has been used
+    if (reminder.usedAt) {
+      return res.status(StatusCodes.OK).json({
+        isUsed: true,
+        usedMessage: `Bạn đã xác nhận thanh toán cho ${creditor.name} trước đó.<br>Vui lòng đăng nhập để xem chi tiết.`,
+        creditor: {
+          name: creditor.name
+        }
+      })
+    }
+
+    res.status(StatusCodes.OK).json({
+      creditor: {
+        _id: creditor._id,
+        name: creditor.name,
+        email: creditor.email,
+        bankName: creditor.bankName,
+        bankAccount: creditor.bankAccount
+      },
+      debtor: {
+        _id: debtor._id,
+        name: debtor.name,
+        email: debtor.email
+      },
+      bills: reminder.bills,
+      totalAmount: reminder.totalAmount,
+      token
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Submit payment from reminder (public)
+ */
+const submitReminderPayment = async (req, res, next) => {
+  try {
+    const { token, amount, note } = req.body
+
+    const { paymentReminderModel } = await import('~/models/paymentReminderModel.js')
+    const reminder = await paymentReminderModel.findByToken(token)
+
+    if (!reminder) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Reminder not found or expired')
+    }
+
+    if (reminder.usedAt) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'This reminder has already been used')
+    }
+
+    // Mark reminder as used
+    await paymentReminderModel.markAsUsed(token)
+
+    // Process the payment as if debtor initiated it
+    const result = await debtService.initiatePayment(reminder.debtorId, reminder.creditorId, amount, note)
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Payment submitted successfully',
+      result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
   getDebtSummary,
   initiatePayment,
   confirmPayment,
-  remindPayment
+  remindPayment,
+  getReminderByToken,
+  submitReminderPayment
 }

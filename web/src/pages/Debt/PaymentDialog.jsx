@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
-import { submitPaymentRequestAPI } from '~/apis'
+import { submitPaymentRequestAPI, submitReminderPaymentAPI } from '~/apis'
 
 const handlePaymentSubmit = async (paymentData) => {
   try {
@@ -94,11 +94,20 @@ const PaymentDialog = ({ open, onClose, creditor }) => {
   const handleConfirmPayment = async () => {
     setLoading(true)
     try {
-      await handlePaymentSubmit({
-        creditorId: creditor.userId,
-        amount: parseFloat(amount),
-        note: note.trim()
-      })
+      if (isReminder) {
+        // For reminder payment, use the token-based API
+        await submitReminderPaymentAPI({
+          token,
+          amount: parseFloat(amount),
+          note: note.trim()
+        })
+      } else {
+        await handlePaymentSubmit({
+          creditorId: creditor._id || creditor.userId,
+          amount: parseFloat(amount),
+          note: note.trim()
+        })
+      }
       
       // Reset form
       setAmount('')
@@ -340,31 +349,33 @@ const PaymentDialog = ({ open, onClose, creditor }) => {
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                onClick={handleClose}
-                disabled={loading}
-                fullWidth
-                sx={{
-                  py: 1,
-                  borderRadius: '18px',
-                  textTransform: 'none',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: 'text.primary',
-                  borderColor: 'divider',
-                  '&:hover': {
+              {!isReminder && (
+                <Button
+                  onClick={handleClose}
+                  disabled={loading}
+                  fullWidth
+                  sx={{
+                    py: 1,
+                    borderRadius: '18px',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: 'text.primary',
                     borderColor: 'divider',
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-                variant="outlined"
-              >
-                Để sau
-              </Button>
+                    '&:hover': {
+                      borderColor: 'divider',
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
+                  variant="outlined"
+                >
+                  Để sau
+                </Button>
+              )}
               <Button
                 onClick={handlePaymentClick}
                 disabled={loading}
-                fullWidth
+                fullWidth={!isReminder}
                 startIcon={<CheckCircleIcon />}
                 sx={{
                   py: 1,

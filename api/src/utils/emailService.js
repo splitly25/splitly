@@ -445,7 +445,7 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills, creditorBankName, creditorBankAccount }) => {
+export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills, creditorBankName, creditorBankAccount, reminderToken }) => {
   try {
     // Only send email if SMTP is configured
     if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
@@ -729,8 +729,8 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
         </p>
         
         <div class="login-button">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/login">
-            Đăng nhập để thanh toán
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">
+            Tôi đã thanh toán
           </a>
         </div>
         

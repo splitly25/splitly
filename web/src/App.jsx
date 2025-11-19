@@ -13,6 +13,8 @@ import AccountVerification from './pages/Auth/AccountVerification'
 import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
 import { Ocr, Bills } from "./pages/Bills"
 import BillDetail from './pages/Bills/BillDetail'
+import PaymentRemind from './pages/PaymentRemind/PaymentRemind'
+import PaymentRemindSuccess from './pages/PaymentRemind/PaymentRemindSuccess'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -43,6 +45,8 @@ function App() {
       
       {/* Public Routes (no authentication required) */}
       <Route path="/payment/confirm" element={<PaymentConfirmation />} />
+      <Route path="/payment/remind" element={<PaymentRemind />} />
+      <Route path="/payment/remind/success" element={<PaymentRemindSuccess />} />
       
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
