@@ -100,7 +100,50 @@ const createNew = async (reqBody) => {
         console.warn('Failed to log bill creation activity:', activityError.message)
       }
     }
-    
+
+    // Send email notifications to all participants except the payer
+    try {
+      const { sendBillCreationEmail } = await import('~/utils/emailService.js')
+
+      // Get payer info
+      const payer = await userModel.findOneById(reqBody.payerId.toString())
+
+      // Send emails to each participant (except payer)
+      const emailPromises = getNewBill.participants
+        .filter(participant => participant._id.toString() !== reqBody.payerId.toString())
+        .map(async (participant) => {
+          // Generate a temporary opt-out token (bill ID for now, can be enhanced later)
+          const optOutToken = createdBill.insertedId.toString()
+
+          return sendBillCreationEmail({
+            participantEmail: participant.email,
+            participantName: participant.name,
+            payerName: payer.name,
+            billName: reqBody.billName,
+            billDescription: reqBody.description || '',
+            totalAmount: reqBody.totalAmount,
+            participantAmount: participant.amount,
+            items: reqBody.items || [],
+            participants: getNewBill.participants.map(p => ({
+              name: p.name,
+              amount: p.amount
+            })),
+            optOutToken
+          })
+        })
+
+      // Send all emails concurrently
+      const emailResults = await Promise.allSettled(emailPromises)
+      const successCount = emailResults.filter(result => result.status === 'fulfilled' && result.value).length
+      const failCount = emailResults.length - successCount
+
+      if (successCount > 0) {
+        console.log(`Bill creation emails sent successfully: ${successCount} sent, ${failCount} failed`)
+      }
+    } catch (emailError) {
+      console.warn('Failed to send bill creation emails:', emailError.message)
+    }
+
     return getNewBill
   } catch (error) {
     throw error

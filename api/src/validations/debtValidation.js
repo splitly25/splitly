@@ -59,8 +59,25 @@ const confirmPayment = async (req, res, next) => {
   }
 }
 
+const remindPayment = async (req, res, next) => {
+  const correctCondition = Joi.object({
+    creditorId: Joi.string().required(),
+    debtorId: Joi.string().required()
+  })
+
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
+  } catch (error) {
+    const errorMessage = new Error(error).message
+    const customError = new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, errorMessage)
+    next(customError)
+  }
+}
+
 export const debtValidation = {
   getUserDebts,
   initiatePayment,
-  confirmPayment
+  confirmPayment,
+  remindPayment
 }

@@ -21,4 +21,12 @@ Router.post('/:userId/payment', authMiddleware.isAuthorized, debtValidation.getU
 // Confirm payment (in-app, not via email token)
 Router.post('/:userId/confirm-payment', authMiddleware.isAuthorized, debtValidation.getUserDebts, debtValidation.confirmPayment, debtController.confirmPayment)
 
+Router.post('/remind-payment', authMiddleware.isAuthorized, debtValidation.remindPayment, debtController.remindPayment)
+
+// Get payment reminder details by token (public route)
+Router.get('/reminder/:token', debtController.getReminderByToken)
+
+// Submit payment from reminder (public route)
+Router.post('/reminder-payment', debtController.submitReminderPayment)
+
 export const debtRoute = Router

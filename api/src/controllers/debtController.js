@@ -154,10 +154,218 @@ const confirmPayment = async (req, res, next) => {
   }
 }
 
+/**
+ * Send payment reminder to debtor
+ * Body: { creditorId, debtorId }
+ * Only creditor can send reminder
+ */
+const remindPayment = async (req, res, next) => {
+  try {
+    const { creditorId, debtorId } = req.body
+
+    // Security: Only creditor can send reminder
+    if (req.jwtDecoded._id !== creditorId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only send reminders for debts owed to you')
+    }
+
+    // Get debts owed to creditor
+    const debts = await debtService.getDebtsOwedToMe(creditorId)
+
+    // Find the debt for the debtor
+    const debt = debts.find(d => d.userId === debtorId)
+    if (!debt || debt.bills.length === 0) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'No outstanding debts found for this user')
+    }
+
+    // Get user info
+    const [creditor, debtor] = await Promise.all([
+      (await import('~/models/userModel.js')).userModel.findOneById(creditorId),
+      (await import('~/models/userModel.js')).userModel.findOneById(debtorId)
+    ])
+    if (!creditor || !debtor) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Create JWT token payload
+    const payload = {
+      creditorId,
+      debtorId,
+      bills: debt.bills.map(b => ({ billId: b.billId, billName: b.billName, amount: b.remainingAmount })),
+      totalAmount: debt.bills.reduce((sum, b) => sum + b.remainingAmount, 0),
+      type: 'payment_reminder'
+    }
+
+    // Generate JWT token with 7 days expiration
+    const { JwtProvider } = await import('~/providers/JwtProvider.js')
+    const { env } = await import('~/config/environment.js')
+    const token = await JwtProvider.generateToken(
+      payload,
+      env.ACCESS_JWT_SECRET_KEY,
+      '7d' // 7 days
+    )
+
+    // Store the token in database to prevent reuse
+    const { paymentModel } = await import('~/models/paymentModel.js')
+    await paymentModel.createNew({
+      token,
+      creditorId,
+      debtorId,
+      bills: debt.bills.map(b => ({ billId: b.billId, billName: b.billName, amount: b.remainingAmount })),
+      totalAmount: debt.bills.reduce((sum, b) => sum + b.remainingAmount, 0)
+    })
+
+    // Send reminder email
+    const { sendPaymentReminderEmail } = await import('~/utils/emailService.js')
+    const emailSent = await sendPaymentReminderEmail({
+      debtorEmail: debtor.email,
+      debtorName: debtor.name,
+      creditorName: creditor.name,
+      bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount })),
+      creditorBankName: creditor.bankName,
+      creditorBankAccount: creditor.bankAccount,
+      reminderToken: token
+    })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      emailSent,
+      message: 'Payment reminder sent successfully'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Get payment reminder details by token (public)
+ */
+const getReminderByToken = async (req, res, next) => {
+  try {
+    const { token } = req.params
+
+    // Verify JWT token
+    const { JwtProvider } = await import('~/providers/JwtProvider.js')
+    const { env } = await import('~/config/environment.js')
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+    } catch (error) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token')
+    }
+
+    // Check token type
+    if (decoded.type !== 'payment_reminder') {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token type')
+    }
+
+    // Check database for usage status
+    const { paymentModel } = await import('~/models/paymentModel.js')
+    const reminder = await paymentModel.findByToken(token)
+
+    if (!reminder) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Reminder not found')
+    }
+
+    // Get user info
+    const [creditor, debtor] = await Promise.all([
+      (await import('~/models/userModel.js')).userModel.findOneById(decoded.creditorId),
+      (await import('~/models/userModel.js')).userModel.findOneById(decoded.debtorId)
+    ])
+
+    if (!creditor || !debtor) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Check if token has been used
+    if (reminder.usedAt) {
+      return res.status(StatusCodes.OK).json({
+        isUsed: true,
+        usedMessage: `Bạn đã xác nhận thanh toán cho ${creditor.name} trước đó.<br>Vui lòng đăng nhập để xem chi tiết.`,
+        creditor: {
+          name: creditor.name
+        }
+      })
+    }
+
+    res.status(StatusCodes.OK).json({
+      creditor: {
+        _id: creditor._id,
+        name: creditor.name,
+        email: creditor.email,
+        bankName: creditor.bankName,
+        bankAccount: creditor.bankAccount
+      },
+      debtor: {
+        _id: debtor._id,
+        name: debtor.name,
+        email: debtor.email
+      },
+      bills: decoded.bills,
+      totalAmount: decoded.totalAmount,
+      token
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Submit payment from reminder (public)
+ */
+const submitReminderPayment = async (req, res, next) => {
+  try {
+    const { token, amount, note } = req.body
+
+    // Verify JWT token
+    const { JwtProvider } = await import('~/providers/JwtProvider.js')
+    const { env } = await import('~/config/environment.js')
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+    } catch (error) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token')
+    }
+
+    // Check token type
+    if (decoded.type !== 'payment_reminder') {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token type')
+    }
+
+    // Check database for usage status
+    const { paymentModel } = await import('~/models/paymentModel.js')
+    const reminder = await paymentModel.findByToken(token)
+
+    if (!reminder) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Reminder not found')
+    }
+
+    if (reminder.usedAt) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'This reminder has already been used')
+    }
+
+    // Mark reminder as used
+    await paymentModel.markAsUsed(token)
+
+    // Process the payment as if debtor initiated it
+    const result = await debtService.initiatePayment(decoded.debtorId, decoded.creditorId, amount, note)
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Payment submitted successfully',
+      result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
   getDebtSummary,
   initiatePayment,
-  confirmPayment
+  confirmPayment,
+  remindPayment,
+  getReminderByToken,
+  submitReminderPayment
 }

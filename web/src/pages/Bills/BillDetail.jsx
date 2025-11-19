@@ -347,7 +347,7 @@ const BillDetail = () => {
                   sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
                   color="text.secondary"
                 >
-                  Chưa thanh toán
+                  Quay lại
                 </Typography>
               </Box>
               <Typography
