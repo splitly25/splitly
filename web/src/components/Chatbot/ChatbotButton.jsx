@@ -55,7 +55,7 @@ const Chatbot = ({ isOpen, setIsOpen, numberOfNotifications, newMessage, setNewM
             )}
 
             {/* Animation styles */}
-            <style jsx>{`
+            <style>{`
                 @keyframes slideIn {
                     from {
                         opacity: 0;
