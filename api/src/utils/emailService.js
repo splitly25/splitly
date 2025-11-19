@@ -726,16 +726,16 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           </div>
           ` : ''}
 
-          <p style="font-size: 12px; margin-top: 12px; font-style: italic;">
+          <p style="font-size: 12px; margin-top: 12px; font-style: italic; text-align: center;">
           Bạn chỉ muốn thanh toán một phần? <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
         ` : ''}
         
         <p class="action-text">
-          Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận với ${creditorName}.
+          Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
         </p>
         <div class="login-button">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/remind?token=${reminderToken}">
             Xác nhận thanh toán
           </a>
         </div>
@@ -762,6 +762,329 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
     return true
   } catch (error) {
     console.error('Failed to send payment reminder email:', error)
+    return false
+  }
+}
+
+/**
+ * Send bill creation notification email to participants (except payer)
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendBillCreationEmail = async ({ participantEmail, participantName, payerName, billName, billDescription, totalAmount, participantAmount, items, participants, optOutToken }) => {
+  try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
+    // Generate bill details HTML
+    const billDetailsHtml = items && items.length > 0 ? `
+    <div class="bill-details">
+      <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Chi tiết hóa đơn</h3>
+      <div class="items-list">
+        ${items.map(item => `
+          <div class="item-row">
+            <div class="item-info">
+              <span class="item-name">${item.name}</span>
+              ${item.quantity ? `<span class="item-quantity">x${item.quantity}</span>` : ''}
+            </div>
+            <div class="item-amount">${item.amount.toLocaleString('vi-VN')}₫</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''
+
+    // Generate participants list HTML
+    const participantsHtml = participants && participants.length > 0 ? `
+    <div class="participants-section">
+      <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Người tham gia</h3>
+      <div class="participants-list">
+        ${participants.map(p => `
+          <div class="participant-row">
+            <span class="participant-name">${p.name}</span>
+            <span class="participant-amount">${p.amount.toLocaleString('vi-VN')}₫</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''
+
+    // Modern HTML email template for bill creation
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bill-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bill-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .bill-description {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .bill-details h3, .participants-section h3 {
+      color: #1e293b;
+      font-size: 18px;
+      margin: 25px 0 15px 0;
+    }
+    .items-list, .participants-list {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 15px;
+    }
+    .item-row, .participant-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .item-row:last-child, .participant-row:last-child {
+      border-bottom: none;
+    }
+    .item-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .item-name {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .item-quantity {
+      color: #64748b;
+      font-size: 14px;
+    }
+    .item-amount, .participant-amount {
+      font-weight: 700;
+      color: #667eea;
+    }
+    .participant-name {
+      font-weight: 500;
+      color: #1e293b;
+    }
+    .total-card {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .total-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .total-amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 10px 0;
+    }
+    .amount-highlight {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      margin: 25px 0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .amount-highlight-text {
+      font-size: 16px;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+    .amount-highlight-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .action-buttons {
+      text-align: center;
+      margin: 35px 0;
+    }
+    .action-button {
+      display: inline-block;
+      padding: 14px 30px;
+      border-radius: 16px;
+      font-weight: 600;
+      font-size: 16px;
+      text-decoration: none;
+      margin: 0 8px 12px 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+    }
+    .pay-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .opt-out-button {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 2px solid #e2e8f0;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">📄</div>
+        <h1>Bạn đã được thêm vào hóa đơn</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${participantName}</strong>,</p>
+        <p class="message">
+          Bạn đã được <strong>${payerName}</strong> thêm vào hóa đơn trên Splitly.
+        </p>
+
+        <div class="bill-info">
+          <div class="bill-title">${billName}</div>
+          ${billDescription ? `<div class="bill-description">${billDescription}</div>` : ''}
+        </div>
+
+        ${billDetailsHtml}
+
+        ${participantsHtml}
+
+        <div class="total-card">
+          <div class="total-label">Tổng tiền hóa đơn</div>
+          <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <div class="amount-highlight">
+          <div class="amount-highlight-text">Số tiền bạn cần thanh toán cho ${payerName}</div>
+          <div class="amount-highlight-value">${participantAmount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <div class="action-buttons">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?bill=${optOutToken}"
+             class="action-button pay-button">
+            💰 Thanh toán ngay
+          </a>
+          <br>
+          <a href="#"
+             class="action-button opt-out-button">
+            🚪 Không tham gia (Opt out)
+          </a>
+        </div>
+
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: participantEmail,
+      subject: `📄 Bạn đã được thêm vào hóa đơn "${billName}"`,
+      html: htmlContent
+    })
+
+    console.log(`Bill creation email sent successfully to ${participantEmail}`)
+    return true
+  } catch (error) {
+    console.error('Failed to send bill creation email:', error)
     return false
   }
 }
