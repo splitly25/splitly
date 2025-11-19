@@ -1021,7 +1021,7 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
         </div>
 
         <div style="text-align: center; margin: 35px 0;">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${paymentToken}"
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${paymentToken}&bill=${billId}"
              style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 18px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             Thanh toán ngay
           </a>

@@ -21,6 +21,7 @@ const PaymentPage = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const token = searchParams.get('token')
+  const bill = searchParams.get('bill')
 
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
@@ -35,6 +36,7 @@ const PaymentPage = () => {
   const [isUsed, setIsUsed] = useState(false)
   const [usedMessage, setUsedMessage] = useState('')
   const [isInvalidToken, setIsInvalidToken] = useState(false)
+  const [showAllBills, setShowAllBills] = useState(false)
 
   // Fetch reminder data on mount
   useEffect(() => {
@@ -55,7 +57,12 @@ const PaymentPage = () => {
           setUsedMessage(data.usedMessage)
         } else {
           setReminderData(data)
-          setAmount(data.totalAmount.toString())
+          // Set amount based on whether we're showing filtered or all bills
+          const hasMatchingBill = bill && data.bills?.some(b => b.billId === bill)
+          const initialAmount = bill && hasMatchingBill
+            ? data.bills.filter(b => b.billId === bill).reduce((sum, b) => sum + b.amount, 0)
+            : data.totalAmount
+          setAmount(initialAmount.toString())
         }
       } catch (err) {
         // Check if it's an invalid token (401) error
@@ -112,6 +119,8 @@ const PaymentPage = () => {
       newErrors.amount = 'Vui lòng nhập số tiền'
     } else if (parseFloat(amount) <= 0) {
       newErrors.amount = 'Số tiền phải lớn hơn 0'
+    } else if (parseFloat(amount) > displayTotalAmount) {
+      newErrors.amount = `Số tiền không được vượt quá ${formatCurrency(displayTotalAmount)}`
     }
 
     setErrors(newErrors)
@@ -129,7 +138,8 @@ const PaymentPage = () => {
       await submitReminderPaymentAPI({
         token,
         amount: parseFloat(amount),
-        note: note.trim()
+        note: note.trim(),
+        priorityBill: bill || null
       })
 
       // Show success and redirect
@@ -309,6 +319,30 @@ const PaymentPage = () => {
 
   const creditor = reminderData?.creditor
 
+  // Filter bills based on bill parameter and showAllBills state
+  const hasMatchingBill = bill && reminderData?.bills?.some(b => b.billId === bill)
+  const displayFilteredBills = bill && hasMatchingBill && !showAllBills
+    ? reminderData?.bills?.filter(b => b.billId === bill)
+    : reminderData?.bills
+  const displayTotalAmount = bill && hasMatchingBill && !showAllBills
+    ? displayFilteredBills?.reduce((sum, b) => sum + b.amount, 0)
+    : reminderData?.totalAmount
+
+  // Calculate additional bills count
+  const additionalBillsCount = bill && hasMatchingBill && !showAllBills
+    ? (reminderData?.bills?.length || 0) - (displayFilteredBills?.length || 0)
+    : 0
+
+  const handleShowAllBills = () => {
+    setShowAllBills(true)
+    // Update amount to full total when showing all bills
+    setAmount((reminderData?.totalAmount || 0).toString())
+    // Clear any amount validation errors
+    if (errors.amount) {
+      setErrors({ ...errors, amount: '' })
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -391,7 +425,7 @@ const PaymentPage = () => {
                     Chi tiết nợ cần thanh toán
                   </Typography>
                   <Box sx={{ bgcolor: '#f8fafc', borderRadius: '12px', p: 2 }}>
-                    {reminderData?.bills?.map((bill, index) => (
+                    {displayFilteredBills?.map((bill, index) => (
                       <Box
                         key={index}
                         sx={{
@@ -399,7 +433,7 @@ const PaymentPage = () => {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           py: 1,
-                          borderBottom: index < reminderData.bills.length - 1 ? '1px solid #e2e8f0' : 'none'
+                          borderBottom: index < displayFilteredBills.length - 1 ? '1px solid #e2e8f0' : 'none'
                         }}
                       >
                         <Typography variant="body2" sx={{ fontSize: '14px' }}>
@@ -424,10 +458,28 @@ const PaymentPage = () => {
                         Tổng cộng
                       </Typography>
                       <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px', color: 'primary.main' }}>
-                        {formatCurrency(reminderData?.totalAmount || 0)}
+                        {formatCurrency(displayTotalAmount || 0)}
                       </Typography>
                     </Box>
                   </Box>
+                  {/* Show additional bills toggle */}
+                  {additionalBillsCount > 0 && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mt: 1,
+                        color: 'primary.main',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        fontStyle: 'italic'
+                      }}
+                      onClick={handleShowAllBills}
+                    >
+                      Nhấn vào đây để hiển thị thêm {additionalBillsCount} hóa đơn khác chưa thanh toán
+                    </Typography>
+                  )}
                 </Box>
 
                 {/* Amount Input */}
@@ -466,7 +518,7 @@ const PaymentPage = () => {
                     }}
                   />
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '12px' }}>
-                    Tổng nợ: {formatCurrency(reminderData?.totalAmount || 0)}
+                    Tổng nợ: {formatCurrency(displayTotalAmount || 0)}
                   </Typography>
                 </Box>
 

@@ -159,6 +159,7 @@ const createNew = async (reqBody) => {
           participantEmail: participant.email,
           participantName: participant.name,
           payerName: payer.name,
+          billId: createdBill.insertedId.toString(),
           billName: reqBody.billName,
           billDescription: reqBody.description || '',
           totalAmount: reqBody.totalAmount,

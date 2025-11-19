@@ -371,7 +371,7 @@ const getPaymentByToken = async (req, res, next) => {
  */
 const submitPayment = async (req, res, next) => {
   try {
-    const { token, amount, note } = req.body
+    const { token, amount, note, priorityBill } = req.body
 
     // First, try to find in paymentModel (for bill payments)
     const { paymentModel } = await import('~/models/paymentModel.js')
@@ -389,7 +389,7 @@ const submitPayment = async (req, res, next) => {
       await paymentModel.markAsUsed(token)
 
       // Process the payment
-      const result = await debtService.initiatePayment(debtorId.toString(), creditorId.toString(), amount, note)
+      const result = await debtService.initiatePayment(debtorId.toString(), creditorId.toString(), amount, note, priorityBill)
 
       res.status(StatusCodes.OK).json({
         success: true,
@@ -427,7 +427,7 @@ const submitPayment = async (req, res, next) => {
       await paymentModel.markAsUsed(token)
 
       // Process the payment as if debtor initiated it
-      const result = await debtService.initiatePayment(decoded.debtorId, decoded.creditorId, amount, note)
+      const result = await debtService.initiatePayment(decoded.debtorId, decoded.creditorId, amount, note, priorityBill)
 
       res.status(StatusCodes.OK).json({
         success: true,
