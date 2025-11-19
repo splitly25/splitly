@@ -34,6 +34,7 @@ const PaymentPage = () => {
   const [fetchError, setFetchError] = useState(null)
   const [isUsed, setIsUsed] = useState(false)
   const [usedMessage, setUsedMessage] = useState('')
+  const [isInvalidToken, setIsInvalidToken] = useState(false)
 
   // Fetch reminder data on mount
   useEffect(() => {
@@ -57,7 +58,12 @@ const PaymentPage = () => {
           setAmount(data.totalAmount.toString())
         }
       } catch (err) {
-        setFetchError('Không thể tải thông tin nhắc nhở. Vui lòng thử lại.')
+        // Check if it's an invalid token (401) error
+        if (err.response?.status === 401) {
+          setIsInvalidToken(true)
+        } else {
+          setFetchError('Không thể tải thông tin nhắc nhở. Vui lòng thử lại.')
+        }
       } finally {
         setFetching(false)
       }
@@ -233,6 +239,66 @@ const PaymentPage = () => {
                 }}
               >
                 Đăng nhập
+              </Button>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
+    )
+  }
+
+  if (isInvalidToken) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 3
+        }}
+      >
+        <Container maxWidth="sm">
+          <Card
+            sx={{
+              borderRadius: '24px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  mb: 2,
+                  fontFamily: "'Nunito Sans', sans-serif"
+                }}
+              >
+                Mã thanh toán không hợp lệ
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
+                Đường dẫn thanh toán này không tồn tại hoặc đã hết hạn.<br />Vui lòng kiểm tra lại.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => navigate('/')}
+                sx={{
+                  borderRadius: '18px',
+                  textTransform: 'none',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  color: 'white',
+                  padding: '10px 24px',
+                  background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                  }
+                }}
+              >
+                Về trang chủ
               </Button>
             </CardContent>
           </Card>

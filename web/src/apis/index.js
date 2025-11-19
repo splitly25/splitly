@@ -192,13 +192,17 @@ export const sendOcrBillAPI = async (imageData, userId) => {
 
 // Verify payment confirmation token
 export const verifyPaymentTokenAPI = async (token) => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
   return response.data
 }
 
 // Confirm or reject payment
 export const confirmPaymentAPI = async (token, isConfirmed) => {
-  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
     token,
     isConfirmed,
   })
