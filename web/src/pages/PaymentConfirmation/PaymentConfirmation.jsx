@@ -111,23 +111,33 @@ const PaymentConfirmation = () => {
             }}
           >
             <CardContent sx={{ p: 4, textAlign: 'center' }}>
-              <ErrorIcon sx={{ fontSize: 64, color: '#ef4444', mb: 2 }} />
-              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
-                Đã có lỗi xảy ra
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  mb: 2,
+                  fontFamily: "'Nunito Sans', sans-serif"
+                }}
+              >
+                Mã xác nhận không hợp lệ
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                {error}
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
+                Đường dẫn xác nhận này không tồn tại hoặc đã hết hạn.<br />Vui lòng kiểm tra lại.
               </Typography>
               <Button
                 variant="contained"
                 onClick={() => navigate('/login')}
                 sx={{
-                  background: COLORS.gradientPrimary,
-                  borderRadius: '16px',
+                  borderRadius: '18px',
                   textTransform: 'none',
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 500
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  color: 'white',
+                  padding: '10px 24px',
+                  background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                  }
                 }}
               >
                 Về trang đăng nhập

@@ -13,6 +13,8 @@ import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation
 import { Ocr, Bills } from "./pages/Bills"
 import BillDetail from './pages/Bills/BillDetail'
 import Group from './pages/Groups/Group'
+import Payment from './pages/Payment/Payment'
+import PaymentSuccess from './pages/Payment/PaymentSuccess'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -44,6 +46,8 @@ function App() {
       
       {/* Public Routes (no authentication required) */}
       <Route path="/payment/confirm" element={<PaymentConfirmation />} />
+      <Route path="/payment/pay" element={<Payment />} />
+      <Route path="/payment/pay/success" element={<PaymentSuccess />} />
       
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />

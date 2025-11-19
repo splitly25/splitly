@@ -15,6 +15,7 @@ const validateAIRequest = async (req, res, next) => {
 
     try {
         await schema.validateAsync(req.body, { abortEarly: false })
+        // console.log("Assistant request validation passed: ", req.body);
         next()
     } catch (error) {
         const errorMessage = new Error(error).message

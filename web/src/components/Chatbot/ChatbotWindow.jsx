@@ -10,8 +10,10 @@ import { toast } from 'react-toastify'
 import { getAssistantResponseAPI } from '~/apis';
 import { getInitials } from '~/utils/formatters';
 import { useChatbot } from '~/context/ChatbotContext';
+import { useNavigate } from 'react-router-dom'
 
 const ChatbotWindow = ({ isOpen, setIsOpen }) => {
+  const navigate = useNavigate()
   const currentUser = useSelector(selectCurrentUser)
   const [messages, setMessages] = useState(() => {
     const saved = sessionStorage.getItem('chatMessages');
@@ -60,11 +62,12 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
     
     // Get bot response
     try {
-      const response = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
+      const { response, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
       if (response.error) {
         toast.error(`Đã có lỗi xảy ra: ${response.error}`);
       } else {
         setMessages(prev => [...prev, response]);
+        navigate(navigation.path, { state: navigation.state })
       }
     } catch (error) {
       console.error(`Đã có lỗi xảy ra: ${error.message}`);
@@ -226,7 +229,7 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
       </div>
 
       {/* Custom animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;

@@ -71,7 +71,7 @@ function BillCreate() {
   const [openPayerDialog, setOpenPayerDialog] = useState(false)
 
   // Chatbot
-  // const { updatePageContext, clearPageContext } = useChatbot()
+  const { updatePageContext } = useChatbot()
 
   // Initialize bill on mount
   useEffect(() => {
@@ -180,6 +180,24 @@ function BillCreate() {
       }
     }
   }, [dispatch])
+
+  useEffect(() => {
+    updatePageContext({
+      page: 'Create New Bill',
+      formData: {
+        billName: billState.billName,
+        category: billState.category,
+        notes: billState.notes,
+        totalAmount: billState.totalAmount,
+        splitType: billState.splitType,
+        payer: billState.payer,
+        paymentDeadline: billState.paymentDeadline,
+        creationDate: billState.creationDate,
+      },
+      participants: participants,
+      items: items,
+    })
+  }, [billState, participants, items, updatePageContext])
 
   // Handle form field updates
   const handleFieldChange = useCallback(
