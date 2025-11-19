@@ -57,6 +57,12 @@ export const submitPaymentRequestAPI = async (userId, paymentData) => {
   return response.data
 }
 
+export const remindPaymentAPI = async (remindData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/remind-payment`, remindData)
+  toast.success('Nhắc nhở thanh toán đã được gửi thành công!', { theme: 'colored' })
+  return response.data
+}
+
 // ============================================
 // USERS APIs
 // ============================================

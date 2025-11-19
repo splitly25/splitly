@@ -154,10 +154,62 @@ const confirmPayment = async (req, res, next) => {
   }
 }
 
+/**
+ * Send payment reminder to debtor
+ * Body: { creditorId, debtorId }
+ * Only creditor can send reminder
+ */
+const remindPayment = async (req, res, next) => {
+  try {
+    const { creditorId, debtorId } = req.body
+
+    // Security: Only creditor can send reminder
+    if (req.jwtDecoded._id !== creditorId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only send reminders for debts owed to you')
+    }
+
+    // Get debts owed to creditor
+    const debts = await debtService.getDebtsOwedToMe(creditorId)
+
+    // Find the debt for the debtor
+    const debt = debts.find(d => d.userId === debtorId)
+    if (!debt || debt.bills.length === 0) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'No outstanding debts found for this user')
+    }
+
+    // Get user info
+    const [creditor, debtor] = await Promise.all([
+      (await import('~/models/userModel.js')).userModel.findOneById(creditorId),
+      (await import('~/models/userModel.js')).userModel.findOneById(debtorId)
+    ])
+    if (!creditor || !debtor) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    // Send reminder email
+    const { sendPaymentReminderEmail } = await import('~/utils/emailService.js')
+    const emailSent = await sendPaymentReminderEmail({
+      debtorEmail: debtor.email,
+      debtorName: debtor.name,
+      creditorName: creditor.name,
+      bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount }))
+    })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      emailSent,
+      message: 'Payment reminder sent successfully'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
   getDebtSummary,
   initiatePayment,
-  confirmPayment
+  confirmPayment,
+  remindPayment
 }

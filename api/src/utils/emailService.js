@@ -212,7 +212,7 @@ export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerNam
     await transporter.sendMail({
       from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
       to: recipientEmail,
-      subject: `💰 ${payerName} đã thanh toán cho bạn`,
+      subject: `💰 ${payerName} đã thanh toán cho bạn qua Splitly`,
       html: htmlContent
     })
 
@@ -428,7 +428,7 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
     await transporter.sendMail({
       from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
       to: payerEmail,
-      subject: `${statusIcon} ${recipientName} ${statusText} thanh toán`,
+      subject: `${statusIcon} ${recipientName} ${statusText} thanh toán qua Splitly`,
       html: htmlContent
     })
 
@@ -436,6 +436,243 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
     return true
   } catch (error) {
     console.error('Failed to send payment response email:', error)
+    return false
+  }
+}
+
+/**
+ * Send payment reminder email to debtor
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills }) => {
+  try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+    
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
+    // Calculate total amount
+    const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0)
+
+    // Modern HTML email template for reminder
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6; 
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header { 
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white; 
+      padding: 40px 30px; 
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content { 
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bills-list {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bills-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .bill-row {
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .bill-row:last-child {
+      border-bottom: none;
+    }
+    .bill-name {
+      font-weight: 600;
+      color: #1e293b;
+      text-align: left;
+      padding: 12px 0;
+    }
+    .bill-amount {
+      font-weight: 700;
+      color: #f59e0b;
+      text-align: right;
+      padding: 12px 0;
+    }
+    .total-card { 
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+      border: 2px solid rgba(251, 191, 36, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+      color: #1e293b;
+    }
+    .total-label {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .total-amount { 
+      font-size: 36px; 
+      font-weight: 700;
+      margin: 10px 0;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .login-button {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .login-button a {
+      display: inline-block;
+      padding: 16px 40px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 18px;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">⏰</div>
+        <h1>Nhắc nhở thanh toán</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${debtorName}</strong>,</p>
+        <p class="message">
+          <strong>${creditorName}</strong> muốn nhắc nhở bạn về các khoản nợ chưa thanh toán trên Splitly.
+        </p>
+        
+        <div class="bills-list">
+          <table class="bills-table">
+            ${bills.map(bill => `
+              <tr class="bill-row">
+                <td class="bill-name">${bill.billName}</td>
+                <td class="bill-amount">${bill.amount.toLocaleString('vi-VN')}₫</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+        
+        <div class="total-card">
+          <div class="total-label">Tổng số tiền cần thanh toán</div>
+          <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
+        </div>
+        
+        <p class="action-text">
+          Vui lòng thanh toán để cập nhật trạng thái các hóa đơn.
+        </p>
+        
+        <div class="login-button">
+          <a href="${env.WEB_URL || 'http://localhost:5173'}/login">
+            Đăng nhập để thanh toán
+          </a>
+        </div>
+        
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: debtorEmail,
+      subject: `⏰ ${creditorName} nhắc nhở bạn thanh toán qua Splitly`,
+      html: htmlContent
+    })
+
+    console.log(`Payment reminder email sent successfully to ${debtorEmail}`)
+    return true
+  } catch (error) {
+    console.error('Failed to send payment reminder email:', error)
     return false
   }
 }
