@@ -19,6 +19,8 @@ Router.route('/:userId').get(authMiddleware.isAuthorized, userController.getUser
 
 Router.route('/email/:email').get(authMiddleware.isAuthorized, userController.getUserByEmail)
 
+Router.route('/:userId/profile').put(authMiddleware.isAuthorized, userController.editProfile)
+
 Router.route('/guest').post(userValidation.createGuestUser, userController.createGuestUser)
 
 export const userRoute = Router
