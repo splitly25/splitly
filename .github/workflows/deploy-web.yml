@@ -42,12 +42,18 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          timeout: 300s
+          command_timeout: 120s
           script: |
             # Navigate to project directory
-            cd ~/splitly/web
+            cd ~/splitly
             
-            # Pull latest changes
-            git pull origin main
+            # Clean deployment approach - remove and reclone
+            rm -rf ~/splitly-temp
+            git clone https://github.com/splitly25/splitly.git ~/splitly-temp
+            
+            # Navigate to web directory
+            cd ~/splitly-temp/web
             
             # Install dependencies
             npm install
@@ -58,6 +64,12 @@ jobs:
             # Copy built files to nginx directory
             sudo cp -r dist/* /var/www/splitly/
             sudo chown -R www-data:www-data /var/www/splitly
+            
+            # Clean up temp directory
+            rm -rf ~/splitly-temp
+            
+            # Navigate back to original directory for PM2 operations
+            cd ~/splitly/web
             
             # Restart PM2 web process (with fallback if process doesn't exist)
             pm2 restart splitly-web || pm2 start npm --name "splitly-web" -- run preview -- --port 3001

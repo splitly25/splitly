@@ -761,7 +761,7 @@ const AddParticipantDialog = ({
                   <CircularProgress size={24} />
                 </Box>
               ) : filteredPeople.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Box sx={{ py: 4 }}>
                   {shouldShowGuestOption ? (
                     <>
                       <Typography sx={{ fontSize: '14px', color: 'text.secondary', mb: 2 }}>
