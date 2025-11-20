@@ -2,8 +2,6 @@
 
 React application built with Vite and Material-UI.
 
-> Last updated: November 20, 2025 - Testing CI/CD deployment
-
 ## Tech Stack
 
 - **React** 19.1.1
