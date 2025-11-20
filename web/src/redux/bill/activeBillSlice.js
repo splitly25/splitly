@@ -133,7 +133,6 @@ export const submitBillThunk = createAsyncThunk('activeBill/submitBill', async (
     return response
   } catch (error) {
     const errorMessage = error.response?.data?.message || 'Lỗi khi tạo hóa đơn. Vui lòng thử lại.'
-    toast.error(errorMessage)
     return rejectWithValue(errorMessage)
   }
 })

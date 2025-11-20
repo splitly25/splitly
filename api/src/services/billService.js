@@ -6,7 +6,6 @@ import { paymentModel } from '~/models/paymentModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
 import { JwtProvider } from '~/providers/JwtProvider.js';
 import { env } from '~/config/environment.js';
-import { randomUUID } from 'crypto';
 
 const createNew = async (reqBody) => {
   try {
