@@ -78,7 +78,7 @@ function GroupCard({ group, onClick, onDelete }) {
                 },
               }}
             >
-              <Delete sx={{ fontSize: '18px' }} />
+              <Delete sx={{ fontSize: '22px' }} />
             </IconButton>
           </Box>
         </Box>
