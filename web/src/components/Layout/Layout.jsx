@@ -31,6 +31,8 @@ import {
   Edit as EditIcon,
   CameraAlt as CameraAltIcon,
   Chat as ChatIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -215,7 +217,7 @@ const Layout = ({ children }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: (isMobile || isExpanded) ? '8px' : 0,
+            gap: isMobile || isExpanded ? '8px' : 0,
             px: 2.5,
             minWidth: 0,
             transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -229,12 +231,12 @@ const Layout = ({ children }) => {
           <Box
             component="span"
             sx={{
-              opacity: (isMobile || isExpanded) ? 1 : 0,
-              width: (isMobile || isExpanded) ? 'auto' : 0,
+              opacity: isMobile || isExpanded ? 1 : 0,
+              width: isMobile || isExpanded ? 'auto' : 0,
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              transitionDelay: (isMobile || isExpanded) ? '0.1s' : '0s',
+              transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
             }}
           >
             Tạo hóa đơn mới
@@ -254,7 +256,7 @@ const Layout = ({ children }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-start',
-                  gap: (isMobile || isExpanded) ? '12px' : 0,
+                  gap: isMobile || isExpanded ? '12px' : 0,
                   borderRadius: '16px',
                   height: '48px',
                   px: 2,
@@ -294,12 +296,12 @@ const Layout = ({ children }) => {
                 <Box
                   component="span"
                   sx={{
-                    opacity: (isMobile || isExpanded) ? 1 : 0,
-                    width: (isMobile || isExpanded) ? 'auto' : 0,
+                    opacity: isMobile || isExpanded ? 1 : 0,
+                    width: isMobile || isExpanded ? 'auto' : 0,
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
                     transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transitionDelay: (isMobile || isExpanded) ? '0.1s' : '0s',
+                    transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
                   }}
                 >
                   {item.label}
@@ -317,8 +319,8 @@ const Layout = ({ children }) => {
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          gap: (isMobile || isExpanded) ? 2 : 0,
-          justifyContent: (isMobile || isExpanded) ? 'flex-start' : 'center',
+          gap: isMobile || isExpanded ? 2 : 0,
+          justifyContent: isMobile || isExpanded ? 'flex-start' : 'center',
           cursor: 'pointer',
           borderRadius: '16px',
           mx: 2,
@@ -587,6 +589,52 @@ const Layout = ({ children }) => {
         },
       }}
     >
+      {/* Profile and Settings */}
+      <MenuItem onClick={() => {
+        handleNavigate('/profile')
+        handleProfileMenuClose()
+      }}>
+        <ListItemIcon>
+          <PersonIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Profile</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={() => {
+        handleNavigate('/settings')
+        handleProfileMenuClose()
+      }}>
+        <ListItemIcon>
+          <SettingsIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Settings</ListItemText>
+      </MenuItem>
+      
+      {/* Divider */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
+      
+      {/* Theme Mode Options */}
+      {/* <MenuItem onClick={() => handleModeChange('light')}>
+        <ListItemIcon>
+          <LightModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Light Mode</ListItemText>
+        {mode === 'light' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('dark')}>
+        <ListItemIcon>
+          <DarkModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Dark Mode</ListItemText>
+        {mode === 'dark' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('system')}>
+        <ListItemIcon>
+          <SettingsBrightnessIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>System</ListItemText>
+        {mode === 'system' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem> */}
+
       {/* Theme Mode Options */}
       <MenuItem onClick={() => handleModeChange('light')}>
         <ListItemIcon>
@@ -608,11 +656,11 @@ const Layout = ({ children }) => {
         </ListItemIcon>
         <ListItemText>System</ListItemText>
         {mode === 'system' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
-      </MenuItem>
+      </MenuItem>{' '}
+
 
       {/* Divider */}
       <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
-
       {/* Logout */}
       <MenuItem onClick={handleLogout}>
         <ListItemIcon>
