@@ -2,13 +2,16 @@ import axios from 'axios'
 import { toast } from 'react-toastify'
 import { clearUser } from '~/redux/user/userSlice'
 import { interceptorLoadingElements } from '~/utils/formatters'
+import { API_ROOT } from '~/utils/constants'
 
 let axiosReduxStore
 export const injectStore = (store) => {
   axiosReduxStore = store
 }
 
-let authorizedAxiosInstance = axios.create()
+let authorizedAxiosInstance = axios.create({
+  baseURL: API_ROOT
+})
 authorizedAxiosInstance.defaults.timeout = 10 * 60 * 1000
 authorizedAxiosInstance.defaults.withCredentials = true
 
