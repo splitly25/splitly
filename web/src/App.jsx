@@ -15,6 +15,7 @@ import BillDetail from './pages/Bills/BillDetail'
 import Group from './pages/Groups/Group'
 import Payment from './pages/Payment/Payment'
 import PaymentSuccess from './pages/Payment/PaymentSuccess'
+import GroupDetails from './pages/Groups/GroupDetails'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -30,7 +31,7 @@ function App() {
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/groups" element={<Group />} />
-        {/* <Route path="/groups/:groupId" element={<GroupDetail />} /> */}
+        <Route path="/groups/:groupId" element={<GroupDetails />} />
         <Route path="/history" element={<History />} />
         <Route path="/debt" element={<Debt />} />
         <Route path="/boards/:boardId" element={<Board />} />
