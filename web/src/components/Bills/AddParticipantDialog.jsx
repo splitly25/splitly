@@ -17,6 +17,9 @@ import SearchIcon from '@mui/icons-material/Search'
 import GroupIcon from '@mui/icons-material/Group'
 import CloseIcon from '@mui/icons-material/Close'
 import PeopleIcon from '@mui/icons-material/People'
+import PeopleProfileToAdd from './PeopleProfileToAdd/PeopleProfileToAdd'
+import { createGuestUserAPI } from '~/apis'
+import { EMAIL_RULE } from '~/utils/validators'
 
 const Label = styled(Typography)(({ theme }) => ({
   fontSize: '14px',
@@ -215,16 +218,35 @@ const AddParticipantDialog = ({
     return name.substring(0, 2).toUpperCase()
   }
 
-  const handleTogglePerson = (person, groupName = null) => {
+  const handleTogglePerson = async (person, groupName = null) => {
+    let personToAdd = person
+
+    // If this is a temporary guest user (not yet created in backend), create it first
+    if (person.isTemporary) {
+      try {
+        const guestUser = await createGuestUserAPI(person.email, person.name)
+        // Replace temporary person with actual created guest user
+        personToAdd = {
+          id: guestUser._id,
+          name: guestUser.displayName || person.name,
+          email: guestUser.email,
+          userType: 'guest',
+        }
+      } catch (error) {
+        console.error('Failed to create guest user:', error)
+        return // Don't add if creation failed
+      }
+    }
+
     setSelectedPeople((prev) => {
-      const exists = prev.find((p) => p.id === person.id)
+      const exists = prev.find((p) => p.id === personToAdd.id)
       if (exists) {
-        return prev.filter((p) => p.id !== person.id)
+        return prev.filter((p) => p.id !== personToAdd.id)
       } else {
         return [
           ...prev,
           {
-            ...person,
+            ...personToAdd,
             groups: groupName ? [groupName] : [],
           },
         ]
@@ -319,6 +341,17 @@ const AddParticipantDialog = ({
     return selectedPeople.filter((p) => !currentParticipantIds.has(p.id)).length
   }
 
+  const isValidEmail = EMAIL_RULE.test(searchQuery.trim())
+  const shouldShowGuestOption = isSearching && filteredPeople.length === 0 && isValidEmail
+
+  const guestPerson = {
+    id: 'temp-guest-' + searchQuery,
+    name: searchQuery.split('@')[0],
+    email: searchQuery.trim(),
+    isTemporary: true, // Flag to indicate this needs to be created
+    userType: 'guest',
+  }
+
   return (
     <Dialog
       sx={(theme) => ({
@@ -329,6 +362,7 @@ const AddParticipantDialog = ({
           marginBottom: '8px',
           position: 'static',
           transform: 'none',
+          borderRadius: '18px',
           '&.Mui-focused': {
             color: theme.palette.text.primary,
           },
@@ -361,6 +395,13 @@ const AddParticipantDialog = ({
           },
         },
       })}
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: '25px',
+          },
+        },
+      }}
       open={open}
       onClose={handleCancel}
       maxWidth="lg"
@@ -562,10 +603,7 @@ const AddParticipantDialog = ({
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         {/* Mark as payer button */}
-                        <PayerButton
-                          isPayer={currentPayerId === person.id}
-                          onClick={() => onMarkAsPayer(person.id)}
-                        >
+                        <PayerButton isPayer={currentPayerId === person.id} onClick={() => onMarkAsPayer(person.id)}>
                           {currentPayerId === person.id ? 'Payer' : 'Mark as Payer'}
                         </PayerButton>
                         <IconButton
@@ -686,12 +724,14 @@ const AddParticipantDialog = ({
               variant="outlined"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ width: '16px', height: '16px', color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ width: '16px', height: '16px', color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
             {isSearching && (
@@ -722,27 +762,23 @@ const AddParticipantDialog = ({
                 </Box>
               ) : filteredPeople.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                    {isSearching ? 'No people found matching your search' : 'No people available from your groups'}
-                  </Typography>
+                  {shouldShowGuestOption ? (
+                    <>
+                      <Typography sx={{ fontSize: '14px', color: 'text.secondary', mb: 2 }}>
+                        Email you searched is not registered yet. Add them as guest?
+                      </Typography>
+                      <PeopleProfileToAdd person={guestPerson} handleTogglePerson={handleTogglePerson} />
+                    </>
+                  ) : (
+                    <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                      {isSearching ? 'No people found matching your search' : 'No people available from your groups'}
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 <>
                   {filteredPeople.map((person) => (
-                    <PersonRow key={person.id}>
-                      <UserAvatar sx={{ width: 32, height: 32, fontSize: '16px' }}>
-                        {getInitials(person.name)}
-                      </UserAvatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                          {person.name}
-                        </Typography>
-                        <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
-                          {person.email}
-                        </Typography>
-                      </Box>
-                      <AddButton onClick={() => handleTogglePerson(person)}>Add</AddButton>
-                    </PersonRow>
+                    <PeopleProfileToAdd key={person.id} person={person} handleTogglePerson={handleTogglePerson} />
                   ))}
 
                   {/* Load More Button for both modes */}

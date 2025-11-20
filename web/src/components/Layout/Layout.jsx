@@ -40,7 +40,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAPI, selectCurrentUser } from '~/redux/user/userSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
-import NotificationsIcon from '@mui/icons-material/Notifications'
 import { useChatbot } from '~/context/ChatbotContext'
 import { getInitials } from '~/utils/formatters'
 
@@ -68,13 +67,7 @@ const Layout = ({ children }) => {
   const createMenuOpen = Boolean(createMenuAnchorEl)
 
   // Use Chatbot Context
-  const {
-    chatbotWindowOpen,
-    setChatbotWindowOpen,
-    numberOfNotifications,
-    newMessage,
-    setNewMessage,
-  } = useChatbot()
+  const { chatbotWindowOpen, setChatbotWindowOpen, numberOfNotifications, newMessage, setNewMessage } = useChatbot()
 
   // Check for chatbot payload from navigation state or URL params
   useEffect(() => {
@@ -84,7 +77,7 @@ const Layout = ({ children }) => {
       // Clear the state to prevent reopening on future navigations
       window.history.replaceState({}, document.title)
     }
-    
+
     // Check URL params
     const searchParams = new URLSearchParams(location.search)
     if (searchParams.get('chatbotWindowOpen') === 'true') {
@@ -483,7 +476,12 @@ const Layout = ({ children }) => {
       {/* Chat with TingTing */}
       <MenuItem
         onClick={() => {
-          // TODO: Implement chat with TingTing functionality
+          navigate('/create', {
+            state: {
+              chatbotWindowOpen: true,
+              billFormData: null,
+            },
+          })
           handleCreateMenuClose()
         }}
         sx={{
@@ -665,7 +663,7 @@ const Layout = ({ children }) => {
       </Box>
 
       {/* Dark Mode Toggle Button - Top Right */}
-      <IconButton
+      {/* <IconButton
         onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
         sx={{
           position: 'fixed',
@@ -690,10 +688,10 @@ const Layout = ({ children }) => {
         ) : (
           <DarkModeIcon fontSize="small" sx={{ color: COLORS.secondary }} />
         )}
-      </IconButton>
+      </IconButton> */}
 
       {/* Notifications Button - Top Right */}
-      <IconButton
+      {/* <IconButton
         sx={{
           position: 'fixed',
           top: 16,
@@ -713,7 +711,7 @@ const Layout = ({ children }) => {
         }}
       >
         <NotificationsIcon fontSize="small" sx={{ color: 'text.primary' }} />
-      </IconButton>
+      </IconButton> */}
 
       {/* Chatbot Button */}
       <ChatbotButton

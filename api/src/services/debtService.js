@@ -197,9 +197,10 @@ const getDebtSummary = async (userId) => {
  * @param {string} creditorId - User ID who will receive the payment
  * @param {number} amount - Payment amount
  * @param {string} note - Optional payment note
+ * @param {string} priorityBill - Optional bill ID to prioritize
  * @returns {Promise<Object>} Payment initiation result
  */
-const initiatePayment = async (debtorId, creditorId, amount, note = '') => {
+const initiatePayment = async (debtorId, creditorId, amount, note = '', priorityBill = null) => {
   try {
     // Get user details
     const [debtor, creditor] = await Promise.all([
@@ -235,6 +236,7 @@ const initiatePayment = async (debtorId, creditorId, amount, note = '') => {
       payerId: debtorId,
       amount,
       note: note || '',
+      priorityBill: priorityBill || null,
       type: 'payment_confirmation'
     }
     const confirmationToken = await JwtProvider.generateToken(

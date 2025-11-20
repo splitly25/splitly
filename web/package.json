@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "host": "vite --host"
+    "host": "vite --host",
+    "production": "cross-env NODE_ENV=production vite build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

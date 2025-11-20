@@ -27,7 +27,7 @@ const USER_COLLECTION_SCHEMA = Joi.object({
     .default(USER_TYPE.MEMBER),
   isGuest: Joi.boolean().default(false),
   lastActivityDate: Joi.date().timestamp('javascript').default(null),
-  verifyToken: Joi.string(),
+  verifyToken: Joi.string().optional().allow(null).default(null),
   createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp('javascript').default(null),
   _destroy: Joi.boolean().default(false),

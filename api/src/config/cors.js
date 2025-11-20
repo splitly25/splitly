@@ -1,23 +1,26 @@
-/**
- * CORS Configuration
- */
+import { WHITELIST_DOMAINS } from '~/utils/constants'
+import { env } from '~/config/environment'
+import { StatusCodes } from 'http-status-codes'
+import APIError from '~/utils/APIError'
 
+// CORS Options Configuration
 export const corsOptions = {
-  origin: [
-    'http://localhost:5173', // Vite dev server
-    'http://localhost:3000', // React dev server alternative
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000'
-  ],
-  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With', 
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'Cache-Control'
-  ],
-  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  origin: function (origin, callback) {
+    // if origin is undefined in dev mode pass the CORS
+    if (env.BUILD_MODE === 'dev') {
+      return callback(null, true)
+    }
+
+    // Check if the origin is in the whitelist
+    if (WHITELIST_DOMAINS.includes(origin)) {
+      return callback(null, true)
+    }
+
+    // If the domain is not allowed, return an error
+    return callback(new APIError(StatusCodes.FORBIDDEN, `${origin} not allowed by our CORS Policy.`))
+  },
+  optionsSuccessStatus: 200,
+
+  // CORS will allow receiving cookies from requests
+  credentials: true,
 }

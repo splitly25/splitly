@@ -57,6 +57,26 @@ export const submitPaymentRequestAPI = async (userId, paymentData) => {
   return response.data
 }
 
+export const remindPaymentAPI = async (remindData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/remind-payment`, remindData)
+  toast.success('Nhắc nhở thanh toán đã được gửi thành công!', { theme: 'colored' })
+  return response.data
+}
+
+export const getReminderByTokenAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/debts/payment/${token}`)
+  return response.data
+}
+
+export const submitReminderPaymentAPI = async (paymentData) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.post(`${API_ROOT}/v1/debts/payment/submit`, paymentData)
+  return response.data
+}
+
 // ============================================
 // USERS APIs
 // ============================================
@@ -96,6 +116,12 @@ export const fetchUsersAPI = async (page = 1, limit = 10, search = '') => {
 
 export const editUserAPI = async(data) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/editProfile`, data)
+export const createGuestUserAPI = async (email, name = null) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/guest`, {
+    email,
+    name,
+  })
+  toast.success('Guest user created successfully!', { theme: 'colored' })
   return response.data
 }
 
@@ -153,6 +179,34 @@ export const fetchGroupsAPI = async (page = 1, limit = 10, search = '') => {
   return response.data
 }
 
+export const createGroupAPI = async (groupData) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/groups`, groupData)
+  toast.success('Nhóm đã được tạo thành công!')
+  return response.data
+}
+
+export const updateGroupAPI = async (groupId, groupData) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}`, groupData)
+  toast.success('Nhóm đã được cập nhật thành công!')
+  return response.data
+}
+
+export const deleteGroupAPI = async (groupId) => {
+  const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/groups/${groupId}`)
+  toast.success('Nhóm đã được xóa thành công!')
+  return response.data
+}
+
+export const updateGroupMembersAPI = async (groupId, memberIds) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}/members`, { memberIds })
+  return response.data
+}
+
+export const getGroupAndMembersAPI = async (groupId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/groups/getGroupAndMembers/${groupId}`)
+  return response.data
+}
+
 // OCR Bill
 export const sendOcrBillAPI = async (imageData, userId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/bills/scan`, {
@@ -168,15 +222,19 @@ export const sendOcrBillAPI = async (imageData, userId) => {
 
 // Verify payment confirmation token
 export const verifyPaymentTokenAPI = async (token) => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/payment-confirmation/verify/${token}`)
   return response.data
 }
 
 // Confirm or reject payment
 export const confirmPaymentAPI = async (token, isConfirmed) => {
-  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.post(`${API_ROOT}/v1/payment-confirmation/confirm`, {
     token,
-    isConfirmed
+    isConfirmed,
   })
   return response.data
 }
@@ -187,21 +245,28 @@ export const confirmPaymentAPI = async (token, isConfirmed) => {
 
 export const getAssistantResponseAPI = async (userId, messages) => {
   // remove id and time field
-  const leng = messages.length;
-  messages = messages.map(({ id, time, ...rest }) => rest);
+  const leng = messages.length
+  // eslint-disable-next-line no-unused-vars
+  messages = messages.map(({ id, time, ...rest }) => rest)
   messages = filter(messages, (msg) => msg.role !== 'notification')
+
+  console.log("Sending messages to Assistant API:", messages);
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
     userId,
-    messages
+    messages,
   })
 
-  const result = {
+
+  const assistantResponse = {
     id: leng + 1,
-    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
-    ...response.data.response
+    time:
+      new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
+      ' ' +
+      new Date().toLocaleDateString('vi-VN'),
+    ...response.data.response,
   }
 
-  console.log("Assistant API Response:", result);
+  console.log("Assistant API Response:", response);
   
   return result;
 }
@@ -209,4 +274,6 @@ export const getAssistantResponseAPI = async (userId, messages) => {
 export const updateUserProfileAPI = async (userId, profileData) => {
   const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/${userId}/profile`, profileData)
   return response.data
+}
+  return { response: assistantResponse, navigation: response.data.navigation };
 }

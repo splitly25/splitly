@@ -13,6 +13,8 @@ const createNew = async (req, res, next) => {
       .pattern(/^\d{10,11}$/),
   });
 
+  
+
   try {
     await correctCondition.validateAsync(req.body, { abortEarly: false });
     next();
@@ -64,9 +66,25 @@ const fetchUsers = async (req, res, next) => {
   }
 };
 
+const createGuestUser = async (req, res, next) => {
+  const correctCondition = Joi.object({
+    email: Joi.string().email().required().trim().message(EMAIL_RULE_MESSAGE),
+    name: Joi.string().optional().min(3).max(30).trim(),
+    //userType: Joi.string().valid('guest').required(),
+  });
+
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+  }
+}
+
 export const userValidation = {
   createNew,
   verifyAccount,
   login,
   fetchUsers,
+  createGuestUser
 };

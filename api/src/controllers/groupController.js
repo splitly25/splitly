@@ -3,10 +3,7 @@ import { groupService } from '~/services/groupService'
 
 const createNew = async (req, res, next) => {
   try {
-    console.log('Creating new group - controller')
-    //const userId = req.jwtDecoded._id
-    console.log('Creating new group with data:', req.body)
-    const createdGroup = await groupService.createNew(req.body, '69103dbc2b799125f830376e')
+    const createdGroup = await groupService.createNew(req.jwtDecoded._id, req.body)
     res.status(StatusCodes.CREATED).json(createdGroup)
   } catch (error) {
     next(error)
@@ -74,6 +71,26 @@ const getGroupsByUserId = async (req, res, next) => {
   }
 }
 
+const deleteGroup = async (req, res, next) => {
+  try {
+    const groupId = req.params.id
+    await groupService.deleteGroup(groupId)
+    res.status(StatusCodes.NO_CONTENT).send()
+  } catch (error) {
+    next(error)
+  }
+}
+
+const update = async (req, res, next) => {
+  try {
+    const groupId = req.params.id
+    const updatedGroup = await groupService.updateGroup(groupId, req.body)
+    res.status(StatusCodes.OK).json(updatedGroup)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const groupController = {
   createNew,
   getGroupById,
@@ -82,4 +99,6 @@ export const groupController = {
   getAllGroupAndMembers,
   getGroupsByUserId,
   fetchGroups,
+  update,
+  deleteGroup,
 }

@@ -8,3 +8,35 @@ export const generateUrl = (path, payload) => {
     return url.toString();
 };
 
+export const navigateBillCreateForm = ({
+    billName,
+    category,
+    notes,
+    creationDate,
+    paymentDeadline,
+    payer,
+    splitType,
+    totalAmount,
+    items,
+    participants
+}) => {
+    return {
+        path: '/create',
+        state: {
+            chatbotWindowOpen: true,
+            billFormData: {
+                billName,
+                category,
+                notes,
+                creationDate,
+                paymentDeadline,
+                payer,
+                splitType,
+                totalAmount,
+                items,
+                participants,
+            }
+        }
+    };
+};
+

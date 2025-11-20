@@ -3,7 +3,6 @@ import { Route, Routes, Navigate } from 'react-router-dom'
 import NotFound from './pages/404/NotFound'
 import Auth from './pages/Auth/Auth'
 import Dashboard from './pages/Dashboard'
-import Groups from './pages/Groups'
 import History from './pages/History'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from './redux/user/userSlice'
@@ -14,6 +13,10 @@ import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation
 import { Ocr, Bills } from "./pages/Bills"
 import BillDetail from './pages/Bills/BillDetail'
 import Profile from './pages/Auth/Profile'
+import Group from './pages/Groups/Group'
+import Payment from './pages/Payment/Payment'
+import PaymentSuccess from './pages/Payment/PaymentSuccess'
+import GroupDetails from './pages/Groups/GroupDetails'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -28,7 +31,8 @@ function App() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/groups" element={<Groups />} />
+        <Route path="/groups" element={<Group />} />
+        <Route path="/groups/:groupId" element={<GroupDetails />} />
         <Route path="/history" element={<History />} />
         <Route path="/debt" element={<Debt />} />
         <Route path="/boards/:boardId" element={<Board />} />
@@ -44,6 +48,8 @@ function App() {
       <Route path="/profile" element={<Profile/>} />
       {/* Public Routes (no authentication required) */}
       <Route path="/payment/confirm" element={<PaymentConfirmation />} />
+      <Route path="/payment/pay" element={<Payment />} />
+      <Route path="/payment/pay/success" element={<PaymentSuccess />} />
       
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />

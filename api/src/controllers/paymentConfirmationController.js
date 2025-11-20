@@ -16,7 +16,7 @@ import { sendPaymentResponseEmail } from '~/utils/emailService'
  */
 const generateConfirmationToken = async (req, res, next) => {
   try {
-    const { paymentId, recipientId, payerId, amount, note } = req.body
+    const { paymentId, recipientId, payerId, amount, note, priorityBill } = req.body
 
     // Validate required fields
     if (!paymentId || !recipientId || !payerId || !amount) {
@@ -30,6 +30,7 @@ const generateConfirmationToken = async (req, res, next) => {
       payerId,
       amount,
       note: note || '',
+      priorityBill: priorityBill || null,
       type: 'payment_confirmation'
     }
 
@@ -93,7 +94,8 @@ const verifyConfirmationToken = async (req, res, next) => {
       payerName: payer.name,
       payerId: decoded.payerId,
       amount: decoded.amount,
-      note: decoded.note
+      note: decoded.note,
+      priorityBill: decoded.priorityBill
     }
 
     res.status(StatusCodes.OK).json(paymentData)
@@ -132,6 +134,7 @@ const confirmPayment = async (req, res, next) => {
     }
 
     const { paymentId, recipientId, payerId, amount } = decoded
+    const priorityBill = decoded.priorityBill
 
     // Get user information for email
     const recipient = await userModel.findOneById(recipientId)
@@ -148,7 +151,8 @@ const confirmPayment = async (req, res, next) => {
       recipientId,
       payerId,
       amount,
-      isConfirmed
+      isConfirmed,
+      priorityBill
     })
 
     if (isConfirmed) {
@@ -157,12 +161,48 @@ const confirmPayment = async (req, res, next) => {
       // Payer sent money TO recipient, so find bills where recipient paid and payer owes
       const bills = await billModel.getBillsByUser(payerId)
       
+      // Sort bills by oldest first (ascending createdAt)
+      bills.sort((a, b) => a.createdAt - b.createdAt)
+      
       let remainingAmount = amount
       const updatedBills = []
       
-      // Process bills where payer owes money to recipient and hasn't fully paid
+      // If priorityBill is provided, try to pay it first
+      if (priorityBill) {
+        const priorityBillDoc = bills.find(bill => bill._id.toString() === priorityBill)
+        if (priorityBillDoc && priorityBillDoc.payerId.equals(recipientId)) {
+          const paymentStatus = priorityBillDoc.paymentStatus.find(ps => ps.userId.equals(payerId))
+          if (paymentStatus) {
+            const amountOwed = paymentStatus.amountOwed
+            const currentAmountPaid = paymentStatus.amountPaid || 0
+            const stillOwes = amountOwed - currentAmountPaid
+            if (stillOwes > 0) {
+              const paymentForThisBill = Math.min(stillOwes, remainingAmount)
+              const updateResult = await billService.markAsPaid(
+                priorityBillDoc._id.toString(),
+                payerId,
+                paymentForThisBill,
+                recipientId
+              )
+              if (updateResult) {
+                remainingAmount -= paymentForThisBill
+                updatedBills.push({
+                  billId: priorityBillDoc._id.toString(),
+                  billName: priorityBillDoc.billName,
+                  amountPaid: paymentForThisBill
+                })
+              }
+            }
+          }
+        }
+      }
+      
+      // Process remaining bills where payer owes money to recipient and hasn't fully paid
       for (const bill of bills) {
         if (remainingAmount <= 0) break
+        
+        // Skip if this is the priority bill already processed
+        if (priorityBill && bill._id.toString() === priorityBill) continue
         
         // Check if this bill is paid by the recipient and payer owes money
         // Use .equals() for proper ObjectId comparison

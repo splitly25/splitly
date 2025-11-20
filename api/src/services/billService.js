@@ -2,7 +2,11 @@
 import { billModel } from '~/models/billModel.js';
 import { activityModel } from '~/models/activityModel.js';
 import { userModel } from '~/models/userModel.js';
+import { paymentModel } from '~/models/paymentModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
+import { JwtProvider } from '~/providers/JwtProvider.js';
+import { env } from '~/config/environment.js';
+import { randomUUID } from 'crypto';
 
 const createNew = async (reqBody) => {
   try {
@@ -100,7 +104,97 @@ const createNew = async (reqBody) => {
         console.warn('Failed to log bill creation activity:', activityError.message)
       }
     }
-    
+
+    // Send email notifications to all participants except the payer
+    try {
+      const { sendBillCreationEmail } = await import('~/utils/emailService.js')
+
+      // Get payer info
+      const payer = await userModel.findOneById(reqBody.payerId.toString())
+      if (!payer) {
+        console.warn('Payer not found, skipping email notifications')
+        return getNewBill
+      }
+
+      // Get populated bill data with participant details
+      const populatedBill = await getBillById(createdBill.insertedId.toString())
+
+      // Filter participants (exclude payer)
+      const participantsToEmail = populatedBill.participants
+        .filter(participant => participant._id.toString() !== reqBody.payerId.toString())
+
+      console.log(`Sending bill creation emails to ${participantsToEmail.length} participants`)
+
+      if (participantsToEmail.length === 0) {
+        console.log('No participants to email (all are payers or no participants found)')
+        return getNewBill
+      }
+
+      // Send emails to each participant (except payer)
+      const emailPromises = participantsToEmail.map(async (participant) => {
+        // Create JWT token for bill payment
+        const payload = {
+          creditorId: reqBody.payerId,
+          debtorId: participant._id,
+          bills: [{
+            billId: createdBill.insertedId.toString(),
+            billName: reqBody.billName,
+            amount: participant.amount
+          }],
+          totalAmount: participant.amount,
+          type: 'bill_payment'
+        }
+        const paymentToken = await JwtProvider.generateToken(payload, env.ACCESS_JWT_SECRET_KEY, '30d') // 30 days for bill payments
+
+        // Create payment record for bill payment
+        await paymentModel.createNew({
+          token: paymentToken,
+          creditorId: reqBody.payerId,
+          debtorId: participant._id
+        })
+
+        console.log(`Sending email to ${participant.email} (${participant.name}) for bill ${reqBody.billName}`)
+
+        return sendBillCreationEmail({
+          participantEmail: participant.email,
+          participantName: participant.name,
+          payerName: payer.name,
+          billId: createdBill.insertedId.toString(),
+          billName: reqBody.billName,
+          billDescription: reqBody.description || '',
+          totalAmount: reqBody.totalAmount,
+          participantAmount: participant.amount,
+          items: reqBody.items || [],
+          participants: populatedBill.participants.map(p => ({
+            name: p.name,
+            amount: p.amount
+          })),
+          optOutToken: createdBill.insertedId.toString(),
+          paymentToken
+        })
+      })
+
+      // Send all emails concurrently
+      const emailResults = await Promise.allSettled(emailPromises)
+      const successCount = emailResults.filter(result => result.status === 'fulfilled' && result.value).length
+      const failCount = emailResults.length - successCount
+
+      console.log(`Bill creation email results: ${successCount} sent, ${failCount} failed`)
+
+      // Log any failures
+      emailResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Email failed for ${participantsToEmail[index].email}:`, result.reason)
+        }
+      })
+
+      if (successCount > 0) {
+        console.log(`Bill creation emails sent successfully: ${successCount} sent, ${failCount} failed`)
+      }
+    } catch (emailError) {
+      console.error('Failed to send bill creation emails:', emailError)
+    }
+
     return getNewBill
   } catch (error) {
     throw error

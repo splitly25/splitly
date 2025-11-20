@@ -1,0 +1,79 @@
+name: Deploy Splitly API to VPS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+    
+    # ADD THIS SECTION ⬇️
+    permissions:
+      deployments: write
+      contents: read
+      statuses: write
+    
+    environment:
+      name: production-api
+      url: https://splitly.be.khangdev.me
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Start Deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: production-api
+          ref: ${{ github.sha }}  # ADD THIS LINE
+      
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            # Navigate to project directory
+            cd ~/splitly/api
+            
+            # Pull latest changes
+            git pull origin main
+            
+            # Install dependencies
+            npm install
+            
+            # Build the project
+            npm run build
+            
+            # Restart PM2 (with fallback if process doesn't exist)
+            pm2 restart splitly-api || PORT=8017 pm2 start npm --name "splitly-api" -- run production
+            
+            # Save PM2 config
+            pm2 save
+            
+            # Show status
+            pm2 status
+            
+            echo "✅ Deployment completed successfully!"
+      
+      - name: Update Deployment Status
+        uses: bobheadxi/deployments@v1
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: production-api
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          env_url: https://splitly.be.khangdev.me

@@ -51,6 +51,8 @@ export const ChatbotProvider = ({ children }) => {
             }
             return contextData
         })
+
+        console.log('Updated page context:', contextData)
     }, [])
 
     const clearPageContext = useCallback(() => {

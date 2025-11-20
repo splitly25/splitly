@@ -17,4 +17,8 @@ Router.route('/:groupId').get(authMiddleware.isAuthorized, groupController.getGr
 
 Router.route('/user/:userId').get(authMiddleware.isAuthorized, groupController.getGroupsByUserId)
 
+Router.route('/:id')
+  .put(authMiddleware.isAuthorized, groupValidation.update, groupController.update)
+  .delete(authMiddleware.isAuthorized,groupController.deleteGroup)
+
 export const groupRoute = Router
