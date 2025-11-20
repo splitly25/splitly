@@ -7,9 +7,16 @@ export const options = [
 /* eslint-disable no-undef */
 let apiRoot = ''
 
-if (process.env.BUILD_MODE === 'dev') {
+// Check if we're in development or production
+const isDevelopment = import.meta.env.DEV || process.env.BUILD_MODE === 'dev'
+const isProduction = import.meta.env.PROD || process.env.BUILD_MODE === 'production'
+
+if (isDevelopment) {
   apiRoot = 'http://localhost:8017'
-} else if (process.env.BUILD_MODE === 'production') {
+} else if (isProduction) {
+  apiRoot = 'https://splitly.be.khangdev.me'
+} else {
+  // Fallback to production API
   apiRoot = 'https://splitly.be.khangdev.me'
 }
 export const FIELD_REQUIRED_MESSAGE = 'This field is required.'
