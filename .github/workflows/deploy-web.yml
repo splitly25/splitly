@@ -43,47 +43,72 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           timeout: 300s
-          command_timeout: 120s
+          command_timeout: 180s
           script: |
-            # Navigate to project directory
+            # Navigate to project directory and pull latest changes
             cd ~/splitly
-            
-            # Clean deployment approach - remove and reclone
-            rm -rf ~/splitly-temp
-            git clone https://github.com/splitly25/splitly.git ~/splitly-temp
+            git fetch origin
+            git reset --hard origin/main
             
             # Navigate to web directory
-            cd ~/splitly-temp/web
-            
-            # Install dependencies
-            npm install
-            
-            # Build the project
-            npm run build
-            
-            # Copy built files to nginx directory
-            sudo cp -r dist/* /var/www/splitly/
-            sudo chown -R www-data:www-data /var/www/splitly
-            
-            # Clean up temp directory
-            rm -rf ~/splitly-temp
-            
-            # Navigate back to original directory for PM2 operations
             cd ~/splitly/web
             
-            # Restart PM2 web process (with fallback if process doesn't exist)
-            pm2 restart splitly-web || pm2 start npm --name "splitly-web" -- run preview -- --port 3001
+            # Install dependencies
+            npm ci --production=false
             
-            # Save PM2 config
-            pm2 save
+            # Build the project for production
+            npm run build
             
-            # Show status
-            pm2 status
+            # Backup current deployment
+            sudo cp -r /var/www/splitly /var/www/splitly-backup-$(date +%Y%m%d-%H%M%S) || true
+            
+            # Copy built files to nginx directory
+            sudo rm -rf /var/www/splitly/*
+            sudo cp -r dist/* /var/www/splitly/
+            sudo chown -R www-data:www-data /var/www/splitly
+            sudo chmod -R 755 /var/www/splitly
             
             # Test nginx configuration and reload
-            sudo nginx -t && sudo systemctl reload nginx
+            sudo nginx -t
+            if [ $? -eq 0 ]; then
+                sudo systemctl reload nginx
+                echo "✅ Nginx reloaded successfully"
+            else
+                echo "❌ Nginx configuration test failed"
+                exit 1
+            fi
             
-            echo "✅ Web deployment completed successfully!"
+            # Verify deployment
+            echo "📁 Deployed files:"
+            ls -la /var/www/splitly/
+            
+            # Test if the site is accessible
+            if curl -f -s http://localhost > /dev/null; then
+                echo "✅ Web deployment completed and site is accessible!"
+            else
+                echo "⚠️  Deployment completed but site may not be accessible"
+            fi
+      
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          script: |
+            echo "🔍 Final verification..."
+            echo "Current files in web directory:"
+            ls -la /var/www/splitly/ | head -10
+            echo ""
+            echo "Checking if index.html exists and is recent:"
+            if [ -f /var/www/splitly/index.html ]; then
+                echo "✅ index.html found"
+                echo "Last modified: $(stat -c %y /var/www/splitly/index.html)"
+            else
+                echo "❌ index.html not found!"
+            fi
       
       - name: Update Deployment Status
         uses: bobheadxi/deployments@v1
