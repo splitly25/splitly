@@ -626,7 +626,7 @@ const Layout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       {/* Mobile Menu Button */}
-      {isMobile && !mobileOpen && (
+      {isMobile && !mobileOpenlayout && (
         <IconButton
           onClick={handleDrawerToggle}
           sx={{
