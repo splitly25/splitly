@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import exitHook from 'async-exit-hook' 
+import exitHook from 'async-exit-hook'
 import express from 'express'
 import cors from 'cors'
 import { CONNECT_DB, CLOSE_DB } from '~/config/mongodb'
@@ -15,30 +15,14 @@ const START_SERVER = () => {
   const hostname = env.APP_HOST || 'localhost'
   const PORT = env.APP_PORT || 3000
 
-   app.use((req, res, next) => {
+  app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store')
     next()
   })
-  
-  // Additional CORS headers for maximum compatibility
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-    res.header('Access-Control-Allow-Credentials', 'true')
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      res.status(200).end()
-      return
-    }
-    next()
-  })
-  
   app.use(cookieParser())
   // Middleware to enable CORS with proper configuration
   app.use(cors(corsOptions))
-  app.use(express.json({limit: '20mb'}))
+  app.use(express.json({ limit: '20mb' }))
   app.use('/v1', APIs_V1)
   app.use(errorHandlingMiddleware)
 
@@ -53,20 +37,19 @@ const START_SERVER = () => {
   })
 }
 
-(async () => {
+;(async () => {
   try {
     console.log('1.Connecting to MongoDB...')
     await CONNECT_DB()
     console.log('2.Connected to MongoDB successfully!')
-    
+
     console.log('3.Initializing database indexes...')
     await initializeDatabase()
     console.log('4.Database indexes initialized!')
-    
+
     START_SERVER()
   } catch (error) {
     console.error('Error connecting to MongoDB:', error)
     process.exit(0)
   }
 })()
-
