@@ -93,7 +93,11 @@ const editProfile = async (req, res, next) => {
     const profileData = req.body
     const profile = await userService.editProfile(userId, profileData)
     res.status(StatusCodes.OK).json(profile)
-    
+  } catch (error) {
+    next(error)
+  }
+}
+
 const createGuestUser = async (req, res, next) => {
   try {
     const result = await userService.createGuestUser(req.body)
@@ -112,6 +116,6 @@ export const userController = {
   getUserById,
   getUserByEmail,
   fetchUsers,
-  editProfile
+  editProfile,
   createGuestUser,
 }
