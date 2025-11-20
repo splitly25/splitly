@@ -116,12 +116,7 @@ const createNew = async (reqBody, options = {}) => {
     const emailContent = verificationEmailTemplate(getNewUser.name, verificationLink)
 
     try {
-      await NodemailerProvider.sendEmail(
-        getNewUser.email,
-        emailContent.subject,
-        emailContent.text,
-        emailContent.html
-      )
+      await NodemailerProvider.sendEmail(getNewUser.email, emailContent.subject, emailContent.text, emailContent.html)
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError.message)
     }
@@ -447,6 +442,11 @@ const editProfile = async (userId, profileData) => {
     const updatedUser = await update(userId, updateData, userId)
 
     return pickUser(updatedUser)
+  } catch (error) {
+    throw error
+  }
+}
+
 const createGuestUser = async (reqBody) => {
   try {
     const normalizedEmail = reqBody.email.toLowerCase().trim()
@@ -499,6 +499,6 @@ export const userService = {
   deleteOneById,
   findOrCreateUserByEmail,
   fetchUsers,
-  editProfile
+  editProfile,
   createGuestUser,
 }

@@ -1,24 +1,25 @@
-import { WHITELIST_DOMAINS } from '~/utils/constants'
-import { env } from '~/config/environment'
-import { StatusCodes } from 'http-status-codes'
-import APIError from '~/utils/APIError'
+// import { WHITELIST_DOMAINS } from '~/utils/constants'
+// import { env } from '~/config/environment'
+// import { StatusCodes } from 'http-status-codes'
+// import APIError from '~/utils/APIError'
 
 // CORS Options Configuration
 export const corsOptions = {
-  origin: function (origin, callback) {
-    // if origin is undefined in dev mode pass the CORS
-    if (env.BUILD_MODE === 'dev') {
-      return callback(null, true)
-    }
+  // origin: function (origin, callback) {
+  //   // if origin is undefined in dev mode pass the CORS
+  //   if (env.BUILD_MODE === 'dev') {
+  //     return callback(null, true)
+  //   }
 
-    // Check if the origin is in the whitelist
-    if (WHITELIST_DOMAINS.includes(origin)) {
-      return callback(null, true)
-    }
+  //   // Check if the origin is in the whitelist
+  //   if (WHITELIST_DOMAINS.includes(origin)) {
+  //     return callback(null, true)
+  //   }
 
-    // If the domain is not allowed, return an error
-    return callback(new APIError(StatusCodes.FORBIDDEN, `${origin} not allowed by our CORS Policy.`))
-  },
+  //   // If the domain is not allowed, return an error
+  //   return callback(new APIError(StatusCodes.FORBIDDEN, `${origin} not allowed by our CORS Policy.`))
+  // },
+  origin: true,
   optionsSuccessStatus: 200,
 
   // CORS will allow receiving cookies from requests
