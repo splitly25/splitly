@@ -19,6 +19,22 @@ const START_SERVER = () => {
     res.set('Cache-Control', 'no-store')
     next()
   })
+  
+  // Additional CORS headers for maximum compatibility
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+    res.header('Access-Control-Allow-Credentials', 'true')
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      res.status(200).end()
+      return
+    }
+    next()
+  })
+  
   app.use(cookieParser())
   // Middleware to enable CORS with proper configuration
   app.use(cors(corsOptions))

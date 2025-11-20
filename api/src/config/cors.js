@@ -5,21 +5,21 @@
 
 // CORS Options Configuration
 export const corsOptions = {
-  // origin: function (origin, callback) {
-  //   // if origin is undefined in dev mode pass the CORS
-  //   if (env.BUILD_MODE === 'dev') {
-  //     return callback(null, true)
-  //   }
-
-  //   // Check if the origin is in the whitelist
-  //   if (WHITELIST_DOMAINS.includes(origin)) {
-  //     return callback(null, true)
-  //   }
-
-  //   // If the domain is not allowed, return an error
-  //   return callback(new APIError(StatusCodes.FORBIDDEN, `${origin} not allowed by our CORS Policy.`))
-  // },
-  origin: true,
+  // Allow all origins
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+    
+    // Allow all origins in development and production
+    return callback(null, true)
+  },
+  
+  // Allow all methods
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  
+  // Allow all headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  
   optionsSuccessStatus: 200,
 
   // CORS will allow receiving cookies from requests
