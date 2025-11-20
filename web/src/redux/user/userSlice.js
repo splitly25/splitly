@@ -6,12 +6,12 @@ import { API_ROOT } from '~/utils/constants'
 const initialState = { currentUser: null }
 
 export const loginUserAPI = createAsyncThunk('activeBoard/loginUserAPI', async (data) => {
-  const response = await authorizedAxiosInstance.post('/v1/users/login', data)
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/login`, data)
   return response.data
 })
 
 export const logoutUserAPI = createAsyncThunk('user/logoutUserAPI', async (showSuccessMessage) => {
-  const response = await authorizedAxiosInstance.delete('/v1/users/logout')
+  const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/users/logout`)
   if (showSuccessMessage) {
     toast.success('Logged out successfully')
   }
