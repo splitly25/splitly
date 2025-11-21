@@ -9,6 +9,7 @@ import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import { initializeDatabase } from '~/config/initDB'
 import cookieParser from 'cookie-parser'
+import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider'
 import { NodemailerProvider } from '~/providers/NodemailerProvider'
 
 const START_SERVER = () => {
@@ -48,13 +49,24 @@ const START_SERVER = () => {
     await initializeDatabase()
     console.log('4.Database indexes initialized!')
 
-    console.log('5.Verifying SMTP connection...')
+    console.log('5.Verifying email services...')
+
+    // Verify Brevo (for registration emails)
+    const brevoReady = await BrevoEmailProvider.verifyConnection()
+    if (!brevoReady) {
+      console.warn('⚠️  WARNING: Brevo is not configured. Registration emails will fail!')
+      console.warn('   Please check your BREVO_API_KEY environment variable')
+    } else {
+      console.log('6a.Brevo email service verified successfully!')
+    }
+
+    // Verify Nodemailer/SMTP (for other emails)
     const smtpReady = await NodemailerProvider.verifyConnection()
     if (!smtpReady) {
-      console.warn('⚠️  WARNING: SMTP is not configured correctly. Emails will fail to send!')
-      console.warn('   Please check your SMTP environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)')
+      console.warn('⚠️  WARNING: SMTP is not configured. Other emails may fail!')
+      console.warn('   Please check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD')
     } else {
-      console.log('6.SMTP connection verified successfully!')
+      console.log('6b.SMTP connection verified successfully!')
     }
 
     START_SERVER()
