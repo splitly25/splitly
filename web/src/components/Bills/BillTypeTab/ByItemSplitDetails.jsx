@@ -5,9 +5,8 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import CustomTextField from '~/components/Form/CustomTextField'
 import { COLORS } from '~/theme'
-import ParticipantCard from '../Form/ParticipantCard'
 import Button from '@mui/material/Button'
-import { formatCurrency } from '~/utils/formatters'
+import ParticipantAutoCaculateList from '../ParticipantAutoCaculateList/ParticipantAutoCaculateList'
 
 function ByItemSplitDetails({
   formData,
@@ -233,56 +232,7 @@ function ByItemSplitDetails({
         />
       </Box>
 
-      <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 3, mb: 3 }} />
-
-      {/* Auto Calculate Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography
-          sx={{
-            fontSize: '16px',
-            fontWeight: 500,
-            color: 'text.primary',
-          }}
-        >
-          Tự động tính toán
-        </Typography>
-      </Box>
-
-      {/* Calculated Amounts - All Participants */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {participants.map((participant) => (
-          <ParticipantCard
-            key={participant.id}
-            participant={participant}
-            showAmountInput={false}
-            onAmountChange={() => {}}
-            onDelete={() => {}}
-            canDelete={false}
-          />
-        ))}
-      </Box>
-
-      {/* Total */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-        <Typography
-          sx={{
-            fontSize: '18px',
-            fontWeight: 500,
-            color: 'text.primary',
-          }}
-        >
-          Tổng cộng:
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: '18px',
-            fontWeight: 700,
-            color: 'text.primary',
-          }}
-        >
-          {formatCurrency(totalAmount || 0)} ₫
-        </Typography>
-      </Box>
+      <ParticipantAutoCaculateList participants={participants} totalAmount={totalAmount} />
     </Box>
   )
 }
