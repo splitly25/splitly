@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "host": "vite --host",
-    "production": "cross-env NODE_ENV=production vite build"
+    "production": "vite preview --port 4173 --host"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
