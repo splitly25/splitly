@@ -8,10 +8,6 @@ import CreateIcon from '@mui/icons-material/Create';
 import WarningIcon from '@mui/icons-material/Warning';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import ExploreIcon from '@mui/icons-material/Explore';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import TingTingGif from '~/assets/tingting.gif';
 import TingTingPng from '~/assets/tingting.png';
 import { toast } from 'react-toastify'
@@ -24,9 +20,9 @@ import { useNavigate } from 'react-router-dom'
 const QUICK_REPLIES = [
   {
     id: 'create-bill',
-    message: 'Tạo hóa đơn nhanh',
+    message: 'Tạo hóa đơn nhanh cho tôi',
     title: 'Tạo hóa đơn nhanh',
-    subtitle: 'Nhập liệu',
+    subtitle: 'Bằng cách nhắn với TingTing',
     icon: CreateIcon,
     borderColor: '#EF9A9A',
     hoverBorderColor: '#E57373',
@@ -35,9 +31,9 @@ const QUICK_REPLIES = [
   },
   {
     id: 'warnings',
-    message: 'Điều bạn nên biết',
+    message: 'Tình hình hóa đơn của tôi thế nào?',
     title: 'Điều bạn nên biết',
-    subtitle: 'Cảnh báo & Nợ',
+    subtitle: 'Về tình hình hóa đơn của bạn',
     icon: WarningIcon,
     borderColor: '#F48FB1',
     hoverBorderColor: '#F06292',
@@ -46,9 +42,9 @@ const QUICK_REPLIES = [
   },
   {
     id: 'payment-suggestion',
-    message: 'Hôm nay ai trả?',
+    message: 'Hôm nay ai nên ứng tiền?',
     title: 'Hôm nay ai trả?',
-    subtitle: 'Gợi ý thông minh',
+    subtitle: 'Gợi ý xem hôm nay ai nên ứng tiền',
     icon: LightbulbIcon,
     borderColor: '#CE93D8',
     hoverBorderColor: '#BA68C8',
@@ -57,9 +53,9 @@ const QUICK_REPLIES = [
   },
   {
     id: 'explore',
-    message: 'Khám phá TingTing',
+    message: 'TingTing có thể làm được gì?',
     title: 'Khám phá TingTing',
-    subtitle: 'Hướng dẫn',
+    subtitle: 'Hiểu thêm về TingTing',
     icon: ExploreIcon,
     borderColor: '#B39DDB',
     hoverBorderColor: '#9575CD',
@@ -72,28 +68,28 @@ const QUICK_REPLIES = [
 const SUGGESTIONS = [
   {
     id: 'create-bill-quick',
-    message: 'Tạo hóa đơn nhanh',
+    message: 'Tạo hóa đơn nhanh cho tôi',
     label: 'Tạo hóa đơn nhanh',
     icon: CreateIcon,
     gradient: { from: '#EF9A9A', to: '#CE93D8' }
   },
   {
     id: 'warnings-quick',
-    message: 'Điều bạn nên biết',
+    message: 'Tình hình hóa đơn của tôi thế nào?',
     label: 'Điều bạn nên biết',
     icon: WarningIcon,
     gradient: { from: '#F48FB1', to: '#E1BEE7' }
   },
   {
     id: 'payment-quick',
-    message: 'Hôm nay ai trả?',
+    message: 'Hôm nay ai nên ứng tiền?',
     label: 'Hôm nay ai trả?',
     icon: LightbulbIcon,
     gradient: { from: '#CE93D8', to: '#B39DDB' }
   },
   {
     id: 'explore-quick',
-    message: 'Khám phá TingTing',
+    message: 'TingTing có thể làm được gì?',
     label: 'Khám phá TingTing',
     icon: ExploreIcon,
     gradient: { from: '#B39DDB', to: '#9FA8DA' }
