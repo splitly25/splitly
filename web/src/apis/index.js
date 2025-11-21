@@ -22,7 +22,7 @@ export const fetchHistorySearchingAPI = async (userId, numPage, limit, search, s
   return response.data
 }
 
-export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer) => {
+export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer, searchDebounced, status) => {
   const params = new URLSearchParams({
     page: numPage,
     limit: limit,
@@ -31,8 +31,12 @@ export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, to
   if (fromDate) params.append('fromDate', fromDate)
   if (toDate) params.append('toDate', toDate)
   if (payer) params.append('payer', payer)
+  if (searchDebounced) params.append('search', searchDebounced)
+  if (status && status !== 'all') params.append('status', status)
 
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/filter/${userId}?${params.toString()}`)
+  console.log(params.toString());
+
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?${params.toString()}`)
   return response.data
 }
 

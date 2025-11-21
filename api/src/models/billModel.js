@@ -202,6 +202,162 @@ const getBillsByUser = async (userId) => {
   }
 }
 
+const getBillsWithPagination = async (userId, page, limit, status, fromDate, toDate, isPayer, searchQuery) => {
+  try {
+    const skip = (page - 1) * limit
+    const userObjectId = new ObjectId(userId)
+
+    // Build the base query
+    let query = {
+      _destroy: false,
+    }
+
+    // Priority 1 & 2: User is either payer OR participant
+    // If isPayer is true, only get bills where user is payer
+    if (isPayer === true || isPayer === 'true') {
+      query.payerId = userObjectId
+
+      // If filtering by status and user is payer, add isSettled condition
+      if (status !== undefined && status !== 'all') {
+        if (status === 'paid') {
+          query.isSettled = true
+        } else if (status === 'unpaid') {
+          query.isSettled = { $ne: true }
+        }
+      }
+    } else {
+      // User is either payer or participant
+      if (status !== undefined && status !== 'all') {
+        // For mixed queries (payer OR participant), we need to use $or with complex conditions
+        const payerCondition = {
+          payerId: userObjectId,
+          ...(status === 'paid' ? { isSettled: true } : { isSettled: { $ne: true } }),
+        }
+
+        const participantCondition = {
+          payerId: { $ne: userObjectId },
+          participants: { $in: [userObjectId] },
+          paymentStatus: {
+            $elemMatch: {
+              userId: userObjectId,
+              ...(status === 'paid'
+                ? { paidDate: { $ne: null, $exists: true } }
+                : { $or: [{ paidDate: null }, { paidDate: { $exists: false } }] }),
+            },
+          },
+        }
+
+        query.$or = [payerCondition, participantCondition]
+      } else {
+        // No status filter, just check user participation
+        query.$or = [{ payerId: userObjectId }, { participants: { $in: [userObjectId] } }]
+      }
+    }
+
+    // Date range filter (check createdAt between fromDate and toDate)
+    if (fromDate || toDate) {
+      query.createdAt = {}
+
+      if (fromDate) {
+        const fromDateMatch = fromDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (fromDateMatch) {
+          const [, day, month, year] = fromDateMatch
+          const startDate = new Date(year, month - 1, day, 0, 0, 0)
+          if (!isNaN(startDate.getTime())) {
+            query.createdAt.$gte = startDate.getTime()
+          }
+        }
+      }
+
+      if (toDate) {
+        const toDateMatch = toDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (toDateMatch) {
+          const [, day, month, year] = toDateMatch
+          const endDate = new Date(year, month - 1, day, 23, 59, 59)
+          if (!isNaN(endDate.getTime())) {
+            query.createdAt.$lte = endDate.getTime()
+          }
+        }
+      }
+
+      if (Object.keys(query.createdAt).length === 0) {
+        delete query.createdAt
+      }
+    }
+
+    // Search query (searchQuery is an object with MongoDB query conditions)
+    if (searchQuery && Object.keys(searchQuery).length > 0) {
+      const baseConditions = { ...query }
+      const finalQuery = {
+        $and: [baseConditions, searchQuery],
+      }
+      for (const key in query) delete query[key]
+      Object.assign(query, finalQuery)
+    }
+
+    console.log(JSON.stringify(query))
+
+    // Get bills from database
+    const bills = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    // Post-process for status filter (if status is defined)
+    // let filteredBills = bills
+
+    // if (status !== undefined && status !== 'all') {
+    //   filteredBills = bills.filter((bill) => {
+    //     const isUserPayer = bill.payerId.equals(userObjectId)
+
+    //     console.log(isUserPayer, bill.payerId, userObjectId)
+
+    //     if (isUserPayer) {
+    //       // If user is payer, check bill.isSettled
+    //       if (status === 'paid') {
+    //         return bill.isSettled === true
+    //       } else if (status === 'unpaid') {
+    //         return bill.isSettled !== true
+    //       }
+    //     } else {
+    //       // If user is participant, check their paymentStatus
+    //       const userPaymentStatus = bill.paymentStatus?.find((ps) => ps.userId.equals(userObjectId))
+
+    //       if (userPaymentStatus) {
+    //         const isPaid = userPaymentStatus.paidDate !== null && userPaymentStatus.paidDate !== undefined
+
+    //         if (status === 'paid') {
+    //           return isPaid
+    //         } else if (status === 'unpaid') {
+    //           return !isPaid
+    //         }
+    //       }
+    //     }
+
+    //     return false
+    //   })
+    // }
+
+    // Count total for pagination (using same query but without status filter)
+    const total = await GET_DB().collection(BILL_COLLECTION_NAME).countDocuments(query)
+
+    return {
+      bills,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit
@@ -391,6 +547,7 @@ export const billModel = {
   getAllWithPagination,
   getBillsByUser,
   getBillsByUserWithPagination,
+  getBillsWithPagination,
   searchBillsByUserWithPagination,
   getBillsByCreator,
   markAsPaid,

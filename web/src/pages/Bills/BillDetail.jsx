@@ -201,7 +201,7 @@ const BillDetail = () => {
 
   return (
     <Layout>
-      <Box className="main-container">
+      <Box className="@container main-container">
         {/* Header */}
         <Box
           sx={{
@@ -361,13 +361,7 @@ const BillDetail = () => {
         </Box>
 
         {/* Main Content */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
-            gap: { xs: 4, md: 6 },
-          }}
-        >
+        <Box className="grid grid-cols-1 @3xl:grid-cols-[2fr_1fr] gap-4 @md:gap-6">
           {/* Left Column - Bill Information */}
           <Box>
             <Card
@@ -445,7 +439,7 @@ const BillDetail = () => {
                       </Typography>
                     </Box>
                     <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                      {formatDateTime(billData.paymentDate)}
+                      {formatDateTime(billData.createdAt)}
                     </Typography>
                   </Box>
 
@@ -462,7 +456,7 @@ const BillDetail = () => {
                       </Typography>
                     </Box>
                     <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                      {formatDate(billData.paymentDeadline)}
+                      {formatDate(billData.paymentDate)}
                     </Typography>
                   </Box>
                 </Box>
