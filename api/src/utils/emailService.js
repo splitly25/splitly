@@ -1054,3 +1054,318 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
     return false
   }
 }
+
+/**
+ * Send debt balance notification email
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, user2Name, user1BillsBefore, user2BillsBefore, user1BillsRemaining, user2BillsRemaining, billsMarkedPaid, netDebt }) => {
+  try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
+    // Format currency helper
+    const formatCurrency = (amount) => {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+      }).format(amount)
+    }
+
+    // Generate bills list HTML
+    const generateBillsList = (bills) => {
+      if (!bills || bills.length === 0) {
+        return '<p>Không có hóa đơn nào.</p>'
+      }
+      return `
+        <table style="width: 100%; border-collapse: collapse;">
+          ${bills.map(bill => `
+            <tr>
+              <td style="text-align: left; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${bill.billName}</td>
+              <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${formatCurrency(bill.remainingAmount)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      `
+    }
+
+    // Calculate totals before balancing
+    const user1TotalBefore = user1BillsBefore.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+    const user2TotalBefore = user2BillsBefore.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+
+    // HTML email template
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6; 
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header { 
+      background: linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%);
+      color: white; 
+      padding: 40px 30px; 
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content { 
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bills-section {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bills-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .bill-row {
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .bill-row:last-child {
+      border-bottom: none;
+    }
+    .bill-name {
+      font-weight: 600;
+      color: #1e293b;
+      text-align: left;
+      padding: 12px 0;
+    }
+    .bill-amount {
+      font-weight: 700;
+      color: #ef4444;
+      text-align: right;
+      padding: 12px 0;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 15px;
+    }
+    .total-card { 
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .total-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .total-amount { 
+      font-size: 36px; 
+      font-weight: 700;
+      color: #1e293b;
+      margin: 10px 0;
+    }
+    .success-card { 
+      background: linear-gradient(135deg, rgba(5, 150, 105, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+      border: 2px solid rgba(5, 150, 105, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+    .success-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #059669;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">⚖️</div>
+        <h1>Cân Bằng Nợ Thành Công</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào,</p>
+        <p class="message">
+          Hệ thống Splitly đã tự động cân bằng các hóa đơn giữa <strong>${user1Name}</strong> và <strong>${user2Name}</strong>.
+        </p>
+        
+        <div class="bills-section">
+          <div class="section-title">Hóa đơn nợ trước khi cân bằng</div>
+          <div style="margin-bottom: 20px;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #1e293b;">${user1Name} nợ ${user2Name}:</div>
+            ${generateBillsList(user1BillsBefore)}
+            <div style="text-align: center; margin-top: 15px; font-weight: 700; color: #ef4444;">
+              Tổng: ${formatCurrency(user1TotalBefore)}
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 8px; color: #1e293b;">${user2Name} nợ ${user1Name}:</div>
+            ${generateBillsList(user2BillsBefore)}
+            <div style="text-align: center; margin-top: 15px; font-weight: 700; color: #ef4444;">
+              Tổng: ${formatCurrency(user2TotalBefore)}
+            </div>
+          </div>
+        </div>
+
+        ${netDebt > 0 ? `
+        <div class="section-title">Kết quả cân bằng: ${user1Name} còn nợ</div>
+        <div class="bills-section">
+          ${generateBillsList(user1BillsRemaining)}
+        </div>
+        <div class="total-card">
+          <div class="total-label">Tổng số tiền còn nợ</div>
+          <div class="total-amount">${formatCurrency(netDebt)}</div>
+        </div>
+        ` : netDebt < 0 ? `
+        <div class="section-title">Kết quả cân bằng: ${user2Name} còn nợ</div>
+        <div class="bills-section">
+          ${generateBillsList(user2BillsRemaining)}
+        </div>
+        <div class="total-card">
+          <div class="total-label">Tổng số tiền còn nợ</div>
+          <div class="total-amount">${formatCurrency(Math.abs(netDebt))}</div>
+        </div>
+        ` : `
+        <div class="success-card">
+          <div class="success-icon">✅</div>
+          <div class="success-text">Tất cả hóa đơn đã được thanh toán hoàn toàn</div>
+        </div>
+        `}
+
+        <p class="action-text">
+          Bạn có thể đăng nhập vào ứng dụng để xem chi tiết các hóa đơn đã được cập nhật.
+        </p>
+        
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+
+    // Send email to both users
+    const mailOptions1 = {
+      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: user1Email,
+      subject: `Cân bằng nợ với ${user2Name} - Splitly`,
+      html: htmlContent
+    }
+
+    const mailOptions2 = {
+      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: user2Email,
+      subject: `Cân bằng nợ với ${user1Name} - Splitly`,
+      html: htmlContent
+    }
+
+    // Send emails concurrently
+    const [result1, result2] = await Promise.allSettled([
+      transporter.sendMail(mailOptions1),
+      transporter.sendMail(mailOptions2)
+    ])
+
+    const success1 = result1.status === 'fulfilled'
+    const success2 = result2.status === 'fulfilled'
+
+    if (success1 && success2) {
+      console.log(`Debt balance emails sent successfully to ${user1Email} and ${user2Email}`)
+      return true
+    } else {
+      console.error('Failed to send some debt balance emails:', {
+        user1: success1 ? 'sent' : result1.reason?.message,
+        user2: success2 ? 'sent' : result2.reason?.message
+      })
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to send debt balance email:', error)
+    return false
+  }
+}
