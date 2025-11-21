@@ -1,15 +1,15 @@
 /* eslint-disable no-useless-catch */
-import { billModel } from '~/models/billModel.js';
-import { activityModel } from '~/models/activityModel.js';
-import { userModel } from '~/models/userModel.js';
-import { paymentModel } from '~/models/paymentModel.js';
-import { ClovaXClient } from '~/providers/ClovaStudioProvider';
-import { JwtProvider } from '~/providers/JwtProvider.js';
-import { env } from '~/config/environment.js';
-import { GET_DB } from '~/config/mongodb';
-import { ObjectId } from 'mongodb';
+import { billModel } from '~/models/billModel.js'
+import { activityModel } from '~/models/activityModel.js'
+import { userModel } from '~/models/userModel.js'
+import { paymentModel } from '~/models/paymentModel.js'
+import { ClovaXClient } from '~/providers/ClovaStudioProvider'
+import { JwtProvider } from '~/providers/JwtProvider.js'
+import { env } from '~/config/environment.js'
+import { GET_DB } from '~/config/mongodb'
+import { ObjectId } from 'mongodb'
 
-const { BILL_COLLECTION_NAME } = billModel;
+const { BILL_COLLECTION_NAME } = billModel
 
 const createNew = async (reqBody) => {
   try {
@@ -18,14 +18,14 @@ const createNew = async (reqBody) => {
     if (reqBody.splittingMethod === 'equal') {
       // Equal split: total amount / number of participants
       const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
-      paymentStatus = reqBody.participants.map(userId => {
-        const isPayer = userId.toString() === reqBody.payerId.toString();
+      paymentStatus = reqBody.participants.map((userId) => {
+        const isPayer = userId.toString() === reqBody.payerId.toString()
         return {
           userId: userId,
           amountOwed: amountPerPerson,
           amountPaid: isPayer ? amountPerPerson : 0, // Payer already paid
-          paidDate: isPayer ? Date.now() : null
-        };
+          paidDate: isPayer ? Date.now() : null,
+        }
       })
     } else if (reqBody.splittingMethod === 'item-based') {
       // Item-based split: calculate based on items with discount/tax adjustment
@@ -35,12 +35,12 @@ const createNew = async (reqBody) => {
       const userAmounts = {}
 
       // Calculate total owed by each user with adjustment
-      reqBody.items.forEach(item => {
+      reqBody.items.forEach((item) => {
         const adjustedItemAmount = item.amount * adjustmentRatio
         const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
 
-        item.allocatedTo.forEach(userId => {
-          const userKey = userId.toString(); // Use string key for object
+        item.allocatedTo.forEach((userId) => {
+          const userKey = userId.toString() // Use string key for object
           userAmounts[userKey] = (userAmounts[userKey] || 0) + amountPerPerson
         })
       })
@@ -48,48 +48,48 @@ const createNew = async (reqBody) => {
       // Create payment status array
       paymentStatus = Object.entries(userAmounts).map(([userIdStr, amount]) => {
         // Use .equals() for proper ObjectId comparison (convert key back to ObjectId for comparison)
-        const isPayer = reqBody.payerId.toString() === userIdStr;
+        const isPayer = reqBody.payerId.toString() === userIdStr
         return {
           userId: userIdStr,
           amountOwed: Math.round(amount),
           amountPaid: isPayer ? Math.round(amount) : 0,
-          paidDate: isPayer ? Date.now() : null
-        };
+          paidDate: isPayer ? Date.now() : null,
+        }
       })
     } else if (reqBody.splittingMethod === 'people-based') {
       // People-based split: each person has a custom amount
       if (!reqBody.paymentStatus || !Array.isArray(reqBody.paymentStatus)) {
-        throw new Error('paymentStatus array is required for people-based splitting');
+        throw new Error('paymentStatus array is required for people-based splitting')
       }
 
       // Validate that the sum of amountOwed matches totalAmount
-      const totalOwed = reqBody.paymentStatus.reduce((sum, ps) => sum + ps.amountOwed, 0);
+      const totalOwed = reqBody.paymentStatus.reduce((sum, ps) => sum + ps.amountOwed, 0)
       if (Math.abs(totalOwed - reqBody.totalAmount) > 0.01) {
-        throw new Error(`Sum of amountOwed (${totalOwed}) must equal totalAmount (${reqBody.totalAmount})`);
+        throw new Error(`Sum of amountOwed (${totalOwed}) must equal totalAmount (${reqBody.totalAmount})`)
       }
 
       // Set payment status with payer already paid
-      paymentStatus = reqBody.paymentStatus.map(ps => {
-        const isPayer = ps.userId.toString() === reqBody.payerId.toString();
+      paymentStatus = reqBody.paymentStatus.map((ps) => {
+        const isPayer = ps.userId.toString() === reqBody.payerId.toString()
         return {
           userId: ps.userId,
           amountOwed: ps.amountOwed,
           amountPaid: isPayer ? ps.amountOwed : 0,
-          paidDate: isPayer ? Date.now() : null
-        };
-      });
+          paidDate: isPayer ? Date.now() : null,
+        }
+      })
     }
-    
+
     const newBillData = {
       ...reqBody,
       paymentStatus,
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     }
-    
+
     const createdBill = await billModel.createNew(newBillData)
     const getNewBill = await billModel.findOneById(createdBill.insertedId.toString())
-    
+
     // Log activity if creatorId is provided
     if (reqBody.creatorId) {
       try {
@@ -100,7 +100,7 @@ const createNew = async (reqBody) => {
           {
             billName: reqBody.billName,
             amount: reqBody.totalAmount,
-            description: `Created new bill: ${reqBody.billName}`
+            description: `Created new bill: ${reqBody.billName}`,
           }
         )
       } catch (activityError) {
@@ -123,8 +123,9 @@ const createNew = async (reqBody) => {
       const populatedBill = await getBillById(createdBill.insertedId.toString())
 
       // Filter participants (exclude payer)
-      const participantsToEmail = populatedBill.participants
-        .filter(participant => participant._id.toString() !== reqBody.payerId.toString())
+      const participantsToEmail = populatedBill.participants.filter(
+        (participant) => participant._id.toString() !== reqBody.payerId.toString()
+      )
 
       console.log(`Sending bill creation emails to ${participantsToEmail.length} participants`)
 
@@ -139,13 +140,15 @@ const createNew = async (reqBody) => {
         const payload = {
           creditorId: reqBody.payerId,
           debtorId: participant._id,
-          bills: [{
-            billId: createdBill.insertedId.toString(),
-            billName: reqBody.billName,
-            amount: participant.amount
-          }],
+          bills: [
+            {
+              billId: createdBill.insertedId.toString(),
+              billName: reqBody.billName,
+              amount: participant.amount,
+            },
+          ],
           totalAmount: participant.amount,
-          type: 'bill_payment'
+          type: 'bill_payment',
         }
         const paymentToken = await JwtProvider.generateToken(payload, env.ACCESS_JWT_SECRET_KEY, '30d') // 30 days for bill payments
 
@@ -153,7 +156,7 @@ const createNew = async (reqBody) => {
         await paymentModel.createNew({
           token: paymentToken,
           creditorId: reqBody.payerId,
-          debtorId: participant._id
+          debtorId: participant._id,
         })
 
         console.log(`Sending email to ${participant.email} (${participant.name}) for bill ${reqBody.billName}`)
@@ -168,18 +171,18 @@ const createNew = async (reqBody) => {
           totalAmount: reqBody.totalAmount,
           participantAmount: participant.amount,
           items: reqBody.items || [],
-          participants: populatedBill.participants.map(p => ({
+          participants: populatedBill.participants.map((p) => ({
             name: p.name,
-            amount: p.amount
+            amount: p.amount,
           })),
           optOutToken: createdBill.insertedId.toString(),
-          paymentToken
+          paymentToken,
         })
       })
 
       // Send all emails concurrently
       const emailResults = await Promise.allSettled(emailPromises)
-      const successCount = emailResults.filter(result => result.status === 'fulfilled' && result.value).length
+      const successCount = emailResults.filter((result) => result.status === 'fulfilled' && result.value).length
       const failCount = emailResults.length - successCount
 
       console.log(`Bill creation email results: ${successCount} sent, ${failCount} failed`)
@@ -210,11 +213,11 @@ const createNew = async (reqBody) => {
  */
 const getAll = async () => {
   try {
-    return await billModel.getAll();
+    return await billModel.getAll()
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get all bills with pagination
@@ -224,11 +227,11 @@ const getAll = async () => {
  */
 const getAllWithPagination = async (page = 1, limit = 10) => {
   try {
-    return await billModel.getAllWithPagination(page, limit);
+    return await billModel.getAllWithPagination(page, limit)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get bills by user ID
@@ -237,11 +240,11 @@ const getAllWithPagination = async (page = 1, limit = 10) => {
  */
 const getBillsByUser = async (userId) => {
   try {
-    return await billModel.getBillsByUser(userId);
+    return await billModel.getBillsByUser(userId)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get bills by user with pagination
@@ -252,11 +255,11 @@ const getBillsByUser = async (userId) => {
  */
 const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
   try {
-    return await billModel.getBillsByUserWithPagination(userId, page, limit);
+    return await billModel.getBillsByUserWithPagination(userId, page, limit)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get bills by creator ID
@@ -265,11 +268,11 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
  */
 const getBillsByCreator = async (creatorId) => {
   try {
-    return await billModel.getBillsByCreator(creatorId);
+    return await billModel.getBillsByCreator(creatorId)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get bill by ID (basic)
@@ -278,11 +281,11 @@ const getBillsByCreator = async (creatorId) => {
  */
 const findOneById = async (billId) => {
   try {
-    return await billModel.findOneById(billId);
+    return await billModel.findOneById(billId)
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Get bill by ID with populated user data
@@ -291,19 +294,19 @@ const findOneById = async (billId) => {
  */
 const getBillById = async (billId) => {
   try {
-    const bill = await billModel.findOneById(billId);
-    
+    const bill = await billModel.findOneById(billId)
+
     if (!bill) {
-      throw new Error('Bill not found');
+      throw new Error('Bill not found')
     }
 
     // Populate payer information
-    const payer = await userModel.findOneById(bill.payerId.toString());
-    
+    const payer = await userModel.findOneById(bill.payerId.toString())
+
     // Populate participants information
     const participantsWithDetails = await Promise.all(
       bill.paymentStatus.map(async (payment) => {
-        const user = await userModel.findOneById(payment.userId.toString());
+        const user = await userModel.findOneById(payment.userId.toString())
         return {
           _id: user._id,
           name: user.name,
@@ -314,14 +317,12 @@ const getBillById = async (billId) => {
           amountPaid: payment.amountPaid,
           paidDate: payment.paidDate,
           role: payment.userId.toString() === bill.payerId.toString() ? 'payer' : 'participant',
-        };
+        }
       })
-    );
+    )
 
     // Calculate if bill is settled
-    const isSettled = bill.paymentStatus.every(
-      (payment) => payment.amountPaid >= payment.amountOwed
-    );
+    const isSettled = bill.paymentStatus.every((payment) => payment.amountPaid >= payment.amountOwed)
 
     // Format response
     return {
@@ -344,11 +345,11 @@ const getBillById = async (billId) => {
       items: bill.items || [],
       createdAt: bill.createdAt,
       updatedAt: bill.updatedAt,
-    };
+    }
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Update bill with activity logging
@@ -360,9 +361,9 @@ const getBillById = async (billId) => {
 const update = async (billId, updateData, updatedBy) => {
   try {
     // Get original bill data for activity logging
-    const originalBill = await billModel.findOneById(billId);
+    const originalBill = await billModel.findOneById(billId)
 
-    const result = await billModel.update(billId, updateData);
+    const result = await billModel.update(billId, updateData)
 
     // Log activity if updatedBy is provided
     if (updatedBy && originalBill) {
@@ -376,17 +377,17 @@ const update = async (billId, updateData, updatedBy) => {
           },
           newValue: updateData,
           description: `Updated bill: ${originalBill.billName}`,
-        });
+        })
       } catch (activityError) {
-        console.warn('Failed to log bill update activity:', activityError.message);
+        console.warn('Failed to log bill update activity:', activityError.message)
       }
     }
 
-    return result;
+    return result
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Mark bill as paid for a user (full or partial payment)
@@ -403,38 +404,31 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
     // Log payment activity
     if (paidBy) {
       try {
-        await activityModel.logBillActivity(
-          activityModel.ACTIVITY_TYPES.BILL_PAID,
-          paidBy,
-          billId,
-          {
-            billName: bill.billName,
-            amountPaid: amountPaid,
-            paymentStatus: 'paid',
-            description: `Payment of ${amountPaid} for bill: ${bill.billName}`
-          }
-        )
+        await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_PAID, paidBy, billId, {
+          billName: bill.billName,
+          amountPaid: amountPaid,
+          paymentStatus: 'paid',
+          description: `Payment of ${amountPaid} for bill: ${bill.billName}`,
+        })
         await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_PAID, paidBy, billId, {
           billName: bill.billName,
           paymentStatus: 'paid',
           description: `Marked payment as completed for bill: ${bill.billName}`,
-        });
+        })
       } catch (activityError) {
-        console.warn('Failed to log bill payment activity:', activityError.message);
+        console.warn('Failed to log bill payment activity:', activityError.message)
       }
     }
-    
-    
 
     // Check if all participants have paid
-    const updatedBill = await billModel.findOneById(billId);
+    const updatedBill = await billModel.findOneById(billId)
     const allPaid = updatedBill.paymentStatus.every((status) => {
-      const amountPaid = status.amountPaid || 0;
-      return amountPaid >= status.amountOwed;
-    });
+      const amountPaid = status.amountPaid || 0
+      return amountPaid >= status.amountOwed
+    })
 
     if (allPaid) {
-      await billModel.update(billId, { isSettled: true });
+      await billModel.update(billId, { isSettled: true })
 
       // Log bill settlement activity
       if (paidBy) {
@@ -442,18 +436,18 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
           await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_SETTLED, paidBy, billId, {
             billName: bill.billName,
             description: `Bill fully settled: ${bill.billName}`,
-          });
+          })
         } catch (activityError) {
-          console.warn('Failed to log bill settlement activity:', activityError.message);
+          console.warn('Failed to log bill settlement activity:', activityError.message)
         }
       }
     }
 
-    return result;
+    return result
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * User opts out from a bill
@@ -464,9 +458,9 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
  */
 const optOutUser = async (billId, userId, optedOutBy) => {
   try {
-    const bill = await billModel.findOneById(billId);
+    const bill = await billModel.findOneById(billId)
 
-    const result = await billModel.optOutUser(billId, userId);
+    const result = await billModel.optOutUser(billId, userId)
 
     // Log opt-out activity
     if (optedOutBy) {
@@ -474,17 +468,17 @@ const optOutUser = async (billId, userId, optedOutBy) => {
         await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_USER_OPTED_OUT, optedOutBy, billId, {
           billName: bill.billName,
           description: `User opted out from bill: ${bill.billName}`,
-        });
+        })
       } catch (activityError) {
-        console.warn('Failed to log bill opt-out activity:', activityError.message);
+        console.warn('Failed to log bill opt-out activity:', activityError.message)
       }
     }
 
-    return result;
+    return result
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Delete bill by ID with activity logging
@@ -494,9 +488,9 @@ const optOutUser = async (billId, userId, optedOutBy) => {
  */
 const deleteOneById = async (billId, deletedBy) => {
   try {
-    const bill = await billModel.findOneById(billId);
+    const bill = await billModel.findOneById(billId)
 
-    const result = await billModel.deleteOneById(billId);
+    const result = await billModel.deleteOneById(billId)
 
     // Log deletion activity
     if (deletedBy && bill) {
@@ -505,17 +499,17 @@ const deleteOneById = async (billId, deletedBy) => {
           billName: bill.billName,
           amount: bill.totalAmount,
           description: `Deleted bill: ${bill.billName}`,
-        });
+        })
       } catch (activityError) {
-        console.warn('Failed to log bill deletion activity:', activityError.message);
+        console.warn('Failed to log bill deletion activity:', activityError.message)
       }
     }
 
-    return result;
+    return result
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Send bill reminder with activity logging
@@ -527,7 +521,7 @@ const deleteOneById = async (billId, deletedBy) => {
  */
 const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId) => {
   try {
-    const bill = await billModel.findOneById(billId);
+    const bill = await billModel.findOneById(billId)
 
     // Here you would implement your actual reminder logic
     // For example: await emailService.sendReminder(...)
@@ -540,64 +534,61 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
           reminderType: reminderType,
           recipientId: recipientUserId,
           description: `Sent ${reminderType} reminder for bill: ${bill.billName}`,
-        });
+        })
       } catch (activityError) {
-        console.warn('Failed to log bill reminder activity:', activityError.message);
+        console.warn('Failed to log bill reminder activity:', activityError.message)
       }
     }
 
-    return { success: true, message: 'Reminder sent successfully' };
+    return { success: true, message: 'Reminder sent successfully' }
   } catch (error) {
-    throw error;
+    throw error
   }
-};
-
+}
 
 const generateSearchQuery = (searchTerm = '') => {
   try {
     // If no search term, return all bills for the user
     if (!searchTerm || searchTerm.trim() === '') {
-      return {};
+      return {}
     }
 
-    const trimmedSearch = searchTerm.trim();
+    const trimmedSearch = searchTerm.trim()
 
     // Build search query with multiple conditions
-    const searchConditions = [];
+    const searchConditions = []
 
     // 1. Search in billName (case-insensitive)
     searchConditions.push({
       billName: { $regex: trimmedSearch, $options: 'i' },
-    });
+    })
 
     // 2. Search in description (case-insensitive)
     searchConditions.push({
       description: { $regex: trimmedSearch, $options: 'i' },
-    });
+    })
 
     // 3. Try to parse as date in various formats
     const datePatterns = [
       /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/, // DD/MM/YYYY or DD-MM-YYYY
       /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/, // YYYY/MM/DD or YYYY-MM-DD
-    ];
+    ]
 
     for (const pattern of datePatterns) {
-      const match = trimmedSearch.match(pattern);
+      const match = trimmedSearch.match(pattern)
       if (match) {
-        let day, month, year;
+        let day, month, year
         if (pattern.source.startsWith('^(\\d{4})')) {
           // YYYY-MM-DD format
-          [, year, month, day] = match;
+          ;[, year, month, day] = match
         } else {
           // DD/MM/YYYY format
-          [, day, month, year] = match;
+          ;[, day, month, year] = match
         }
 
-        console.log(day, month, year)
-
         // Create date range for the entire day
-        const startDate = new Date(year, month - 1, day, 0, 0, 0);
-        const endDate = new Date(year, month - 1, day, 23, 59, 59);
+        const startDate = new Date(year, month - 1, day, 0, 0, 0)
+        const endDate = new Date(year, month - 1, day, 23, 59, 59)
 
         if (!isNaN(startDate.getTime())) {
           searchConditions.push({
@@ -605,38 +596,38 @@ const generateSearchQuery = (searchTerm = '') => {
               $gte: startDate,
               $lte: endDate,
             },
-          });
+          })
           searchConditions.push({
             createdAt: {
               $gte: startDate,
               $lte: endDate,
             },
-          });
-          break;
+          })
+          break
         }
       }
     }
 
     // 4. Search by year (if 4 digits between 2000-2100)
-    const yearMatch = trimmedSearch.match(/^(20\d{2})$/);
+    const yearMatch = trimmedSearch.match(/^(20\d{2})$/)
     if (yearMatch) {
-      const year = parseInt(yearMatch[1]);
-      const startOfYear = new Date(year, 0, 1, 0, 0, 0);
-      const endOfYear = new Date(year, 11, 31, 23, 59, 59);
+      const year = parseInt(yearMatch[1])
+      const startOfYear = new Date(year, 0, 1, 0, 0, 0)
+      const endOfYear = new Date(year, 11, 31, 23, 59, 59)
 
       searchConditions.push({
         paymentDate: {
           $gte: startOfYear,
           $lte: endOfYear,
         },
-      });
+      })
 
       searchConditions.push({
         createdAt: {
           $gte: startOfYear,
           $lte: endOfYear,
         },
-      });
+      })
     }
 
     // 5. Search by month name (Vietnamese and English)
@@ -685,43 +676,40 @@ const generateSearchQuery = (searchTerm = '') => {
       'tháng 12': 12,
       december: 12,
       dec: 12,
-    };
+    }
 
-    const lowerSearch = trimmedSearch.toLowerCase();
-    const monthNumber = monthNames[lowerSearch];
+    const lowerSearch = trimmedSearch.toLowerCase()
+    const monthNumber = monthNames[lowerSearch]
 
     if (monthNumber) {
-      const currentYear = new Date().getFullYear();
-      console.log(monthNumber, currentYear)
-      const startOfMonth = new Date(currentYear, monthNumber - 1, 1, 0, 0, 0);
-      const endOfMonth = new Date(currentYear, monthNumber, 0, 23, 59, 59);
+      const currentYear = new Date().getFullYear()
+      const startOfMonth = new Date(currentYear, monthNumber - 1, 1, 0, 0, 0)
+      const endOfMonth = new Date(currentYear, monthNumber, 0, 23, 59, 59)
 
       searchConditions.push({
         paymentDate: {
           $gte: startOfMonth,
           $lte: endOfMonth,
         },
-      });
+      })
       searchConditions.push({
         createdAt: {
           $gte: startOfMonth,
           $lte: endOfMonth,
         },
-      });
+      })
     }
 
     // Build the custom query with $or condition
     const customQuery = {
       $or: searchConditions,
-    };
-
-    console.log(JSON.stringify(customQuery))
+    }
     // Call the model with the custom query
-    return customQuery;
+    return customQuery
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 /**
  * Filter bills by user with date range and payer
@@ -735,29 +723,29 @@ const generateSearchQuery = (searchTerm = '') => {
  * @param {number} limit - Items per page
  * @returns {Promise<Object>} Bills with pagination info
  */
-const getBillsWithConditions = async (userId, fromDate, toDate, payer, searchDebounced, status, page = 1, limit = 10) => {
+const getBillsWithConditions = async (
+  userId,
+  fromDate,
+  toDate,
+  payer,
+  searchDebounced,
+  status,
+  page = 1,
+  limit = 10
+) => {
   try {
-    const searchQuery = generateSearchQuery(searchDebounced);
+    const searchQuery = generateSearchQuery(searchDebounced)
     // Use the new comprehensive query function from billModel
-    return await billModel.getBillsWithPagination(
-      userId,
-      page,
-      limit,
-      status,
-      fromDate,
-      toDate,
-      payer,
-      searchQuery
-    )
+    return await billModel.getBillsWithPagination(userId, page, limit, status, fromDate, toDate, payer, searchQuery)
   } catch (error) {
     throw error
   }
-};
+}
 
 const getMutualBills = async (userId1, userId2) => {
   try {
-    const user1ObjectId = new ObjectId(userId1);
-    const user2ObjectId = new ObjectId(userId2);
+    const user1ObjectId = new ObjectId(userId1)
+    const user2ObjectId = new ObjectId(userId2)
 
     // Find bills where user1 owes user2 (user1 is participant, user2 is payer)
     const billsUser1Owes = await GET_DB()
@@ -765,9 +753,9 @@ const getMutualBills = async (userId1, userId2) => {
       .find({
         payerId: user2ObjectId,
         participants: user1ObjectId,
-        _destroy: false
+        _destroy: false,
       })
-      .toArray();
+      .toArray()
 
     // Find bills where user2 owes user1 (user2 is participant, user1 is payer)
     const billsUser2Owes = await GET_DB()
@@ -775,70 +763,74 @@ const getMutualBills = async (userId1, userId2) => {
       .find({
         payerId: user1ObjectId,
         participants: user2ObjectId,
-        _destroy: false
+        _destroy: false,
       })
-      .toArray();
+      .toArray()
 
     // Filter and populate bills where user1 hasn't paid fully
-    const user1UnpaidBills = billsUser1Owes.filter(bill => {
-      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user1ObjectId));
-      return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed;
-    }).map(bill => {
-      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user1ObjectId));
-      return {
-        _id: bill._id,
-        billName: bill.billName,
-        description: bill.description || '',
-        totalAmount: bill.totalAmount,
-        amountOwed: paymentStatus.amountOwed,
-        amountPaid: paymentStatus.amountPaid,
-        remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
-        paymentDate: bill.paymentDate || bill.createdAt,
-        payerId: bill.payerId,
-        createdAt: bill.createdAt
-      };
-    });
+    const user1UnpaidBills = billsUser1Owes
+      .filter((bill) => {
+        const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed
+      })
+      .map((bill) => {
+        const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
+        return {
+          _id: bill._id,
+          billName: bill.billName,
+          description: bill.description || '',
+          totalAmount: bill.totalAmount,
+          amountOwed: paymentStatus.amountOwed,
+          amountPaid: paymentStatus.amountPaid,
+          remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+          paymentDate: bill.paymentDate || bill.createdAt,
+          payerId: bill.payerId,
+          createdAt: bill.createdAt,
+        }
+      })
 
     // Filter and populate bills where user2 hasn't paid fully
-    const user2UnpaidBills = billsUser2Owes.filter(bill => {
-      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user2ObjectId));
-      return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed;
-    }).map(bill => {
-      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user2ObjectId));
-      return {
-        _id: bill._id,
-        billName: bill.billName,
-        description: bill.description || '',
-        totalAmount: bill.totalAmount,
-        amountOwed: paymentStatus.amountOwed,
-        amountPaid: paymentStatus.amountPaid,
-        remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
-        paymentDate: bill.paymentDate || bill.createdAt,
-        payerId: bill.payerId,
-        createdAt: bill.createdAt
-      };
-    });
+    const user2UnpaidBills = billsUser2Owes
+      .filter((bill) => {
+        const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed
+      })
+      .map((bill) => {
+        const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
+        return {
+          _id: bill._id,
+          billName: bill.billName,
+          description: bill.description || '',
+          totalAmount: bill.totalAmount,
+          amountOwed: paymentStatus.amountOwed,
+          amountPaid: paymentStatus.amountPaid,
+          remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+          paymentDate: bill.paymentDate || bill.createdAt,
+          payerId: bill.payerId,
+          createdAt: bill.createdAt,
+        }
+      })
 
     // Calculate totals
-    const totalUser1Owes = user1UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
-    const totalUser2Owes = user2UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+    const totalUser1Owes = user1UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+    const totalUser2Owes = user2UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0)
 
     return {
       user1Bills: user1UnpaidBills,
       user2Bills: user2UnpaidBills,
       totalUser1Owes,
       totalUser2Owes,
-      canBalance: user1UnpaidBills.length > 0 && user2UnpaidBills.length > 0
-    };
+      canBalance: user1UnpaidBills.length > 0 && user2UnpaidBills.length > 0,
+    }
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 const scanBill = async ({ userId, imageData }) => {
-  const client = new ClovaXClient();
+  const client = new ClovaXClient()
 
-  const dataUriString = imageData;
+  const dataUriString = imageData
 
   const messages = [
     {
@@ -885,7 +877,7 @@ Return only valid JSON. Do not include explanations or extra text.
         },
       ],
     },
-  ];
+  ]
 
   const request = {
     messages,
@@ -895,16 +887,12 @@ Return only valid JSON. Do not include explanations or extra text.
     temperature: 0.5,
     repetitionPenalty: 1.1,
     stop: [],
-  };
+  }
 
-  const response = await client.createChatCompletion(request);
+  const response = await client.createChatCompletion(request)
 
-  const content = response?.result?.message?.content ?? '';
-
-  console.log(content);
-
-  return { response };
-};
+  return { response }
+}
 
 export const billService = {
   createNew,
@@ -920,8 +908,9 @@ export const billService = {
   optOutUser,
   deleteOneById,
   sendReminder,
-  searchBillsByUserWithPagination,
-  filterBillsByUser,
+  // searchBillsByUserWithPagination,
+  // filterBillsByUser,
   getMutualBills,
   scanBill,
-};
+  getBillsWithConditions,
+}
