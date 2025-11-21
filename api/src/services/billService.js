@@ -8,6 +8,7 @@ import { JwtProvider } from '~/providers/JwtProvider.js'
 import { env } from '~/config/environment.js'
 import { GET_DB } from '~/config/mongodb'
 import { ObjectId } from 'mongodb'
+import { sendBillCreationEmail } from '~/utils/emailService.js'
 
 const { BILL_COLLECTION_NAME } = billModel
 
@@ -110,8 +111,6 @@ const createNew = async (reqBody) => {
 
     // Send email notifications to all participants except the payer
     try {
-      const { sendBillCreationEmail } = await import('~/utils/emailService.js')
-
       // Get payer info
       const payer = await userModel.findOneById(reqBody.payerId.toString())
       if (!payer) {
@@ -177,6 +176,7 @@ const createNew = async (reqBody) => {
           })),
           optOutToken: createdBill.insertedId.toString(),
           paymentToken,
+          billId: createdBill.insertedId.toString(),
         })
       })
 
