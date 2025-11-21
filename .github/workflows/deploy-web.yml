@@ -47,6 +47,9 @@ jobs:
 
             if pm2 describe splitly-web > /dev/null 2>&1; then
               pm2 restart splitly-web
+            else
+              cd ~/splitly/web
+              pm2 start npm --name splitly-web -- run production
             fi
 
             # Save PM2 config
