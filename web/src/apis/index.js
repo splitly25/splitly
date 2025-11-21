@@ -155,7 +155,7 @@ export const fetchMutualBillsAPI = async (userId, creditorId) => {
 // Balance debts between two users
 export const balanceDebtsAPI = async (userId, otherUserId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/balance`, {
-    otherUserId
+    otherUserId,
   })
   toast.success('Cân bằng nợ thành công!', { theme: 'colored' })
   return response.data
@@ -263,12 +263,11 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   messages = messages.map(({ id, time, ...rest }) => rest)
   messages = filter(messages, (msg) => msg.role !== 'notification')
 
-  console.log("Sending messages to Assistant API:", messages);
+  console.log('Sending messages to Assistant API:', messages)
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
     userId,
     messages,
   })
-
 
   const assistantResponse = {
     id: leng + 1,
@@ -279,7 +278,6 @@ export const getAssistantResponseAPI = async (userId, messages) => {
     ...response.data.response,
   }
 
-  console.log("Assistant API Response:", response);
-  
-  return { response: assistantResponse, navigation: response.data.navigation };
+  console.log('Assistant API Response:', response)
+  return { response: assistantResponse, navigation: response.data.navigation }
 }

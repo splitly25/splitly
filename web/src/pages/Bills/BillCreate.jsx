@@ -45,7 +45,6 @@ import {
 } from '~/redux/bill/activeBillSlice'
 import { useChatbot } from '~/context/ChatbotContext'
 
-
 function BillCreate() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -468,6 +467,7 @@ function BillCreate() {
           onDeleteParticipant={handleDeleteParticipant}
           onParticipantAmountChange={handleParticipantAmountChange}
           onParticipantAmountBlur={handleParticipantAmountBlur}
+          availableGroups={availableGroups}
         />
 
         {/* Split Details Section */}

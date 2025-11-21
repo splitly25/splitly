@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { GET_DB } from '~/config/mongodb.js'
 import { ObjectId } from 'mongodb'
 import { userModel } from './userModel'
+import { pickUser } from '~/utils/formatters'
 
 const GROUP_COLLECTION_NAME = 'groups'
 
@@ -72,25 +73,52 @@ const getAll = async () => {
   }
 }
 
+//fetch groups with pagination and optional search and agregated with user details
 const fetchGroups = async (page = 1, limit = 10, search = '') => {
   try {
     const skip = (page - 1) * limit
-    const query = { _destroy: false }
+    const matchConditions = {
+      _destroy: false,
+    }
 
     // Add search condition if search term is provided
     if (search) {
-      query.$or = [{ groupName: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }]
+      matchConditions.$or = [
+        { groupName: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ]
     }
 
     const groups = await GET_DB()
       .collection(GROUP_COLLECTION_NAME)
-      .find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
+      .aggregate([
+        { $match: matchConditions },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+            pipeline: [{ $project: { password: 0, verifyToken: 0 } }],
+          },
+        },
+        {
+          $addFields: {
+            members: '$memberDetails',
+          },
+        },
+        {
+          $project: {
+            memberDetails: 0,
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ])
       .toArray()
 
-    const total = await GET_DB().collection(GROUP_COLLECTION_NAME).countDocuments(query)
+    const total = await GET_DB().collection(GROUP_COLLECTION_NAME).countDocuments(matchConditions)
 
     return {
       groups,
@@ -313,6 +341,21 @@ const getAllGroupsAndMembers = async () => {
   }
 }
 
+const pickGroup = (group) => {
+  if (!group) return null
+
+  return {
+    _id: group._id,
+    groupName: group.groupName,
+    description: group.description,
+    creatorId: group.creatorId,
+    members: Array.isArray(group.members) ? group.members.map(pickUser) : [],
+    avatar: group.avatar,
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+  }
+}
+
 export const groupModel = {
   GROUP_COLLECTION_NAME,
   GROUP_COLLECTION_SCHEMA,
@@ -328,4 +371,5 @@ export const groupModel = {
   getGroupAndMembers,
   getAllGroupsAndMembers,
   fetchGroups,
+  pickGroup,
 }
