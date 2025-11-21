@@ -9,6 +9,7 @@ import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import { initializeDatabase } from '~/config/initDB'
 import cookieParser from 'cookie-parser'
+import { NodemailerProvider } from '~/providers/NodemailerProvider'
 
 const START_SERVER = () => {
   const app = express()
@@ -27,13 +28,13 @@ const START_SERVER = () => {
   app.use(errorHandlingMiddleware)
 
   app.listen(PORT, hostname, () => {
-    console.log(`5.Server is running on http://${hostname}:${PORT}`)
+    console.log(`7.Server is running on http://${hostname}:${PORT}`)
   })
 
   exitHook(() => {
-    console.log('\n6.Exiting application, closing MongoDB connection...')
+    console.log('\n8.Exiting application, closing MongoDB connection...')
     CLOSE_DB()
-    console.log('7.MongoDB connection closed.')
+    console.log('9.MongoDB connection closed.')
   })
 }
 
@@ -46,6 +47,15 @@ const START_SERVER = () => {
     console.log('3.Initializing database indexes...')
     await initializeDatabase()
     console.log('4.Database indexes initialized!')
+
+    console.log('5.Verifying SMTP connection...')
+    const smtpReady = await NodemailerProvider.verifyConnection()
+    if (!smtpReady) {
+      console.warn('⚠️  WARNING: SMTP is not configured correctly. Emails will fail to send!')
+      console.warn('   Please check your SMTP environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)')
+    } else {
+      console.log('6.SMTP connection verified successfully!')
+    }
 
     START_SERVER()
   } catch (error) {
