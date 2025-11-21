@@ -11,6 +11,8 @@ Router.route('/user/:userId').get(authMiddleware.isAuthorized, billController.ge
 
 Router.route('/:billId').get(authMiddleware.isAuthorized, billController.getBillById)
 
+Router.route('/mutual/:userId/:creditorId').get(authMiddleware.isAuthorized, billController.getMutualBills)
+
 Router.route('/scan')
   .post(billValidation.scan, billController.scan)
   

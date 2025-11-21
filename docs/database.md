@@ -67,6 +67,8 @@
   payerId: String (required, user ObjectId - person who paid upfront),
   totalAmount: Number (required, >= 0),
   paymentDate: Timestamp,
+  creationDate: Timestamp,
+  paymentDeadline: Timestamp,
   splittingMethod: String (enum: 'equal' | 'item-based'),
   participants: [String] (array of user ObjectIds),
   items: [

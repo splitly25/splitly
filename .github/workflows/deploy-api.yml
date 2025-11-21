@@ -45,27 +45,35 @@ jobs:
           port: 22
           script: |
             # Navigate to project directory
-            cd ~/splitly/api
-            
+            cd ~/splitly
+
             # Pull latest changes
-            git pull origin main
-            
-            # Install dependencies
+            git fetch origin
+            git reset --hard origin/main
+
+            # Navigate to API directory
+            cd ~/splitly/api
+
+            # Install all dependencies (including devDependencies for build)
             npm install
-            
-            # Build the project
+
+            # Build the project with Babel
             npm run build
-            
-            # Restart PM2 (with fallback if process doesn't exist)
-            pm2 restart splitly-api || PORT=8017 pm2 start npm --name "splitly-api" -- run production
-            
+
+            # Restart PM2 process
+            if pm2 describe splitly-api > /dev/null 2>&1; then
+              pm2 restart splitly-api
+            else
+              BUILD_MODE=production pm2 start ./build/src/server.js --name splitly-api
+            fi
+
             # Save PM2 config
             pm2 save
-            
+
             # Show status
             pm2 status
-            
-            echo "✅ Deployment completed successfully!"
+
+            echo "✅ API Deployment completed successfully!"
       
       - name: Update Deployment Status
         uses: bobheadxi/deployments@v1

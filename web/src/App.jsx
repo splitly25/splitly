@@ -10,9 +10,10 @@ import { Outlet } from 'react-router-dom'
 import Debt from './pages/Debt'
 import AccountVerification from './pages/Auth/AccountVerification'
 import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
-import { Ocr, Bills } from "./pages/Bills"
+import { Ocr, Bills } from './pages/Bills'
 import BillDetail from './pages/Bills/BillDetail'
 import Profile from './pages/Auth/Profile'
+import Settings from './pages/Settings/Settings'
 import Group from './pages/Groups/Group'
 import Payment from './pages/Payment/Payment'
 import PaymentSuccess from './pages/Payment/PaymentSuccess'
@@ -27,7 +28,6 @@ function App() {
   const currentUser = useSelector(selectCurrentUser)
   return (
     <Routes>
-
       {/* Protected Routes */}
       <Route element={<ProtectedRoute user={currentUser} />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -39,18 +39,20 @@ function App() {
         <Route path="/create" element={<Bills />} />
         <Route path="/ocr" element={<Ocr />} />
         <Route path="/bills/:billId" element={<BillDetail />} />
+        <Route path="/profile" element={<Profile />} />
+        {/* <Route path="/settings" element={<Settings />} /> */}
       </Route>
 
       {/* Authentication Routes */}
       <Route path="/login" element={<Auth />} />
       <Route path="/register" element={<Auth />} />
       <Route path="/account/verification" element={<AccountVerification />} />
-      <Route path="/profile" element={<Profile/>} />
+
       {/* Public Routes (no authentication required) */}
       <Route path="/payment/confirm" element={<PaymentConfirmation />} />
       <Route path="/payment/pay" element={<Payment />} />
       <Route path="/payment/pay/success" element={<PaymentSuccess />} />
-      
+
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="*" element={<NotFound />} />

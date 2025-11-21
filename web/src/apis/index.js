@@ -146,6 +146,21 @@ export const fetchBillByIdAPI = async (billId) => {
   return response.data
 }
 
+// Get mutual bills between two users
+export const fetchMutualBillsAPI = async (userId, creditorId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/bills/mutual/${userId}/${creditorId}`)
+  return response.data
+}
+
+// Balance debts between two users
+export const balanceDebtsAPI = async (userId, otherUserId) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/balance`, {
+    otherUserId
+  })
+  toast.success('Cân bằng nợ thành công!', { theme: 'colored' })
+  return response.data
+}
+
 // ============================================
 // GROUP APIs
 // ============================================

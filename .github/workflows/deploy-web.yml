@@ -2,84 +2,57 @@ name: Deploy Splitly Web to VPS
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'web/**'
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy Web to Production Server
+    name: Deploy to Production Server
     runs-on: ubuntu-latest
     
-    permissions:
-      deployments: write
-      contents: read
-      statuses: write
-    
-    environment:
-      name: production-web
-      url: https://splitly.khangdev.me
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Start Deployment
-        uses: bobheadxi/deployments@v1
-        id: deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: production-web
-          ref: ${{ github.sha }}
-      
-      - name: Deploy Web to VPS via SSH
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          timeout: 300s
           script: |
             # Navigate to project directory
-            cd ~/splitly/web
-            
+            cd ~/splitly
+
             # Pull latest changes
-            git pull origin main
-            
-            # Install dependencies
+            git fetch origin
+            git reset --hard origin/main
+
+            # Build API
+            cd ~/splitly/api
             npm install
-            
-            # Build the project
             npm run build
-            
-            # Copy built files to nginx directory
-            sudo cp -r dist/* /var/www/splitly/
-            sudo chown -R www-data:www-data /var/www/splitly
-            
-            # Restart PM2 web process (with fallback if process doesn't exist)
-            pm2 restart splitly-web || pm2 start npm --name "splitly-web" -- run preview -- --port 3001
-            
+
+            # Build Web
+            cd ~/splitly/web
+            npm install
+            npm run build
+
+            # Restart PM2 processes
+            if pm2 describe splitly-api > /dev/null 2>&1; then
+              pm2 restart splitly-api
+            else
+              cd ~/splitly/api
+              BUILD_MODE=production pm2 start ./build/src/server.js --name splitly-api
+            fi
+
+            if pm2 describe splitly-web > /dev/null 2>&1; then
+              pm2 restart splitly-web
+            fi
+
             # Save PM2 config
             pm2 save
-            
+
             # Show status
             pm2 status
-            
-            # Test nginx configuration and reload
-            sudo nginx -t && sudo systemctl reload nginx
-            
-            echo "✅ Web deployment completed successfully!"
-      
-      - name: Update Deployment Status
-        uses: bobheadxi/deployments@v1
-        if: always()
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: production-web
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-          env_url: https://splitly.khangdev.me
+
+            echo "✅ Deployment completed!"
