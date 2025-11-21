@@ -845,7 +845,7 @@ const getMutualBills = async (userId1, userId2) => {
       user2Bills: user2UnpaidBills,
       totalUser1Owes,
       totalUser2Owes,
-      canBalance: user1UnpaidBills.length > 0 || user2UnpaidBills.length > 0
+      canBalance: user1UnpaidBills.length > 0 && user2UnpaidBills.length > 0
     };
   } catch (error) {
     throw error;

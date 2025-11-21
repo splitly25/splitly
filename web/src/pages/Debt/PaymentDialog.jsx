@@ -65,6 +65,13 @@ const PaymentDialog = ({ open, onClose, creditor, currentUserId, refetch }) => {
     }
   }, [open, creditor?.userId])
 
+  // Set default payment type based on balance availability
+  useEffect(() => {
+    if (open && mutualBills) {
+      setPaymentType(mutualBills.canBalance ? 'balance' : 'pay')
+    }
+  }, [open, mutualBills])
+
   const fetchMutualBills = async () => {
     try {
       setLoadingBills(true)
@@ -243,8 +250,13 @@ const PaymentDialog = ({ open, onClose, creditor, currentUserId, refetch }) => {
 
             {/* Payment Type Selector */}
             <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
+              >
+                Loại thanh toán
+              </Typography>
               <FormControl fullWidth>
-                <InputLabel sx={{ fontSize: '14px' }}>Loại thanh toán</InputLabel>
                 <Select
                   value={paymentType}
                   onChange={handlePaymentTypeChange}

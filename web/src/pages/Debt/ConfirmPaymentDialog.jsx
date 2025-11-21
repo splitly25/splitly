@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,18 @@ import {
   Typography,
   IconButton,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider
 } from '@mui/material'
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
 import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
+import { fetchMutualBillsAPI, balanceDebtsAPI } from '~/apis'
 
 const handleConfirmPaymentSubmit = async ({userId, refetch, formData}) => {
   try {
@@ -33,6 +39,11 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
   const [errors, setErrors] = useState({})
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  
+  // New state for debt balancing
+  const [paymentType, setPaymentType] = useState('confirm') // 'confirm' or 'balance'
+  const [mutualBills, setMutualBills] = useState(null)
+  const [loadingBills, setLoadingBills] = useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -42,6 +53,33 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
       setShowConfirmation(false)
     }
   }, [open, defaultAmount])
+
+  const fetchMutualBills = useCallback(async () => {
+    try {
+      setLoadingBills(true)
+      const data = await fetchMutualBillsAPI(myId, debtor.userId)
+      setMutualBills(data)
+    } catch (error) {
+      console.error('Error fetching mutual bills:', error)
+      setMutualBills(null)
+    } finally {
+      setLoadingBills(false)
+    }
+  }, [myId, debtor?.userId])
+
+  // Fetch mutual bills when dialog opens
+  React.useEffect(() => {
+    if (open && debtor?.userId) {
+      fetchMutualBills()
+    }
+  }, [open, debtor?.userId, fetchMutualBills])
+
+  // Set default payment type based on balance availability
+  React.useEffect(() => {
+    if (open && mutualBills) {
+      setPaymentType(mutualBills.canBalance ? 'balance' : 'confirm')
+    }
+  }, [open, mutualBills])
 
   const handleAmountChange = (e) => {
     const value = e.target.value.replace(/[^\d]/g, '')
@@ -102,12 +140,43 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
     setShowConfirmation(false)
   }
 
+  const handlePaymentTypeChange = (event) => {
+    setPaymentType(event.target.value)
+    setErrors({})
+    setShowConfirmation(false)
+  }
+
+  const handleBalanceClick = () => {
+    setShowConfirmation(true)
+  }
+
+  const handleConfirmBalance = async () => {
+    setConfirmLoading(true)
+    try {
+      await balanceDebtsAPI(myId, debtor.userId)
+      await refetch()
+      setAmount('')
+      setNote('')
+      setErrors({})
+      setShowConfirmation(false)
+      onClose()
+    } catch (error) {
+      console.error('Balance submission error:', error)
+      setErrors({ submit: error.message || 'Có lỗi xảy ra. Vui lòng thử lại.' })
+      setShowConfirmation(false)
+    } finally {
+      setConfirmLoading(false)
+    }
+  }
+
   const handleClose = () => {
     if (!confirmLoading) {
       setAmount('')
       setNote('')
       setErrors({})
       setShowConfirmation(false)
+      setPaymentType('confirm')
+      setMutualBills(null)
       onClose()
     }
   }
@@ -166,13 +235,61 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
               mb: 0.5
             }}
           >
-            Thông tin xác nhận
+            {paymentType === 'confirm' ? 'Thông tin xác nhận' : 'Cân bằng nợ'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
-            Từ {debtor.userName}
+            {paymentType === 'confirm' 
+              ? `Từ ${debtor?.userName || ''}`
+              : `Cân bằng nợ với ${debtor?.userName || ''}`
+            }
           </Typography>
         </Box>
 
+        {/* Payment Type Selector */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
+          >
+            Loại xác nhận
+          </Typography>
+          <FormControl fullWidth>
+            <Select
+              value={paymentType}
+              onChange={handlePaymentTypeChange}
+              disabled={confirmLoading || loadingBills}
+              sx={{
+                borderRadius: '18px',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'divider'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'divider'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main'
+                }
+              }}
+            >
+              <MenuItem value="confirm">Xác nhận thanh toán</MenuItem>
+              <MenuItem 
+                value="balance" 
+                disabled={!mutualBills?.canBalance}
+              >
+                Cân bằng nợ
+              </MenuItem>
+            </Select>
+          </FormControl>
+          {loadingBills && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Đang tải dữ liệu...
+            </Typography>
+          )}
+        </Box>
+
+        {/* Conditional Content based on Payment Type */}
+        {paymentType === 'confirm' ? (
+          <>
         {/* Amount Input */}
         <Box sx={{ mb: 2 }}>
           <Typography
@@ -245,6 +362,116 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
             }}
           />
         </Box>
+          </>
+        ) : (
+          <>
+            {/* Balance Debt Content */}
+            {mutualBills && (
+              <>
+                {/* Bills You Owe */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
+                  >
+                    Hóa đơn bạn trả
+                  </Typography>
+                  <Box sx={{ 
+                    bgcolor: '#f5f5f5',
+                    borderRadius: '12px',
+                    p: 2,
+                    maxHeight: '150px',
+                    overflowY: 'auto'
+                  }}>
+                    {mutualBills.user1Bills.length > 0 ? (
+                      mutualBills.user1Bills.map((bill, index) => (
+                        <Box key={bill._id} sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          py: 0.5,
+                          borderBottom: index < mutualBills.user1Bills.length - 1 ? '1px solid #e0e0e0' : 'none'
+                        }}>
+                          <Typography variant="body2" sx={{ fontSize: '14px' }}>
+                            {bill.billName}
+                          </Typography>
+                          <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
+                            {formatCurrency(bill.remainingAmount)}
+                          </Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+                        Không có hóa đơn nào
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Bills Debtor Owes */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
+                  >
+                    Hóa đơn {debtor?.userName} trả
+                  </Typography>
+                  <Box sx={{ 
+                    bgcolor: '#f5f5f5',
+                    borderRadius: '12px',
+                    p: 2,
+                    maxHeight: '150px',
+                    overflowY: 'auto'
+                  }}>
+                    {mutualBills.user2Bills.length > 0 ? (
+                      mutualBills.user2Bills.map((bill, index) => (
+                        <Box key={bill._id} sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          py: 0.5,
+                          borderBottom: index < mutualBills.user2Bills.length - 1 ? '1px solid #e0e0e0' : 'none'
+                        }}>
+                          <Typography variant="body2" sx={{ fontSize: '14px' }}>
+                            {bill.billName}
+                          </Typography>
+                          <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
+                            {formatCurrency(bill.remainingAmount)}
+                          </Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+                        Không có hóa đơn nào
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Balance Result */}
+                <Box sx={{ 
+                  bgcolor: '#fef3c7',
+                  borderRadius: '12px',
+                  p: 2,
+                  mb: 2,
+                  textAlign: 'center'
+                }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '14px', color: '#92400e' }}>
+                    {mutualBills.totalUser1Owes > mutualBills.totalUser2Owes
+                      ? `Sau khi cân bằng nợ, bạn sẽ còn nợ ${debtor?.userName} ${formatCurrency(mutualBills.totalUser1Owes - mutualBills.totalUser2Owes)}`
+                      : mutualBills.totalUser2Owes > mutualBills.totalUser1Owes
+                      ? `Sau khi cân bằng nợ, ${debtor?.userName} sẽ còn nợ bạn ${formatCurrency(mutualBills.totalUser2Owes - mutualBills.totalUser1Owes)}`
+                      : 'Sau khi cân bằng nợ, tất cả các hóa đơn sẽ được thanh toán hoàn toàn'
+                    }
+                  </Typography>
+                </Box>
+
+                {/* Auto Confirmation Notice */}
+                <Typography variant="body2" sx={{ fontSize: '13px', fontStyle: 'italic', color: 'gray', textAlign: 'center', mb: 2 }}>
+                  Cân bằng nợ sẽ được xác nhận tự động và gửi email đến bạn và {debtor?.userName}
+                </Typography>
+              </>
+            )}
+          </>
+        )}
 
         {/* Error Message */}
         {errors.submit && (
@@ -298,31 +525,58 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
           >
             Huỷ
           </Button>
-          <Button
-            onClick={handleConfirmClick}
-            disabled={confirmLoading}
-            fullWidth
-            startIcon={<CheckCircleIcon />}
-            sx={{
-              py: 1,
-              borderRadius: '18px',
-              textTransform: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
-              color: 'white',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
-              },
-              '&:disabled': {
-                background: 'rgba(0, 0, 0, 0.12)',
-                color: 'rgba(0, 0, 0, 0.26)'
-              }
-            }}
-            variant="contained"
-          >
-            {confirmLoading ? <CircularProgress size={20} /> : 'Xác nhận'}
-          </Button>
+          {paymentType === 'confirm' ? (
+            <Button
+              onClick={handleConfirmClick}
+              disabled={confirmLoading}
+              fullWidth
+              startIcon={<CheckCircleIcon />}
+              sx={{
+                py: 1,
+                borderRadius: '18px',
+                textTransform: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                color: 'white',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                },
+                '&:disabled': {
+                  background: 'rgba(0, 0, 0, 0.12)',
+                  color: 'rgba(0, 0, 0, 0.26)'
+                }
+              }}
+              variant="contained"
+            >
+              {confirmLoading ? <CircularProgress size={20} /> : 'Xác nhận'}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleBalanceClick}
+              disabled={confirmLoading || !mutualBills?.canBalance}
+              fullWidth
+              sx={{
+                py: 1,
+                borderRadius: '18px',
+                textTransform: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
+                color: 'white',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
+                },
+                '&:disabled': {
+                  background: 'rgba(0, 0, 0, 0.12)',
+                  color: 'rgba(0, 0, 0, 0.26)'
+                }
+              }}
+              variant="contained"
+            >
+              {confirmLoading ? 'Đang xử lý...' : 'Cân bằng'}
+            </Button>
+          )}
         </Box>
         </>
         ) : (
@@ -339,11 +593,24 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                     mb: 2
                   }}
                 >
-                  Xác nhận đã nhận tiền
+                  {paymentType === 'confirm' ? 'Xác nhận đã nhận tiền' : 'Xác nhận cân bằng nợ'}
                 </Typography>
-                <Typography variant="body1" sx={{ fontSize: '15px', color: 'text.primary' }}>
-                  Bạn đã nhận được <strong>{formatCurrency(parseFloat(amount) || 0)}</strong> từ <strong>{debtor?.userName}</strong> chưa?
+                <Typography variant="body1" sx={{ fontSize: '15px', color: 'text.primary', mb: 2 }}>
+                  {paymentType === 'confirm' 
+                    ? <>Bạn đã nhận được <strong>{formatCurrency(parseFloat(amount) || 0)}</strong> từ <strong>{debtor?.userName}</strong> chưa?</>
+                    : `Bạn có muốn cân bằng số tiền nợ không?`
+                  }
                 </Typography>
+                {paymentType === 'balance' && mutualBills && (
+                  <Typography variant="body1" sx={{ fontSize: '15px', color: 'text.primary' }}>
+                    {mutualBills.totalUser1Owes > mutualBills.totalUser2Owes
+                      ? `Sau khi cân bằng, bạn sẽ còn nợ ${debtor?.userName} ${formatCurrency(mutualBills.totalUser1Owes - mutualBills.totalUser2Owes)}.`
+                      : mutualBills.totalUser2Owes > mutualBills.totalUser1Owes
+                      ? `Sau khi cân bằng, ${debtor?.userName} sẽ còn nợ bạn ${formatCurrency(mutualBills.totalUser2Owes - mutualBills.totalUser1Owes)}.`
+                      : 'Sau khi cân bằng, tất cả các hóa đơn sẽ được thanh toán hoàn toàn.'
+                    }
+                  </Typography>
+                )}
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -366,10 +633,10 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                   }}
                   variant="outlined"
                 >
-                  Chưa nhận
+                  {paymentType === 'confirm' ? 'Chưa nhận' : 'Quay lại'}
                 </Button>
                 <Button
-                  onClick={handleConfirmPayment}
+                  onClick={paymentType === 'confirm' ? handleConfirmPayment : handleConfirmBalance}
                   disabled={confirmLoading}
                   fullWidth
                   sx={{
@@ -390,7 +657,7 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                   }}
                   variant="contained"
                 >
-                  {confirmLoading ? 'Đang xử lý...' : 'Đã nhận'}
+                  {confirmLoading ? 'Đang xử lý...' : (paymentType === 'confirm' ? 'Đã nhận' : 'Xác nhận')}
                 </Button>
               </Box>
             </Box>
