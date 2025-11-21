@@ -1,15 +1,38 @@
-import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider.js'
-import { WEBSITE_DOMAIN } from './constants'
+/* eslint-disable no-useless-catch */
+/**
+ * Email Service
+ * Simple email utility using nodemailer
+ */
 
-export const sendPaymentEmail = async ({
-  recipientEmail,
-  recipientName,
-  payerName,
-  amount,
-  note,
-  confirmationToken,
-}) => {
+import { env } from '~/config/environment.js'
+
+/**
+ * Send payment notification email
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerName, amount, note, confirmationToken }) => {
   try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+    
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
+    // Modern HTML email template matching UI style
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -147,24 +170,18 @@ export const sendPaymentEmail = async ({
         <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
       </div>
       
-      ${
-        note
-          ? `
+      ${note ? `
       <div class="note">
         <div class="note-label">📝 Ghi chú</div>
         <div class="note-content">${note}</div>
       </div>
-      `
-          : ''
-      }
+      ` : ''}
       
       <p class="action-text">
         Vui lòng kiểm tra và xác nhận khi bạn đã nhận được tiền.
       </p>
       
-      ${
-        confirmationToken
-          ? `
+      ${confirmationToken ? `
       <div style="text-align: center; margin: 30px 0;">
         <a href="${WEBSITE_DOMAIN}/payment/confirm?token=${confirmationToken}"
            style="display: inline-block;
@@ -179,9 +196,7 @@ export const sendPaymentEmail = async ({
           ✓ Xác nhận đã nhận tiền
         </a>
       </div>
-      `
-          : ''
-      }
+      ` : ''}
       
       <div class="footer">
         <p>Trân trọng,<br><strong>Splitly Team</strong></p>
@@ -193,14 +208,13 @@ export const sendPaymentEmail = async ({
 </html>
     `.trim()
 
-    try {
-      await BrevoEmailProvider.sendEmail(
-        recipientEmail,
-        `💰 ${payerName} đã thanh toán cho bạn qua Splitly`,
-        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
-        htmlContent
-      )
-    } catch (error) {}
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: recipientEmail,
+      subject: `💰 ${payerName} đã thanh toán cho bạn qua Splitly`,
+      html: htmlContent
+    })
 
     return true
   } catch (error) {
@@ -208,12 +222,36 @@ export const sendPaymentEmail = async ({
   }
 }
 
+/**
+ * Send payment response notification email to payer
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
 export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipientName, amount, isConfirmed }) => {
   try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+    
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
     const statusIcon = isConfirmed ? '✅' : '❌'
     const statusText = isConfirmed ? 'Đã nhận được' : 'Chưa nhận được'
     const statusColor = isConfirmed ? '#10b981' : '#ef4444'
-    const statusGradient = isConfirmed
+    const statusGradient = isConfirmed 
       ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
       : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
     const message = isConfirmed
@@ -365,11 +403,9 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
       </div>
       
       <p class="action-text">
-        ${
-          isConfirmed
-            ? 'Khoản thanh toán đã được xác nhận thành công. Cảm ơn bạn đã sử dụng Splitly!'
-            : 'Vui lòng liên hệ trực tiếp với người nhận để kiểm tra thông tin thanh toán.'
-        }
+        ${isConfirmed 
+          ? 'Khoản thanh toán đã được xác nhận thành công. Cảm ơn bạn đã sử dụng Splitly!'
+          : 'Vui lòng liên hệ trực tiếp với người nhận để kiểm tra thông tin thanh toán.'}
       </p>
       
       <div class="login-button">
@@ -388,13 +424,13 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
 </html>
     `.trim()
 
-    // Send email using Brevo
-    await BrevoEmailProvider.sendEmail(
-      payerEmail,
-      `${statusIcon} ${recipientName} ${statusText} thanh toán qua Splitly`,
-      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
-      htmlContent
-    )
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: payerEmail,
+      subject: `${statusIcon} ${recipientName} ${statusText} thanh toán qua Splitly`,
+      html: htmlContent
+    })
 
     console.log(`Payment response email sent successfully to ${payerEmail}`)
     return true
@@ -409,16 +445,27 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendPaymentReminderEmail = async ({
-  debtorEmail,
-  debtorName,
-  creditorName,
-  bills,
-  creditorBankName,
-  creditorBankAccount,
-  reminderToken,
-}) => {
+export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills, creditorBankName, creditorBankAccount, reminderToken }) => {
   try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+    
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
     // Calculate total amount
     const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0)
 
@@ -631,16 +678,12 @@ export const sendPaymentReminderEmail = async ({
         
         <div class="bills-list">
           <table class="bills-table">
-            ${bills
-              .map(
-                (bill) => `
+            ${bills.map(bill => `
               <tr class="bill-row">
                 <td class="bill-name">${bill.billName}</td>
                 <td class="bill-amount">${bill.amount.toLocaleString('vi-VN')}₫</td>
               </tr>
-            `
-              )
-              .join('')}
+            `).join('')}
           </table>
         </div>
         
@@ -649,9 +692,7 @@ export const sendPaymentReminderEmail = async ({
           <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
         </div>
         
-        ${
-          creditorBankName && creditorBankAccount
-            ? `
+        ${creditorBankName && creditorBankAccount ? `
         <div class="bank-info">
           <div class="bank-info-title">Thông tin chuyển khoản</div>
           <table class="bank-table">
@@ -673,9 +714,7 @@ export const sendPaymentReminderEmail = async ({
             </tr>
           </table>
           
-          ${
-            qrCodeUrl
-              ? `
+          ${qrCodeUrl ? `
           <div class="qr-section">
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
@@ -685,16 +724,12 @@ export const sendPaymentReminderEmail = async ({
               </tr>
             </table>
           </div>
-          `
-              : ''
-          }
+          ` : ''}
 
           <p style="font-size: 12px; margin-top: 12px; font-style: italic; text-align: center;">
           Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
-        `
-            : ''
-        }
+        ` : ''}
         
         <p class="action-text">
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
@@ -715,13 +750,13 @@ export const sendPaymentReminderEmail = async ({
 </html>
     `.trim()
 
-    // Send email using Brevo
-    await BrevoEmailProvider.sendEmail(
-      debtorEmail,
-      `⏰ ${creditorName} nhắc nhở bạn thanh toán qua Splitly`,
-      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
-      htmlContent
-    )
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: debtorEmail,
+      subject: `⏰ ${creditorName} nhắc nhở bạn thanh toán qua Splitly`,
+      html: htmlContent
+    })
 
     console.log(`Payment reminder email sent successfully to ${debtorEmail}`)
     return true
@@ -736,31 +771,34 @@ export const sendPaymentReminderEmail = async ({
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendBillCreationEmail = async ({
-  participantEmail,
-  participantName,
-  payerName,
-  billName,
-  billDescription,
-  totalAmount,
-  participantAmount,
-  items,
-  participants,
-  optOutToken,
-  paymentToken,
-  billId,
-}) => {
+export const sendBillCreationEmail = async ({ participantEmail, participantName, payerName, billName, billDescription, totalAmount, participantAmount, items, participants, optOutToken, paymentToken,billId }) => {
   try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      console.log('SMTP not configured, skipping bill creation email to', participantEmail)
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
     // Generate bill details HTML
-    const billDetailsHtml =
-      items && items.length > 0
-        ? `
+    const billDetailsHtml = items && items.length > 0 ? `
     <div class="bill-details">
       <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Chi tiết hóa đơn</h3>
       <div class="items-list">
-        ${items
-          .map(
-            (item) => `
+        ${items.map(item => `
           <div class="item-row">
             <div class="item-info">
               <span class="item-name">${item.name}</span>
@@ -768,32 +806,23 @@ export const sendBillCreationEmail = async ({
             </div>
             <div class="item-amount">${item.amount.toLocaleString('vi-VN')}₫</div>
           </div>
-        `
-          )
-          .join('')}
+        `).join('')}
       </div>
     </div>
-    `
-        : ''
+    ` : ''
 
     // Generate participants list HTML
-    const participantsHtml =
-      participants && participants.length > 0
-        ? `
+    const participantsHtml = participants && participants.length > 0 ? `
     <div class="participants-section">
       <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Người tham gia</h3>
       <div class="participants-list">
         <table class="participants-table">
-          ${participants
-            .map(
-              (p) => `
+          ${participants.map(p => `
             <tr class="participant-row">
               <td class="participant-name">${p.name}</td>
               <td class="participant-amount">${p.amount.toLocaleString('vi-VN')}</td>
             </tr>
-          `
-            )
-            .join('')}
+          `).join('')}
           <tr class="participant-row" style="border-top: 2px solid #e2e8f0; font-weight: 700;">
             <td class="participant-name">Tổng cộng</td>
             <td class="participant-amount">${totalAmount.toLocaleString('vi-VN')}₫</td>
@@ -801,8 +830,7 @@ export const sendBillCreationEmail = async ({
         </table>
       </div>
     </div>
-    `
-        : ''
+    ` : ''
 
     // Modern HTML email template for bill creation
     const htmlContent = `
@@ -1011,13 +1039,13 @@ export const sendBillCreationEmail = async ({
 </html>
     `.trim()
 
-    // Send email using Brevo
-    await BrevoEmailProvider.sendEmail(
-      participantEmail,
-      `📄 Bạn đã được thêm vào hóa đơn "${billName}"`,
-      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
-      htmlContent
-    )
+    // Send email
+    await transporter.sendMail({
+      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: participantEmail,
+      subject: `📄 Bạn đã được thêm vào hóa đơn "${billName}"`,
+      html: htmlContent
+    })
 
     console.log(`Bill creation email sent successfully to ${participantEmail}`)
     return true
@@ -1032,24 +1060,32 @@ export const sendBillCreationEmail = async ({
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendDebtBalanceEmail = async ({
-  user1Email,
-  user1Name,
-  user2Email,
-  user2Name,
-  user1BillsBefore,
-  user2BillsBefore,
-  user1BillsRemaining,
-  user2BillsRemaining,
-  billsMarkedPaid,
-  netDebt,
-}) => {
+export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, user2Name, user1BillsBefore, user2BillsBefore, user1BillsRemaining, user2BillsRemaining, billsMarkedPaid, netDebt }) => {
   try {
+    // Only send email if SMTP is configured
+    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
+      return false
+    }
+
+    // Import nodemailer only when needed
+    const nodemailer = await import('nodemailer')
+
+    // Create transporter
+    const transporter = nodemailer.default.createTransport({
+      host: env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(env.SMTP_PORT) || 587,
+      secure: parseInt(env.SMTP_PORT) === 465,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASSWORD
+      }
+    })
+
     // Format currency helper
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('vi-VN', {
         style: 'currency',
-        currency: 'VND',
+        currency: 'VND'
       }).format(amount)
     }
 
@@ -1060,18 +1096,12 @@ export const sendDebtBalanceEmail = async ({
       }
       return `
         <table style="width: 100%; border-collapse: collapse;">
-          ${bills
-            .map(
-              (bill) => `
+          ${bills.map(bill => `
             <tr>
               <td style="text-align: left; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${bill.billName}</td>
-              <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${formatCurrency(
-                bill.remainingAmount
-              )}</td>
+              <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${formatCurrency(bill.remainingAmount)}</td>
             </tr>
-          `
-            )
-            .join('')}
+          `).join('')}
         </table>
       `
     }
@@ -1262,9 +1292,7 @@ export const sendDebtBalanceEmail = async ({
           </div>
         </div>
 
-        ${
-          netDebt > 0
-            ? `
+        ${netDebt > 0 ? `
         <div class="section-title">Kết quả cân bằng: ${user1Name} còn nợ</div>
         <div class="bills-section">
           ${generateBillsList(user1BillsRemaining)}
@@ -1273,9 +1301,7 @@ export const sendDebtBalanceEmail = async ({
           <div class="total-label">Tổng số tiền còn nợ</div>
           <div class="total-amount">${formatCurrency(netDebt)}</div>
         </div>
-        `
-            : netDebt < 0
-            ? `
+        ` : netDebt < 0 ? `
         <div class="section-title">Kết quả cân bằng: ${user2Name} còn nợ</div>
         <div class="bills-section">
           ${generateBillsList(user2BillsRemaining)}
@@ -1284,14 +1310,12 @@ export const sendDebtBalanceEmail = async ({
           <div class="total-label">Tổng số tiền còn nợ</div>
           <div class="total-amount">${formatCurrency(Math.abs(netDebt))}</div>
         </div>
-        `
-            : `
+        ` : `
         <div class="success-card">
           <div class="success-icon">✅</div>
           <div class="success-text">Tất cả hóa đơn đã được thanh toán hoàn toàn</div>
         </div>
-        `
-        }
+        `}
 
         <p class="action-text">
           Bạn có thể đăng nhập vào ứng dụng để xem chi tiết các hóa đơn đã được cập nhật.
@@ -1306,10 +1330,25 @@ export const sendDebtBalanceEmail = async ({
 </body>
 </html>`
 
-    // Send emails to both users using Brevo
+    // Send email to both users
+    const mailOptions1 = {
+      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: user1Email,
+      subject: `Cân bằng nợ với ${user2Name} - Splitly`,
+      html: htmlContent
+    }
+
+    const mailOptions2 = {
+      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
+      to: user2Email,
+      subject: `Cân bằng nợ với ${user1Name} - Splitly`,
+      html: htmlContent
+    }
+
+    // Send emails concurrently
     const [result1, result2] = await Promise.allSettled([
-      BrevoEmailProvider.sendEmail(user1Email, `Cân bằng nợ với ${user2Name} - Splitly`, 'Splitly', htmlContent),
-      BrevoEmailProvider.sendEmail(user2Email, `Cân bằng nợ với ${user1Name} - Splitly`, 'Splitly', htmlContent),
+      transporter.sendMail(mailOptions1),
+      transporter.sendMail(mailOptions2)
     ])
 
     const success1 = result1.status === 'fulfilled'
@@ -1321,7 +1360,7 @@ export const sendDebtBalanceEmail = async ({
     } else {
       console.error('Failed to send some debt balance emails:', {
         user1: success1 ? 'sent' : result1.reason?.message,
-        user2: success2 ? 'sent' : result2.reason?.message,
+        user2: success2 ? 'sent' : result2.reason?.message
       })
       return false
     }
