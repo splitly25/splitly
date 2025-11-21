@@ -14,7 +14,6 @@ import ParticipantsSection from '~/components/Bills/ParticipantsSection'
 import EqualSplitDetails from '~/components/Bills/EqualSplitDetails'
 import ByPersonSplitDetails from '~/components/Bills/ByPersonSplitDetails'
 import ByItemSplitDetails from '~/components/Bills/ByItemSplitDetails'
-import { useConfirm } from 'material-ui-confirm'
 import {
   selectActiveBill,
   selectParticipants,
@@ -36,8 +35,6 @@ import {
   updateItem,
   toggleItemAllocation,
   calculateAmounts,
-  distributeDifference,
-  distributeItemDifference,
   initializeBill,
   resetBill,
   setSubmitError,
@@ -53,7 +50,6 @@ function BillCreate() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const currentUser = useSelector(selectCurrentUser)
-  const confirm = useConfirm()
 
   // Redux state
   const billState = useSelector(selectActiveBill)
@@ -338,187 +334,6 @@ function BillCreate() {
     return payer ? payer.name : 'Chọn người ứng tiền'
   }, [participants, billState.payer])
 
-  // Validate by-person split amounts
-  const validateByPersonAmounts = async () => {
-    try {
-      const totalAmountValue = parseFloat(billState.totalAmount) || 0
-      const sumOfParticipants = participants.reduce((sum, p) => sum + (parseFloat(p.usedAmount) || 0), 0)
-      const difference = Math.abs(totalAmountValue - sumOfParticipants)
-
-      // Allow small rounding errors (less than 1 currency unit)
-      if (difference < 1) {
-        // Case 2: Amounts match - show success
-        const { confirmed } = await confirm({
-          title: 'Kiểm tra hoàn tất',
-          description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-            'vi-VN'
-          )}₫) khớp với tổng số tiền của các thành viên (${sumOfParticipants.toLocaleString('vi-VN')}₫). ✓`,
-          confirmationText: 'OK',
-          hideCancelButton: true,
-          dialogProps: { maxWidth: 'sm' },
-        })
-        if (confirmed) return true
-        return false
-      }
-
-      // Case 1: Total > Sum - Confirmation to distribute excess
-      if (totalAmountValue > sumOfParticipants) {
-        try {
-          const { confirmed } = await confirm({
-            title: 'Tổng tiền lớn hơn',
-            description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-              'vi-VN'
-            )}₫) lớn hơn tổng số tiền của các thành viên (${sumOfParticipants.toLocaleString(
-              'vi-VN'
-            )}₫). Chênh lệch: ${difference.toLocaleString(
-              'vi-VN'
-            )}₫. Bạn muốn chia đều số tiền chênh lệch cho các thành viên?`,
-            confirmationText: 'Chia đều chênh lệch',
-            cancellationText: 'Hủy để sửa',
-            dialogProps: { maxWidth: 'sm' },
-          })
-
-          if (confirmed) {
-            dispatch(distributeDifference({ difference, shouldAdd: true }))
-            dispatch(calculateAmounts())
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            return true
-          }
-          return false
-        } catch {
-          // User cancelled
-          return false
-        }
-      }
-
-      // Case 3: Total < Sum - Confirmation to distribute difference
-      if (totalAmountValue < sumOfParticipants) {
-        try {
-          const { confirmed } = await confirm({
-            title: 'Tổng tiền nhỏ hơn',
-            description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-              'vi-VN'
-            )}₫) nhỏ hơn tổng số tiền của các thành viên (${sumOfParticipants.toLocaleString(
-              'vi-VN'
-            )}₫). Chênh lệch: ${difference.toLocaleString(
-              'vi-VN'
-            )}₫. Bạn muốn chia đều số tiền chênh lệch cho các thành viên?`,
-            confirmationText: 'Chia đều chênh lệch',
-            cancellationText: 'Hủy để sửa',
-            dialogProps: { maxWidth: 'sm' },
-          })
-
-          if (confirmed) {
-            dispatch(distributeDifference({ difference, shouldAdd: false }))
-            dispatch(calculateAmounts())
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            return true
-          }
-          return false
-        } catch {
-          // User cancelled
-          return false
-        }
-      }
-
-      return true
-    } catch (error) {
-      console.error('Error in validateByPersonAmounts:', error)
-      return false
-    }
-  }
-
-  // Validate by-item split amounts
-  const validateByItemAmounts = async () => {
-    try {
-      const totalAmountValue = parseFloat(billState.totalAmount) || 0
-      const sumOfItems = items.reduce(
-        (sum, item) => sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.amount) || 0),
-        0
-      )
-      const difference = Math.abs(totalAmountValue - sumOfItems)
-
-      // Allow small rounding errors (less than 1 currency unit)
-      if (difference < 1) {
-        // Case 2: Amounts match - show success
-        const { confirmed } = await confirm({
-          title: 'Kiểm tra hoàn tất',
-          description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-            'vi-VN'
-          )}₫) khớp với tổng giá trị các món (${sumOfItems.toLocaleString('vi-VN')}₫). ✓`,
-          confirmationText: 'OK',
-          hideCancelButton: true,
-          dialogProps: { maxWidth: 'sm' },
-        })
-        if (confirmed) return true
-        return false
-      }
-
-      // Case 1: Total > Sum - Confirmation to distribute excess
-      if (totalAmountValue > sumOfItems) {
-        try {
-          const { confirmed } = await confirm({
-            title: 'Tổng tiền lớn hơn',
-            description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-              'vi-VN'
-            )}₫) lớn hơn tổng giá trị các món (${sumOfItems.toLocaleString(
-              'vi-VN'
-            )}₫). Chênh lệch: ${difference.toLocaleString(
-              'vi-VN'
-            )}₫. Bạn muốn chia đều số tiền chênh lệch cho các món?`,
-            confirmationText: 'Chia đều chênh lệch',
-            cancellationText: 'Hủy để sửa',
-            dialogProps: { maxWidth: 'sm' },
-          })
-
-          if (confirmed) {
-            dispatch(distributeItemDifference({ difference, shouldAdd: true }))
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            return true
-          }
-          return false
-        } catch {
-          // User cancelled
-          return false
-        }
-      }
-
-      // Case 3: Total < Sum - Confirmation to distribute difference
-      if (totalAmountValue < sumOfItems) {
-        try {
-          const { confirmed } = await confirm({
-            title: 'Tổng tiền nhỏ hơn',
-            description: `Tổng tiền thanh toán (${totalAmountValue.toLocaleString(
-              'vi-VN'
-            )}₫) nhỏ hơn tổng giá trị các món (${sumOfItems.toLocaleString(
-              'vi-VN'
-            )}₫). Chênh lệch: ${difference.toLocaleString(
-              'vi-VN'
-            )}₫. Bạn muốn chia đều số tiền chênh lệch cho các món?`,
-            confirmationText: 'Chia đều chênh lệch',
-            cancellationText: 'Hủy để sửa',
-            dialogProps: { maxWidth: 'sm' },
-          })
-
-          if (confirmed) {
-            dispatch(distributeItemDifference({ difference, shouldAdd: false }))
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            return true
-          }
-          return false
-        } catch {
-          // User cancelled
-          return false
-        }
-      }
-
-      return true
-    } catch (error) {
-      console.error('Error in validateByItemAmounts:', error)
-      return false
-    }
-  }
-
   // Submit handler
   const handleSubmit = async () => {
     dispatch(setSubmitError(null))
@@ -528,23 +343,14 @@ function BillCreate() {
       return
     }
 
-    // validation?
-    // if (billState.splitType === 'by-person') {
-    //   const isValid = await validateByPersonAmounts()
-    //   if (!isValid) return
-    // }
-    // if (billState.splitType === 'by-item') {
-    //   const isValid = await validateByItemAmounts()
-    //   if (!isValid) return
-    // }
-
     // Build bill data
     const billData = {
       billName: billState.billName,
       creatorId: currentUser?._id,
       payerId: billState.payer,
       totalAmount: parseFloat(billState.totalAmount),
-      paymentDate: billState.creationDate,
+      creationDate: billState.creationDate,
+      paymentDeadline: billState.paymentDeadline,
       description: billState.notes,
       category: billState.category,
       participants: participants.map((p) => String(p.id)),
@@ -680,7 +486,6 @@ function BillCreate() {
             onFieldChange={handleFieldChange}
             participants={participants}
             totalAmount={billState.totalAmount}
-            onValidateAmounts={validateByPersonAmounts}
           />
         )}
 
@@ -695,7 +500,6 @@ function BillCreate() {
             onDeleteItem={handleDeleteItem}
             onItemChange={handleItemChange}
             onItemAllocationToggle={handleItemAllocationToggle}
-            onValidateAmounts={validateByItemAmounts}
           />
         )}
       </Box>

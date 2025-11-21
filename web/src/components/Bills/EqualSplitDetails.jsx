@@ -3,6 +3,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import CustomTextField from '~/components/Form/CustomTextField'
 import ParticipantCard from '../Form/ParticipantCard'
+import { formatCurrency } from '~/utils/formatters'
 
 function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount }) {
   return (
@@ -40,7 +41,7 @@ function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount 
           label="Tổng số tiền thanh toán"
           required
           type="text"
-          placeholder="VD:100 or 100+200*10..."
+          placeholder="VD: 100+200 hoặc 65k"
           enableAutoCalculate
           value={formData.totalAmount || ''}
           onChange={(e) => onFieldChange('totalAmount', e.target.value)}
@@ -48,15 +49,6 @@ function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount 
             startAdornment: <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />,
           }}
         />
-        <Typography
-          sx={{
-            fontSize: '14px',
-            color: 'text.secondary',
-            mt: 1,
-          }}
-        >
-          Hỗ trợ: + (cộng), - (trừ), * (nhân), / (chia), () (ngoặc)
-        </Typography>
       </Box>
 
       <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 3, mb: 3 }} />
@@ -89,7 +81,7 @@ function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount 
       </Box>
 
       {/* Total */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' , p: 2}}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
         <Typography
           sx={{
             fontSize: '18px',
@@ -106,7 +98,7 @@ function EqualSplitDetails({ formData, onFieldChange, participants, totalAmount 
             color: 'text.primary',
           }}
         >
-          {totalAmount || 0} ₫
+          {formatCurrency(totalAmount || 0)} ₫
         </Typography>
       </Box>
     </Box>

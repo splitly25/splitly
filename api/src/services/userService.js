@@ -7,7 +7,7 @@ import bcryptjs from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 import { pickUser } from '~/utils/formatters'
 import { WEBSITE_DOMAIN } from '~/utils/constants'
-import { NodemailerProvider } from '~/providers/NodemailerProvider'
+import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider'
 import { verificationEmailTemplate } from '~/utils/emailTemplates'
 import { JwtProvider } from '~/providers/JwtProvider'
 import { env } from '~/config/environment'
@@ -62,18 +62,28 @@ const createNew = async (reqBody, options = {}) => {
         const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${updatedUser.email}&token=${updatedUser.verifyToken}`
         const emailContent = verificationEmailTemplate(updatedUser.name, verificationLink)
 
+        let emailSent = true
+        let emailError = null
+
         try {
-          await NodemailerProvider.sendEmail(
+          await BrevoEmailProvider.sendEmail(
             updatedUser.email,
             emailContent.subject,
             emailContent.text,
             emailContent.html
           )
-        } catch (emailError) {
-          console.error('Failed to send verification email:', emailError.message)
+        } catch (error) {
+          emailSent = false
+          emailError = error.message
+          console.error('Failed to send verification email:', error.message)
+          console.error('SMTP Error Details:', { code: error.code, command: error.command })
         }
 
-        return pickUser(updatedUser)
+        return {
+          ...pickUser(updatedUser),
+          emailSent,
+          emailError: emailSent ? null : emailError,
+        }
       }
 
       // If it's already a member (guest=false), throw conflict error
@@ -115,13 +125,23 @@ const createNew = async (reqBody, options = {}) => {
     const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${getNewUser.email}&token=${getNewUser.verifyToken}`
     const emailContent = verificationEmailTemplate(getNewUser.name, verificationLink)
 
+    let emailSent = true
+    let emailError = null
+
     try {
-      await NodemailerProvider.sendEmail(getNewUser.email, emailContent.subject, emailContent.text, emailContent.html)
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError.message)
+      await BrevoEmailProvider.sendEmail(getNewUser.email, emailContent.subject, emailContent.text, emailContent.html)
+    } catch (error) {
+      emailSent = false
+      emailError = error.message
+      console.error('Failed to send verification email:', error.message)
+      console.error('SMTP Error Details:', { code: error.code, command: error.command })
     }
 
-    return pickUser(getNewUser)
+    return {
+      ...pickUser(getNewUser),
+      emailSent,
+      emailError: emailSent ? null : emailError,
+    }
   } catch (error) {
     throw error
   }
@@ -446,6 +466,7 @@ const editProfile = async (userId, profileData) => {
     throw error
   }
 }
+
 const createGuestUser = async (reqBody) => {
   try {
     const normalizedEmail = reqBody.email.toLowerCase().trim()

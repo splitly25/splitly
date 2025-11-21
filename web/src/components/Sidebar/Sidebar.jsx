@@ -24,6 +24,8 @@ import {
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { COLORS } from '~/theme'
+import LogoRounded from '~/assets/Splitly-Rounded.png'
+import LogoFull from '~/assets/Splitly-Full.png'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
 const SIDEBAR_WIDTH_COLLAPSED = 80
@@ -89,40 +91,20 @@ const Sidebar = ({ children }) => {
         }}
       >
         {isExpanded && (
-          <Typography
-            variant="h5"
-            sx={{
-              fontFamily: "'Nunito Sans', sans-serif",
-              fontWeight: 700,
-              fontSize: '24px',
-              background: COLORS.gradientPrimary,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              cursor: 'pointer',
-            }}
+          <img
+            src={LogoFull}
+            alt="Splitly Logo"
+            style={{ height: 40, cursor: 'pointer' }}
             onClick={() => handleNavigate('/dashboard')}
-          >
-            Splitly
-          </Typography>
+          />
         )}
         {!isExpanded && (
-          <Typography
-            variant="h5"
-            sx={{
-              fontFamily: "'Nunito Sans', sans-serif",
-              fontWeight: 700,
-              fontSize: '24px',
-              background: COLORS.gradientPrimary,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              cursor: 'pointer',
-            }}
+          <img
+            src={LogoRounded}
+            alt="Splitly Logo"
+            style={{ height: 40, cursor: 'pointer' }}
             onClick={() => handleNavigate('/dashboard')}
-          >
-            S
-          </Typography>
+          />
         )}
       </Box>
 

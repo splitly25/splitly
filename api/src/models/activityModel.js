@@ -26,6 +26,9 @@ const ACTIVITY_TYPES = {
   PAYMENT_CONFIRMED: 'payment_confirmed',
   PAYMENT_REJECTED: 'payment_rejected',
   
+  // Debt activities
+  DEBT_BALANCED: 'debt_balanced',
+  
   // Group activities
   GROUP_CREATED: 'group_created',
   GROUP_UPDATED: 'group_updated',

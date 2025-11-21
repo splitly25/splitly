@@ -6,7 +6,10 @@ import { paymentModel } from '~/models/paymentModel.js';
 import { ClovaXClient } from '~/providers/ClovaStudioProvider';
 import { JwtProvider } from '~/providers/JwtProvider.js';
 import { env } from '~/config/environment.js';
-import { randomUUID } from 'crypto';
+import { GET_DB } from '~/config/mongodb';
+import { ObjectId } from 'mongodb';
+
+const { BILL_COLLECTION_NAME } = billModel;
 
 const createNew = async (reqBody) => {
   try {
@@ -749,7 +752,88 @@ const getBillsWithConditions = async (userId, fromDate, toDate, payer, searchDeb
   } catch (error) {
     throw error
   }
-}
+};
+
+const getMutualBills = async (userId1, userId2) => {
+  try {
+    const user1ObjectId = new ObjectId(userId1);
+    const user2ObjectId = new ObjectId(userId2);
+
+    // Find bills where user1 owes user2 (user1 is participant, user2 is payer)
+    const billsUser1Owes = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({
+        payerId: user2ObjectId,
+        participants: user1ObjectId,
+        _destroy: false
+      })
+      .toArray();
+
+    // Find bills where user2 owes user1 (user2 is participant, user1 is payer)
+    const billsUser2Owes = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find({
+        payerId: user1ObjectId,
+        participants: user2ObjectId,
+        _destroy: false
+      })
+      .toArray();
+
+    // Filter and populate bills where user1 hasn't paid fully
+    const user1UnpaidBills = billsUser1Owes.filter(bill => {
+      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user1ObjectId));
+      return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed;
+    }).map(bill => {
+      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user1ObjectId));
+      return {
+        _id: bill._id,
+        billName: bill.billName,
+        description: bill.description || '',
+        totalAmount: bill.totalAmount,
+        amountOwed: paymentStatus.amountOwed,
+        amountPaid: paymentStatus.amountPaid,
+        remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+        paymentDate: bill.paymentDate || bill.createdAt,
+        payerId: bill.payerId,
+        createdAt: bill.createdAt
+      };
+    });
+
+    // Filter and populate bills where user2 hasn't paid fully
+    const user2UnpaidBills = billsUser2Owes.filter(bill => {
+      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user2ObjectId));
+      return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed;
+    }).map(bill => {
+      const paymentStatus = bill.paymentStatus.find(ps => ps.userId.equals(user2ObjectId));
+      return {
+        _id: bill._id,
+        billName: bill.billName,
+        description: bill.description || '',
+        totalAmount: bill.totalAmount,
+        amountOwed: paymentStatus.amountOwed,
+        amountPaid: paymentStatus.amountPaid,
+        remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+        paymentDate: bill.paymentDate || bill.createdAt,
+        payerId: bill.payerId,
+        createdAt: bill.createdAt
+      };
+    });
+
+    // Calculate totals
+    const totalUser1Owes = user1UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+    const totalUser2Owes = user2UnpaidBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+
+    return {
+      user1Bills: user1UnpaidBills,
+      user2Bills: user2UnpaidBills,
+      totalUser1Owes,
+      totalUser2Owes,
+      canBalance: user1UnpaidBills.length > 0 && user2UnpaidBills.length > 0
+    };
+  } catch (error) {
+    throw error;
+  }
+};
 
 const scanBill = async ({ userId, imageData }) => {
   const client = new ClovaXClient();
@@ -836,7 +920,8 @@ export const billService = {
   optOutUser,
   deleteOneById,
   sendReminder,
-  getBillsWithConditions,
-  // filterBillsByUser,
+  searchBillsByUserWithPagination,
+  filterBillsByUser,
+  getMutualBills,
   scanBill,
 };

@@ -1,6 +1,10 @@
 import { env } from '~/config/environment'
 
-export const WHITELIST_DOMAINS = ['http://localhost:5173', 'https://splitly.khangdev.me']
+export const WHITELIST_DOMAINS = [
+  'http://localhost:5173', 
+  'https://splitly.khangdev.me',
+  'https://splitly-kjwa.onrender.com'
+]
 
 export const BILL_TYPE = ['equal', 'item-based', 'people-based']
 

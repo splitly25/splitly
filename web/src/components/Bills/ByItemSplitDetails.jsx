@@ -1,4 +1,4 @@
-import { Box, Typography, Avatar, Button, IconButton, Chip } from '@mui/material'
+import { Box, Typography, IconButton, Chip } from '@mui/material'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import AddIcon from '@mui/icons-material/Add'
@@ -6,6 +6,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import CustomTextField from '~/components/Form/CustomTextField'
 import { COLORS } from '~/theme'
 import ParticipantCard from '../Form/ParticipantCard'
+import Button from '@mui/material/Button'
+import { formatCurrency } from '~/utils/formatters'
 
 function ByItemSplitDetails({
   formData,
@@ -17,15 +19,7 @@ function ByItemSplitDetails({
   onDeleteItem,
   onItemChange,
   onItemAllocationToggle,
-  onValidateAmounts,
 }) {
-  const handleValidateTotal = async () => {
-    // Validate the total amount against sum of items
-    if (onValidateAmounts) {
-      await onValidateAmounts()
-    }
-  }
-
   return (
     <Box
       sx={(theme) => ({
@@ -63,33 +57,9 @@ function ByItemSplitDetails({
         >
           Danh sách món hàng
         </Typography>
-        <Button
-          onClick={onAddItem}
-          sx={{
-            background: COLORS.gradientPrimary,
-            color: '#FAFAFA',
-            borderRadius: '16px',
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            padding: '6px 12px',
-            height: '32px',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            '&:hover': {
-              opacity: 0.9,
-            },
-          }}
-        >
-          <AddIcon sx={{ width: '18px', height: '18px' }} />
-          Thêm món
-        </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
         {items.map((item, index) => (
           <Box
             key={item.id}
@@ -109,7 +79,6 @@ function ByItemSplitDetails({
                   placeholder="VD: Rau tươi"
                   size="small"
                 />
-                
               </Box>
               <IconButton
                 onClick={() => onDeleteItem(item.id)}
@@ -142,7 +111,7 @@ function ByItemSplitDetails({
                   enableAutoCalculate
                   value={item.quantity || ''}
                   onChange={(e) => onItemChange(item.id, 'quantity', e.target.value)}
-                  placeholder="VD: 2+3 hoặc 5*2"
+                  placeholder="VD: 2+3"
                   size="small"
                 />
               </Box>
@@ -153,7 +122,7 @@ function ByItemSplitDetails({
                   enableAutoCalculate
                   value={item.amount || ''}
                   onChange={(e) => onItemChange(item.id, 'amount', e.target.value)}
-                  placeholder="VD: 10000+5000"
+                  placeholder="VD: 65k"
                   size="small"
                 />
               </Box>
@@ -220,13 +189,41 @@ function ByItemSplitDetails({
         ))}
       </Box>
 
+      {/* Add Item Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <Button
+          onClick={onAddItem}
+          sx={{
+            background: COLORS.gradientPrimary,
+            color: '#FAFAFA',
+            borderRadius: '16px',
+            textTransform: 'none',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: '8px 16px',
+            height: '36px',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            '&:hover': {
+              opacity: 0.9,
+            },
+          }}
+        >
+          <AddIcon sx={{ width: '18px', height: '18px' }} />
+          Thêm món
+        </Button>
+      </Box>
+
       {/* Total Amount Input - Moved below items */}
       <Box sx={{ mb: 3 }}>
         <CustomTextField
           label="Tổng số tiền thanh toán"
           required
           type="text"
-          placeholder="VD: 100+200 hoặc 500*3 hoặc (100+50)/2"
+          placeholder="VD: 100+200 hoặc 65k"
           enableAutoCalculate
           value={formData.totalAmount || ''}
           onChange={(e) => onFieldChange('totalAmount', e.target.value)}
@@ -234,36 +231,6 @@ function ByItemSplitDetails({
             startAdornment: <AttachMoneyIcon sx={{ width: '20px', height: '20px', mr: 1, color: 'text.secondary' }} />,
           }}
         />
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-          <Typography
-            sx={{
-              fontSize: '14px',
-              color: 'text.secondary',
-            }}
-          >
-            Hỗ trợ phép tính: + (cộng), - (trừ), * (nhân), / (chia), () (ngoặc)
-          </Typography>
-          <Button
-            onClick={handleValidateTotal}
-            sx={(theme) => ({
-              minWidth: '140px',
-              borderRadius: '16px',
-              textTransform: 'none',
-              fontSize: '13px',
-              fontWeight: 500,
-              border: `0.8px solid ${theme.palette.divider}`,
-              color: 'primary.main',
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.04)',
-              '&:hover': {
-                border: `0.8px solid ${theme.palette.primary.main}`,
-                backgroundColor:
-                  theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : 'rgba(25, 118, 210, 0.08)',
-              },
-            })}
-          >
-            Kiểm tra tổng tiền
-          </Button>
-        </Box>
       </Box>
 
       <Box sx={{ borderTop: (theme) => `1px solid ${theme.palette.divider}`, pt: 3, mb: 3 }} />
@@ -294,7 +261,7 @@ function ByItemSplitDetails({
           />
         ))}
       </Box>
-  
+
       {/* Total */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
         <Typography
@@ -313,7 +280,7 @@ function ByItemSplitDetails({
             color: 'text.primary',
           }}
         >
-          {totalAmount || 0} ₫
+          {formatCurrency(totalAmount || 0)} ₫
         </Typography>
       </Box>
     </Box>

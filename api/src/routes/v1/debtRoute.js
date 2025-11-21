@@ -29,4 +29,7 @@ Router.get('/payment/:token', debtController.getPaymentByToken)
 // Submit payment (public route)
 Router.post('/payment/submit', debtController.submitPayment)
 
+// Balance debts between two users
+Router.post('/:userId/balance', authMiddleware.isAuthorized, debtValidation.getUserDebts, debtController.balanceDebts)
+
 export const debtRoute = Router

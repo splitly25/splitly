@@ -31,6 +31,8 @@ import {
   Edit as EditIcon,
   CameraAlt as CameraAltIcon,
   Chat as ChatIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -42,9 +44,11 @@ import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import { useChatbot } from '~/context/ChatbotContext'
 import { getInitials } from '~/utils/formatters'
+import LogoRounded from '~/assets/Splitly-Rounded.png'
+import LogoFull from '~/assets/Splitly-Full.png'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
-const SIDEBAR_WIDTH_COLLAPSED = 80
+const SIDEBAR_WIDTH_COLLAPSED = 88
 
 const Layout = ({ children }) => {
   const currentUser = useSelector(selectCurrentUser)
@@ -173,35 +177,33 @@ const Layout = ({ children }) => {
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isExpanded ? 'flex-start' : 'center',
-          minHeight: '64px',
+          justifyContent: 'center',
+          minHeight: 96,
         }}
       >
-        <Typography
-          variant="h4"
-          sx={{
-            fontFamily: "'Nunito Sans', sans-serif",
-            fontWeight: 700,
-            fontSize: isExpanded ? '32px' : '28px',
-            background: COLORS.gradientPrimary,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            cursor: 'pointer',
-            lineHeight: 1,
-          }}
-          onClick={() => handleNavigate('/dashboard')}
-        >
-          {isExpanded ? 'Splitly' : 'LOGO'}
-        </Typography>
+        {(isMobile || isExpanded) && (
+          <img
+            src={LogoFull}
+            alt="Splitly Logo"
+            style={{ height: 64, cursor: 'pointer' }}
+            onClick={() => handleNavigate('/dashboard')}
+          />
+        )}
+        {!isMobile && !isExpanded && (
+          <img
+            src={LogoRounded}
+            alt="Splitly Logo"
+            style={{ height: 40, cursor: 'pointer' }}
+            onClick={() => handleNavigate('/dashboard')}
+          />
+        )}
       </Box>
 
       {/* Create New Bill Button */}
-      <Box sx={{ px: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', px: 2, mb: 2 }}>
         <Button
           variant="contained"
           fullWidth
-          startIcon={isExpanded ? <AddIcon /> : null}
           onClick={handleCreateMenuOpen}
           sx={{
             background: COLORS.gradientPrimary,
@@ -212,16 +214,33 @@ const Layout = ({ children }) => {
             fontSize: '16px',
             fontWeight: 500,
             boxShadow: '0px 10px 15px 0px rgba(0,0,0,0.1)',
-            justifyContent: isExpanded ? 'flex-start' : 'center',
-            px: isExpanded ? 2.5 : 0,
-            minWidth: isExpanded ? 'auto' : '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: isMobile || isExpanded ? '8px' : 0,
+            px: 2.5,
+            minWidth: 0,
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
               background: COLORS.gradientPrimary,
               opacity: 0.9,
             },
           }}
         >
-          {isExpanded ? 'Tạo hóa đơn mới' : <AddIcon />}
+          <AddIcon sx={{ fontSize: '20px' }} />
+          <Box
+            component="span"
+            sx={{
+              opacity: isMobile || isExpanded ? 1 : 0,
+              width: isMobile || isExpanded ? 'auto' : 0,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
+            }}
+          >
+            Tạo hóa đơn mới
+          </Box>
         </Button>
       </Box>
 
@@ -234,14 +253,18 @@ const Layout = ({ children }) => {
               <Button
                 onClick={() => handleNavigate(item.path)}
                 sx={{
-                  justifyContent: isExpanded ? 'flex-start' : 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: isMobile || isExpanded ? '12px' : 0,
                   borderRadius: '16px',
                   height: '48px',
-                  px: isExpanded ? 2 : 0,
-                  minWidth: isExpanded ? 'auto' : '48px',
+                  px: 2,
+                  minWidth: 0,
                   textTransform: 'none',
                   fontSize: '16px',
                   fontWeight: 400,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   color: isActive ? (mode === 'dark' ? COLORS.primary : COLORS.secondary) : 'text.primary',
                   background: isActive
                     ? mode === 'dark'
@@ -255,15 +278,34 @@ const Layout = ({ children }) => {
                         : 'linear-gradient(90deg, rgba(74, 20, 140, 0.15) 0%, rgba(206, 147, 216, 0.15) 100%)'
                       : 'rgba(0, 0, 0, 0.04)',
                   },
-                  '& .MuiButton-startIcon': {
-                    marginRight: isExpanded ? '12px' : 0,
-                    marginLeft: 0,
-                    color: isActive ? (mode === 'dark' ? COLORS.primary : COLORS.secondary) : 'inherit',
-                  },
                 }}
-                startIcon={item.icon}
               >
-                {isExpanded && item.label}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '24px',
+                    height: '24px',
+                    flexShrink: 0,
+                    color: isActive ? (mode === 'dark' ? COLORS.primary : COLORS.secondary) : 'inherit',
+                  }}
+                >
+                  {item.icon}
+                </Box>
+                <Box
+                  component="span"
+                  sx={{
+                    opacity: isMobile || isExpanded ? 1 : 0,
+                    width: isMobile || isExpanded ? 'auto' : 0,
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
+                  }}
+                >
+                  {item.label}
+                </Box>
               </Button>
             </Tooltip>
           )
@@ -277,8 +319,8 @@ const Layout = ({ children }) => {
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          gap: isExpanded ? 2 : 0,
-          justifyContent: isExpanded ? 'flex-start' : 'center',
+          gap: isMobile || isExpanded ? 2 : 0,
+          justifyContent: isMobile || isExpanded ? 'flex-start' : 'center',
           cursor: 'pointer',
           borderRadius: '16px',
           mx: 2,
@@ -299,7 +341,7 @@ const Layout = ({ children }) => {
         >
           {getInitials(currentUser?.name)}
         </Avatar>
-        {isExpanded && (
+        {(isMobile || isExpanded) && (
           <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <Typography
               variant="body2"
@@ -547,6 +589,52 @@ const Layout = ({ children }) => {
         },
       }}
     >
+      {/* Profile and Settings */}
+      <MenuItem onClick={() => {
+        handleNavigate('/profile')
+        handleProfileMenuClose()
+      }}>
+        <ListItemIcon>
+          <PersonIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Profile</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={() => {
+        handleNavigate('/settings')
+        handleProfileMenuClose()
+      }}>
+        <ListItemIcon>
+          <SettingsIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Settings</ListItemText>
+      </MenuItem>
+      
+      {/* Divider */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
+      
+      {/* Theme Mode Options */}
+      {/* <MenuItem onClick={() => handleModeChange('light')}>
+        <ListItemIcon>
+          <LightModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Light Mode</ListItemText>
+        {mode === 'light' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('dark')}>
+        <ListItemIcon>
+          <DarkModeIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Dark Mode</ListItemText>
+        {mode === 'dark' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem>
+      <MenuItem onClick={() => handleModeChange('system')}>
+        <ListItemIcon>
+          <SettingsBrightnessIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>System</ListItemText>
+        {mode === 'system' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
+      </MenuItem> */}
+
       {/* Theme Mode Options */}
       <MenuItem onClick={() => handleModeChange('light')}>
         <ListItemIcon>
@@ -568,11 +656,11 @@ const Layout = ({ children }) => {
         </ListItemIcon>
         <ListItemText>System</ListItemText>
         {mode === 'system' && <Box sx={{ ml: 1, color: COLORS.secondary }}>✓</Box>}
-      </MenuItem>
+      </MenuItem>{' '}
+
 
       {/* Divider */}
       <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
-
       {/* Logout */}
       <MenuItem onClick={handleLogout}>
         <ListItemIcon>
@@ -586,7 +674,7 @@ const Layout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       {/* Mobile Menu Button */}
-      {isMobile && (
+      {isMobile && !mobileOpen && (
         <IconButton
           onClick={handleDrawerToggle}
           sx={{
@@ -612,13 +700,14 @@ const Layout = ({ children }) => {
           sx={{
             width: sidebarWidth,
             flexShrink: 0,
-            transition: 'width 0.3s ease',
+            transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             '& .MuiDrawer-paper': {
               width: sidebarWidth,
               boxSizing: 'border-box',
               border: 'none',
-              transition: 'width 0.3s ease',
+              transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
               overflowX: 'hidden',
+              willChange: 'width',
             },
           }}
         >

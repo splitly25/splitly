@@ -13,7 +13,9 @@ const BILL_COLLECTION_SCHEMA = Joi.object({
   creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   totalAmount: Joi.number().min(0).required(),
-  paymentDate: Joi.date().optional(),
+  paymentDate: Joi.date().optional().default(null),
+  creationDate: Joi.date().required().default(Date.now),
+  paymentDeadline: Joi.date().required(),
   splittingMethod: Joi.string()
     .valid(...BILL_TYPE)
     .optional(),
@@ -113,6 +115,7 @@ const convertIdsToObjectId = (data) => {
 const createNew = async (data) => {
   try {
     const convertedData = convertIdsToObjectId(data)
+    console.log("convertedData:", convertedData) // Debugging line
     const validData = await validateBeforeCreate(convertedData)
     const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(validData)
     return createdBill
