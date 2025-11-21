@@ -3,6 +3,9 @@
  * evaluateMathExpression("50*3") // 150
  * evaluateMathExpression("1000/4") // 250
  * evaluateMathExpression("(100+50)*2") // 300
+ * evaluateMathExpression("65k") // 65000
+ * evaluateMathExpression("50k+15k") // 65000
+ * evaluateMathExpression("100k/2") // 50000
  */
 export const evaluateMathExpression = (expression) => {
   if (!expression || typeof expression !== 'string') {
@@ -10,7 +13,11 @@ export const evaluateMathExpression = (expression) => {
   }
 
   // Remove spaces
-  const cleanExpression = expression.trim().replace(/\s+/g, '')
+  let cleanExpression = expression.trim().replace(/\s+/g, '')
+
+  // Convert 'k' or 'K' suffix to *1000
+  // Match patterns like: 65k, 50.5k, 100K (with optional decimal)
+  cleanExpression = cleanExpression.replace(/(\d+(?:\.\d+)?)[kK]/g, '($1*1000)')
 
   // Check if it's already a plain number (including those with leading zeros like 0.5 or 012)
   if (/^0*\d+(\.\d+)?$/.test(cleanExpression)) {
