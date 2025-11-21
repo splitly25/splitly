@@ -38,9 +38,20 @@ const getBillById = async (req, res, next) => {
   }
 }
 
+const getMutualBills = async (req, res, next) => {
+  try {
+    const { userId, creditorId } = req.params
+    const mutualBills = await billService.getMutualBills(userId, creditorId)
+    res.status(StatusCodes.OK).json(mutualBills)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const billController = {
   createNew, 
   scan,
   getBillsByUserId,
   getBillById,
+  getMutualBills,
 }

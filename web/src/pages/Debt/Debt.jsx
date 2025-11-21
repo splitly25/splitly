@@ -4,20 +4,21 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  useMediaQuery,
-  useTheme,
   Card,
   CardContent,
   Avatar,
   Button,
-  Chip
+  Chip,
+  TextField,
+  InputAdornment
 } from '@mui/material'
 import {
   Send as SendIcon,
   NotificationsActive as NotificationsActiveIcon,
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon
+  TrendingDown as TrendingDownIcon,
+  Search as SearchIcon
 } from '@mui/icons-material'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
@@ -29,7 +30,9 @@ import ConfirmPaymentDialog from './ConfirmPaymentDialog'
 import RemindDialog from './RemindDialog'
 
 // Summary Card Component
-const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColor, cardBgColor }) => (
+const SummaryCard = ({ title, amount, icon, bgColor, textColor, iconBgColor, cardBgColor }) => {
+  const Icon = icon
+  return (
   <Card
     sx={{
       border: '1px solid',
@@ -70,7 +73,8 @@ const SummaryCard = ({ title, amount, icon: Icon, bgColor, textColor, iconBgColo
       </Box>
     </CardContent>
   </Card>
-)
+  )
+}
 
 // Person Debt Card Component
 const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirmPayment }) => {
@@ -220,20 +224,32 @@ const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirm
 
 // Main Debt Component
 const Debt = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedCreditor, setSelectedCreditor] = useState(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState(null)
   const [remindDialogOpen, setRemindDialogOpen] = useState(false)
   const [selectedRemindDebtor, setSelectedRemindDebtor] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
   
   // Get current user from Redux store
   const currentUser = useSelector(selectCurrentUser)
   const currentUserId = currentUser?._id
   
   const { loading, error, debtData, refetch } = useDebt(currentUserId)
+
+  // Filter debts based on search term
+  const filterDebts = (debts) => {
+    if (!searchTerm) return debts
+    const lowerSearch = searchTerm.toLowerCase()
+    return debts.filter(person =>
+      person.userName.toLowerCase().includes(lowerSearch) ||
+      person.bills?.some(bill => bill.billName.toLowerCase().includes(lowerSearch))
+    )
+  }
+
+  const filteredIOwe = filterDebts(debtData.iOwe.debts)
+  const filteredOwedToMe = filterDebts(debtData.owedToMe.debts)
 
   const handlePaymentClick = (creditor) => {
     setSelectedCreditor(creditor)
@@ -295,6 +311,56 @@ const Debt = () => {
           </Typography>
         </Box>
 
+        {/* Search Bar */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="Tìm kiếm theo tên người dùng hoặc tên hóa đơn..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '20px',
+                backgroundColor: 'white',
+              }
+            }}
+          />
+        </Box>
+
+        {/* Search Results Info */}
+        {searchTerm && (
+          <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" color="text.secondary">
+              Đang hiển thị {filteredIOwe.length + filteredOwedToMe.length} kết quả phù hợp với từ khóa "{searchTerm}"
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setSearchTerm('')}
+              sx={{
+                borderRadius: '18px',
+                textTransform: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                px: 2,
+                py: 0.5,
+                '&:hover': {
+                  bgcolor: 'rgba(0,0,0,0.04)'
+                }
+              }}
+            >
+              Hiện tất cả
+            </Button>
+          </Box>
+        )}
+
         {/* Summary Cards */}
         <Box
           sx={{
@@ -339,12 +405,14 @@ const Debt = () => {
               Mình nợ người khác
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {debtData.iOwe.debts.length === 0 ? (
+              {filteredIOwe.length === 0 ? (
                 <Card sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: '20px' }}>
-                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                  <Typography color="text.secondary">
+                    {searchTerm ? 'Không tìm thấy kết quả' : 'Không có dữ liệu'}
+                  </Typography>
                 </Card>
               ) : (
-                debtData.iOwe.debts.map((person) => (
+                filteredIOwe.map((person) => (
                   <PersonDebtCard
                     key={person.userId}
                     person={person}
@@ -362,12 +430,14 @@ const Debt = () => {
               Người khác nợ mình
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {debtData.owedToMe.debts.length === 0 ? (
+              {filteredOwedToMe.length === 0 ? (
                 <Card sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: '20px' }}>
-                  <Typography color="text.secondary">Không có dữ liệu</Typography>
+                  <Typography color="text.secondary">
+                    {searchTerm ? 'Không tìm thấy kết quả' : 'Không có dữ liệu'}
+                  </Typography>
                 </Card>
               ) : (
-                debtData.owedToMe.debts.map((person) => (
+                filteredOwedToMe.map((person) => (
                   <PersonDebtCard
                     key={person.userId}
                     person={person}

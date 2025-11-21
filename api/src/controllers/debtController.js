@@ -440,6 +440,27 @@ const submitPayment = async (req, res, next) => {
   }
 }
 
+/**
+ * Balance debts between two users
+ */
+const balanceDebts = async (req, res, next) => {
+  try {
+    const { userId } = req.params // current user
+    const { otherUserId } = req.body
+
+    // Security check: Verify that the authenticated user is one of the participants
+    if (req.jwtDecoded._id !== userId && req.jwtDecoded._id !== otherUserId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only balance debts involving yourself')
+    }
+
+    const result = await debtService.balanceDebts(userId, otherUserId)
+
+    res.status(StatusCodes.OK).json(result)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const debtController = {
   getDebtsOwedToMe,
   getDebtsIOwe,
@@ -448,5 +469,6 @@ export const debtController = {
   confirmPayment,
   remindPayment,
   getPaymentByToken,
-  submitPayment
+  submitPayment,
+  balanceDebts
 }

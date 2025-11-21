@@ -266,9 +266,136 @@ const initiatePayment = async (debtorId, creditorId, amount, note = '', priority
   }
 }
 
+const balanceDebts = async (userId1, userId2) => {
+  try {
+    // Get mutual bills
+    const { billService } = await import('~/services/billService.js')
+    const mutualBills = await billService.getMutualBills(userId1, userId2)
+
+    if (!mutualBills.canBalance) {
+      throw new Error('No debts to balance between these users')
+    }
+
+    const { user1Bills, user2Bills } = mutualBills
+
+    // Create deep copies of bills for email (preserve original amounts)
+    const user1BillsBefore = user1Bills.map(bill => ({ ...bill }))
+    const user2BillsBefore = user2Bills.map(bill => ({ ...bill }))
+
+    // Sort bills by remaining amount (smallest first for optimal balancing)
+    const sortedUser1Bills = [...user1Bills].sort((a, b) => a.remainingAmount - b.remainingAmount)
+    const sortedUser2Bills = [...user2Bills].sort((a, b) => a.remainingAmount - b.remainingAmount)
+
+    let billsMarkedPaid = []
+    let user1Index = 0
+    let user2Index = 0
+
+    // Balance bills by offsetting smaller amounts first
+    while (user1Index < sortedUser1Bills.length && user2Index < sortedUser2Bills.length) {
+      const user1Bill = sortedUser1Bills[user1Index]
+      const user2Bill = sortedUser2Bills[user2Index]
+
+      const offsetAmount = Math.min(user1Bill.remainingAmount, user2Bill.remainingAmount)
+
+      if (offsetAmount > 0) {
+        // Mark both bills as paid by the offset amount
+        await billService.markAsPaid(user1Bill._id.toString(), userId1, offsetAmount, userId1)
+        await billService.markAsPaid(user2Bill._id.toString(), userId2, offsetAmount, userId1)
+
+        billsMarkedPaid.push({
+          billId: user1Bill._id.toString(),
+          billName: user1Bill.billName,
+          amountPaid: offsetAmount,
+          paidBy: userId1,
+          paidTo: userId2
+        })
+
+        billsMarkedPaid.push({
+          billId: user2Bill._id.toString(),
+          billName: user2Bill.billName,
+          amountPaid: offsetAmount,
+          paidBy: userId2,
+          paidTo: userId1
+        })
+
+        // Update remaining amounts
+        user1Bill.remainingAmount -= offsetAmount
+        user2Bill.remainingAmount -= offsetAmount
+
+        // Move to next bill if this one is fully paid
+        if (user1Bill.remainingAmount === 0) user1Index++
+        if (user2Bill.remainingAmount === 0) user2Index++
+      } else {
+        break
+      }
+    }
+
+    // Calculate final net debt
+    const finalUser1Owes = sortedUser1Bills.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+    const finalUser2Owes = sortedUser2Bills.reduce((sum, bill) => sum + bill.remainingAmount, 0)
+    const netDebt = finalUser1Owes - finalUser2Owes
+
+    // Filter remaining bills (bills with remaining amounts after balancing)
+    const user1BillsRemaining = sortedUser1Bills.filter(bill => bill.remainingAmount > 0)
+    const user2BillsRemaining = sortedUser2Bills.filter(bill => bill.remainingAmount > 0)
+
+    // Get user details for email
+    const [user1, user2] = await Promise.all([
+      userModel.findOneById(userId1),
+      userModel.findOneById(userId2)
+    ])
+
+    if (!user1 || !user2) {
+      throw new Error('User not found')
+    }
+
+    // Send email notification
+    const { sendDebtBalanceEmail } = await import('~/utils/emailService.js')
+    await sendDebtBalanceEmail({
+      user1Email: user1.email,
+      user1Name: user1.name,
+      user2Email: user2.email,
+      user2Name: user2.name,
+      user1BillsBefore,
+      user2BillsBefore,
+      user1BillsRemaining,
+      user2BillsRemaining,
+      billsMarkedPaid,
+      netDebt
+    })
+
+    // Log activity
+    await activityModel.createNew({
+      activityType: activityModel.ACTIVITY_TYPES.DEBT_BALANCED,
+      userId: userId1,
+      resourceType: 'user',
+      resourceId: userId2,
+      details: {
+        user1Name: user1.name,
+        user2Name: user2.name,
+        totalUser1Owed: mutualBills.totalUser1Owes,
+        totalUser2Owed: mutualBills.totalUser2Owes,
+        netDebt,
+        billsMarkedPaid: billsMarkedPaid.length
+      }
+    })
+
+    return {
+      success: true,
+      message: 'Debts balanced successfully',
+      netDebt,
+      billsMarkedPaid,
+      emailSent: true
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 export const debtService = {
   getDebtsOwedToMe,
   getDebtsIOwe,
   getDebtSummary,
-  initiatePayment
+  initiatePayment,
+  balanceDebts
 }
