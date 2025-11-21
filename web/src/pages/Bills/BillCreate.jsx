@@ -11,9 +11,9 @@ import AddParticipantDialog from '~/components/Bills/AddParticipantDialog'
 import SelectPayerDialog from '~/components/Bills/SelectPayerDialog'
 import GeneralInformationSection from '~/components/Bills/GeneralInformationSection'
 import ParticipantsSection from '~/components/Bills/ParticipantsSection'
-import EqualSplitDetails from '~/components/Bills/EqualSplitDetails'
-import ByPersonSplitDetails from '~/components/Bills/ByPersonSplitDetails'
-import ByItemSplitDetails from '~/components/Bills/ByItemSplitDetails'
+import EqualSplitDetails from '~/components/Bills/BillTypeTab/EqualSplitDetails'
+import ByPersonSplitDetails from '~/components/Bills/BillTypeTab/ByPersonSplitDetails'
+import ByItemSplitDetails from '~/components/Bills/BillTypeTab/ByItemSplitDetails'
 import {
   selectActiveBill,
   selectParticipants,
@@ -44,7 +44,6 @@ import {
   submitBillThunk,
 } from '~/redux/bill/activeBillSlice'
 import { useChatbot } from '~/context/ChatbotContext'
-
 
 function BillCreate() {
   const navigate = useNavigate()
@@ -468,6 +467,7 @@ function BillCreate() {
           onDeleteParticipant={handleDeleteParticipant}
           onParticipantAmountChange={handleParticipantAmountChange}
           onParticipantAmountBlur={handleParticipantAmountBlur}
+          availableGroups={availableGroups}
         />
 
         {/* Split Details Section */}

@@ -167,7 +167,33 @@ export const activeBillSlice = createSlice({
     },
 
     removeParticipant: (state, action) => {
+      const removedParticipant = state.participants.find((p) => p.id === action.payload)
       state.participants = state.participants.filter((p) => p.id !== action.payload)
+
+      // check if any groups are now incomplete
+      if (removedParticipant && removedParticipant.groups && removedParticipant.groups.length > 0) {
+        removedParticipant.groups.forEach((groupName) => {
+          const group = state.availableGroups.find((g) => g.name === groupName)
+          if (group) {
+            const allMembersStillPresent = group.members.every(
+              (member) => member.id === action.payload || state.participants.some((p) => p.id === member.id)
+            )
+
+            if (!allMembersStillPresent) {
+              // Remove this group from all remaining participants
+              state.participants = state.participants.map((p) => {
+                if (p.groups && p.groups.includes(groupName)) {
+                  return {
+                    ...p,
+                    groups: p.groups.filter((g) => g !== groupName),
+                  }
+                }
+                return p
+              })
+            }
+          }
+        })
+      }
     },
 
     updateParticipantAmount: (state, action) => {
