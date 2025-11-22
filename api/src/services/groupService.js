@@ -310,21 +310,61 @@ const fetchGroups = async (page = 1, limit = 10, search = '') => {
   }
 }
 
-const updateGroup = async (groupId, reqBody) => {
+const updateGroup = async (groupId, reqBody, updatedBy) => {
   try {
+    // Get original group data for activity logging
+    const originalGroup = await groupModel.findOneById(groupId)
+
     const updateData = {
       ...reqBody,
     }
+    // Convert member IDs to ObjectId if members array is provided
+    if (updateData.members && Array.isArray(updateData.members)) {
+      updateData.members = updateData.members.map((memberId) => new ObjectId(memberId))
+    }
     const updatedGroup = await groupModel.update(groupId, updateData)
+
+    // Log activity if updatedBy is provided
+    if (updatedBy && originalGroup) {
+      try {
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_UPDATED, updatedBy, groupId, {
+          groupName: originalGroup.groupName,
+          previousValue: {
+            groupName: originalGroup.groupName,
+            description: originalGroup.description,
+          },
+          newValue: updateData,
+          description: `Updated group: ${originalGroup.groupName}`,
+        })
+      } catch (activityError) {
+        console.warn('Failed to log group update activity:', activityError.message)
+      }
+    }
+
     return updatedGroup
   } catch (error) {
     throw error
   }
 }
 
-const deleteGroup = async (groupId) => {
+const deleteGroup = async (groupId, deletedBy) => {
   try {
+    // Get group data for activity logging before deletion
+    const group = await groupModel.findOneById(groupId)
+
     await groupModel.deleteOneById(groupId)
+
+    // Log deletion activity
+    if (deletedBy && group) {
+      try {
+        await activityModel.logGroupActivity(activityModel.ACTIVITY_TYPES.GROUP_DELETED, deletedBy, groupId, {
+          groupName: group.groupName,
+          description: `Deleted group: ${group.groupName}`,
+        })
+      } catch (activityError) {
+        console.warn('Failed to log group deletion activity:', activityError.message)
+      }
+    }
   } catch (error) {
     throw error
   }

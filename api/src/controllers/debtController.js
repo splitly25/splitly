@@ -161,7 +161,7 @@ const confirmPayment = async (req, res, next) => {
  */
 const remindPayment = async (req, res, next) => {
   try {
-    const { creditorId, debtorId } = req.body
+    const { creditorId, debtorId, bill } = req.body
 
     // Security: Only creditor can send reminder
     if (req.jwtDecoded._id !== creditorId) {
@@ -221,7 +221,8 @@ const remindPayment = async (req, res, next) => {
       bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount })),
       creditorBankName: creditor.bankName,
       creditorBankAccount: creditor.bankAccount,
-      reminderToken: token
+      reminderToken: token,
+      priorityBill: bill
     })
 
     res.status(StatusCodes.OK).json({
@@ -271,6 +272,14 @@ const getPaymentByToken = async (req, res, next) => {
         throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
       }
 
+      // Fetch current debts from database - get debts that debtor owes to creditor
+      const debts = await debtService.getDebtsIOwe(decoded.debtorId)
+      const debt = debts.find(d => d.userId === decoded.creditorId)
+
+      if (!debt) {
+        throw new ApiError(StatusCodes.NOT_FOUND, 'No outstanding debts found')
+      }
+
       // Check if token has been used
       if (paymentRecord.usedAt) {
         return res.status(StatusCodes.OK).json({
@@ -295,8 +304,8 @@ const getPaymentByToken = async (req, res, next) => {
           name: debtor.name,
           email: debtor.email
         },
-        bills: decoded.bills,
-        totalAmount: decoded.totalAmount,
+        bills: debt.bills,
+        totalAmount: debt.totalAmount,
         token: paymentRecord.token
       })
     } else {
@@ -332,6 +341,14 @@ const getPaymentByToken = async (req, res, next) => {
         throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
       }
 
+      // Fetch current debts from database - get debts that debtor owes to creditor
+      const debts = await debtService.getDebtsIOwe(decoded.debtorId)
+      const debt = debts.find(d => d.userId === decoded.creditorId)
+
+      if (!debt) {
+        throw new ApiError(StatusCodes.NOT_FOUND, 'No outstanding debts found')
+      }
+
       // Check if token has been used
       if (reminder.usedAt) {
         return res.status(StatusCodes.OK).json({
@@ -356,8 +373,8 @@ const getPaymentByToken = async (req, res, next) => {
           name: debtor.name,
           email: debtor.email
         },
-        bills: decoded.bills,
-        totalAmount: decoded.totalAmount,
+        bills: debt.bills,
+        totalAmount: debt.totalAmount,
         token
       })
     }

@@ -1,38 +1,15 @@
-/* eslint-disable no-useless-catch */
-/**
- * Email Service
- * Simple email utility using nodemailer
- */
+import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider.js'
+import { WEBSITE_DOMAIN } from './constants'
 
-import { env } from '~/config/environment.js'
-
-/**
- * Send payment notification email
- * @param {Object} params - Email parameters
- * @returns {Promise<boolean>} - Success status
- */
-export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerName, amount, note, confirmationToken }) => {
+export const sendPaymentEmail = async ({
+  recipientEmail,
+  recipientName,
+  payerName,
+  amount,
+  note,
+  confirmationToken,
+}) => {
   try {
-    // Only send email if SMTP is configured
-    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
-      return false
-    }
-
-    // Import nodemailer only when needed
-    const nodemailer = await import('nodemailer')
-    
-    // Create transporter
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(env.SMTP_PORT) || 587,
-      secure: parseInt(env.SMTP_PORT) === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASSWORD
-      }
-    })
-
-    // Modern HTML email template matching UI style
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -170,20 +147,26 @@ export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerNam
         <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
       </div>
       
-      ${note ? `
+      ${
+        note
+          ? `
       <div class="note">
         <div class="note-label">📝 Ghi chú</div>
         <div class="note-content">${note}</div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
       
       <p class="action-text">
         Vui lòng kiểm tra và xác nhận khi bạn đã nhận được tiền.
       </p>
       
-      ${confirmationToken ? `
+      ${
+        confirmationToken
+          ? `
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/confirm?token=${confirmationToken}"
+        <a href="${WEBSITE_DOMAIN}/payment/confirm?token=${confirmationToken}"
            style="display: inline-block;
                   padding: 16px 40px;
                   background: linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%);
@@ -196,7 +179,9 @@ export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerNam
           ✓ Xác nhận đã nhận tiền
         </a>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
       
       <div class="footer">
         <p>Trân trọng,<br><strong>Splitly Team</strong></p>
@@ -208,13 +193,14 @@ export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerNam
 </html>
     `.trim()
 
-    // Send email
-    await transporter.sendMail({
-      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: recipientEmail,
-      subject: `💰 ${payerName} đã thanh toán cho bạn qua Splitly`,
-      html: htmlContent
-    })
+    try {
+      await BrevoEmailProvider.sendEmail(
+        recipientEmail,
+        `💰 ${payerName} đã thanh toán cho bạn qua Splitly`,
+        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+        htmlContent
+      )
+    } catch (error) {}
 
     return true
   } catch (error) {
@@ -222,36 +208,12 @@ export const sendPaymentEmail = async ({ recipientEmail, recipientName, payerNam
   }
 }
 
-/**
- * Send payment response notification email to payer
- * @param {Object} params - Email parameters
- * @returns {Promise<boolean>} - Success status
- */
 export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipientName, amount, isConfirmed }) => {
   try {
-    // Only send email if SMTP is configured
-    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
-      return false
-    }
-
-    // Import nodemailer only when needed
-    const nodemailer = await import('nodemailer')
-    
-    // Create transporter
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(env.SMTP_PORT) || 587,
-      secure: parseInt(env.SMTP_PORT) === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASSWORD
-      }
-    })
-
     const statusIcon = isConfirmed ? '✅' : '❌'
     const statusText = isConfirmed ? 'Đã nhận được' : 'Chưa nhận được'
     const statusColor = isConfirmed ? '#10b981' : '#ef4444'
-    const statusGradient = isConfirmed 
+    const statusGradient = isConfirmed
       ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
       : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
     const message = isConfirmed
@@ -403,13 +365,15 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
       </div>
       
       <p class="action-text">
-        ${isConfirmed 
-          ? 'Khoản thanh toán đã được xác nhận thành công. Cảm ơn bạn đã sử dụng Splitly!'
-          : 'Vui lòng liên hệ trực tiếp với người nhận để kiểm tra thông tin thanh toán.'}
+        ${
+          isConfirmed
+            ? 'Khoản thanh toán đã được xác nhận thành công. Cảm ơn bạn đã sử dụng Splitly!'
+            : 'Vui lòng liên hệ trực tiếp với người nhận để kiểm tra thông tin thanh toán.'
+        }
       </p>
       
       <div class="login-button">
-        <a href="${env.WEB_URL || 'http://localhost:5173'}/login">
+        <a href="${WEBSITE_DOMAIN}/login">
           Đăng nhập để xem chi tiết
         </a>
       </div>
@@ -424,13 +388,13 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
 </html>
     `.trim()
 
-    // Send email
-    await transporter.sendMail({
-      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: payerEmail,
-      subject: `${statusIcon} ${recipientName} ${statusText} thanh toán qua Splitly`,
-      html: htmlContent
-    })
+    // Send email using Brevo
+    await BrevoEmailProvider.sendEmail(
+      payerEmail,
+      `${statusIcon} ${recipientName} ${statusText} thanh toán qua Splitly`,
+      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+      htmlContent
+    )
 
     console.log(`Payment response email sent successfully to ${payerEmail}`)
     return true
@@ -445,27 +409,17 @@ export const sendPaymentResponseEmail = async ({ payerEmail, payerName, recipien
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, creditorName, bills, creditorBankName, creditorBankAccount, reminderToken }) => {
+export const sendPaymentReminderEmail = async ({
+  debtorEmail,
+  debtorName,
+  creditorName,
+  bills,
+  creditorBankName,
+  creditorBankAccount,
+  reminderToken,
+  priorityBill,
+}) => {
   try {
-    // Only send email if SMTP is configured
-    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
-      return false
-    }
-
-    // Import nodemailer only when needed
-    const nodemailer = await import('nodemailer')
-    
-    // Create transporter
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(env.SMTP_PORT) || 587,
-      secure: parseInt(env.SMTP_PORT) === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASSWORD
-      }
-    })
-
     // Calculate total amount
     const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0)
 
@@ -678,12 +632,16 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
         
         <div class="bills-list">
           <table class="bills-table">
-            ${bills.map(bill => `
+            ${bills
+              .map(
+                (bill) => `
               <tr class="bill-row">
                 <td class="bill-name">${bill.billName}</td>
                 <td class="bill-amount">${bill.amount.toLocaleString('vi-VN')}₫</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
           </table>
         </div>
         
@@ -692,7 +650,9 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
           <div class="total-amount">${totalAmount.toLocaleString('vi-VN')}₫</div>
         </div>
         
-        ${creditorBankName && creditorBankAccount ? `
+        ${
+          creditorBankName && creditorBankAccount
+            ? `
         <div class="bank-info">
           <div class="bank-info-title">Thông tin chuyển khoản</div>
           <table class="bank-table">
@@ -714,7 +674,9 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
             </tr>
           </table>
           
-          ${qrCodeUrl ? `
+          ${
+            qrCodeUrl
+              ? `
           <div class="qr-section">
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
@@ -724,18 +686,22 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
               </tr>
             </table>
           </div>
-          ` : ''}
+          `
+              : ''
+          }
 
           <p style="font-size: 12px; margin-top: 12px; font-style: italic; text-align: center;">
-          Bạn chỉ muốn thanh toán một phần? <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
+          Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
         
         <p class="action-text">
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
         </p>
         <div class="login-button">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${reminderToken}">
+          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">
             Xác nhận thanh toán
           </a>
         </div>
@@ -750,13 +716,13 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
 </html>
     `.trim()
 
-    // Send email
-    await transporter.sendMail({
-      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: debtorEmail,
-      subject: `⏰ ${creditorName} nhắc nhở bạn thanh toán qua Splitly`,
-      html: htmlContent
-    })
+    // Send email using Brevo
+    await BrevoEmailProvider.sendEmail(
+      debtorEmail,
+      `⏰ ${creditorName} nhắc nhở bạn thanh toán qua Splitly`,
+      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+      htmlContent
+    )
 
     console.log(`Payment reminder email sent successfully to ${debtorEmail}`)
     return true
@@ -771,34 +737,31 @@ export const sendPaymentReminderEmail = async ({ debtorEmail, debtorName, credit
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendBillCreationEmail = async ({ participantEmail, participantName, payerName, billName, billDescription, totalAmount, participantAmount, items, participants, optOutToken, paymentToken }) => {
+export const sendBillCreationEmail = async ({
+  participantEmail,
+  participantName,
+  payerName,
+  billName,
+  billDescription,
+  totalAmount,
+  participantAmount,
+  items,
+  participants,
+  optOutToken,
+  paymentToken,
+  billId,
+}) => {
   try {
-    // Only send email if SMTP is configured
-    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
-      console.log('SMTP not configured, skipping bill creation email to', participantEmail)
-      return false
-    }
-
-    // Import nodemailer only when needed
-    const nodemailer = await import('nodemailer')
-
-    // Create transporter
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(env.SMTP_PORT) || 587,
-      secure: parseInt(env.SMTP_PORT) === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASSWORD
-      }
-    })
-
     // Generate bill details HTML
-    const billDetailsHtml = items && items.length > 0 ? `
+    const billDetailsHtml =
+      items && items.length > 0
+        ? `
     <div class="bill-details">
       <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Chi tiết hóa đơn</h3>
       <div class="items-list">
-        ${items.map(item => `
+        ${items
+          .map(
+            (item) => `
           <div class="item-row">
             <div class="item-info">
               <span class="item-name">${item.name}</span>
@@ -806,23 +769,32 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
             </div>
             <div class="item-amount">${item.amount.toLocaleString('vi-VN')}₫</div>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
-    ` : ''
+    `
+        : ''
 
     // Generate participants list HTML
-    const participantsHtml = participants && participants.length > 0 ? `
+    const participantsHtml =
+      participants && participants.length > 0
+        ? `
     <div class="participants-section">
       <h3 style="color: #1e293b; font-size: 18px; margin: 25px 0 15px 0;">Người tham gia</h3>
       <div class="participants-list">
         <table class="participants-table">
-          ${participants.map(p => `
+          ${participants
+            .map(
+              (p) => `
             <tr class="participant-row">
               <td class="participant-name">${p.name}</td>
               <td class="participant-amount">${p.amount.toLocaleString('vi-VN')}</td>
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
           <tr class="participant-row" style="border-top: 2px solid #e2e8f0; font-weight: 700;">
             <td class="participant-name">Tổng cộng</td>
             <td class="participant-amount">${totalAmount.toLocaleString('vi-VN')}₫</td>
@@ -830,7 +802,8 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
         </table>
       </div>
     </div>
-    ` : ''
+    `
+        : ''
 
     // Modern HTML email template for bill creation
     const htmlContent = `
@@ -991,6 +964,12 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
     .footer strong {
       color: #64748b;
     }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -1021,13 +1000,13 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
         </div>
 
         <div style="text-align: center; margin: 35px 0;">
-          <a href="${env.WEB_URL || 'http://localhost:5173'}/payment/pay?token=${paymentToken}&bill=${billId}"
+          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${paymentToken}&bill=${billId}"
              style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 18px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             Thanh toán ngay
           </a>
         </div>
 
-        <p>Bạn không tham gia hóa đơn này? <a href="${env.WEB_URL || 'http://localhost:5173'}/bill/opt-out?token=${optOutToken}">Nhấn vào đây để từ chối.</a></p>
+        <p class="action-text">Bạn không tham gia hóa đơn này? <a href="${WEBSITE_DOMAIN}/bill/opt-out?token=${optOutToken}">Nhấn vào đây để từ chối.</a></p>
 
         <div class="footer">
           <p>Trân trọng,<br><strong>Splitly Team</strong></p>
@@ -1039,13 +1018,13 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
 </html>
     `.trim()
 
-    // Send email
-    await transporter.sendMail({
-      from: `"${env.ADMIN_EMAIL_NAME || 'Splitly'}" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: participantEmail,
-      subject: `📄 Bạn đã được thêm vào hóa đơn "${billName}"`,
-      html: htmlContent
-    })
+    // Send email using Brevo
+    await BrevoEmailProvider.sendEmail(
+      participantEmail,
+      `📄 Bạn đã được thêm vào hóa đơn "${billName}"`,
+      'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+      htmlContent
+    )
 
     console.log(`Bill creation email sent successfully to ${participantEmail}`)
     return true
@@ -1060,32 +1039,24 @@ export const sendBillCreationEmail = async ({ participantEmail, participantName,
  * @param {Object} params - Email parameters
  * @returns {Promise<boolean>} - Success status
  */
-export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, user2Name, user1BillsBefore, user2BillsBefore, user1BillsRemaining, user2BillsRemaining, billsMarkedPaid, netDebt }) => {
+export const sendDebtBalanceEmail = async ({
+  user1Email,
+  user1Name,
+  user2Email,
+  user2Name,
+  user1BillsBefore,
+  user2BillsBefore,
+  user1BillsRemaining,
+  user2BillsRemaining,
+  billsMarkedPaid,
+  netDebt,
+}) => {
   try {
-    // Only send email if SMTP is configured
-    if (!env.SMTP_USER || !env.SMTP_PASSWORD || !env.ADMIN_EMAIL_ADDRESS) {
-      return false
-    }
-
-    // Import nodemailer only when needed
-    const nodemailer = await import('nodemailer')
-
-    // Create transporter
-    const transporter = nodemailer.default.createTransport({
-      host: env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(env.SMTP_PORT) || 587,
-      secure: parseInt(env.SMTP_PORT) === 465,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASSWORD
-      }
-    })
-
     // Format currency helper
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('vi-VN', {
         style: 'currency',
-        currency: 'VND'
+        currency: 'VND',
       }).format(amount)
     }
 
@@ -1096,12 +1067,18 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
       }
       return `
         <table style="width: 100%; border-collapse: collapse;">
-          ${bills.map(bill => `
+          ${bills
+            .map(
+              (bill) => `
             <tr>
               <td style="text-align: left; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${bill.billName}</td>
-              <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${formatCurrency(bill.remainingAmount)}</td>
+              <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${formatCurrency(
+                bill.remainingAmount
+              )}</td>
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
         </table>
       `
     }
@@ -1292,7 +1269,9 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
           </div>
         </div>
 
-        ${netDebt > 0 ? `
+        ${
+          netDebt > 0
+            ? `
         <div class="section-title">Kết quả cân bằng: ${user1Name} còn nợ</div>
         <div class="bills-section">
           ${generateBillsList(user1BillsRemaining)}
@@ -1301,7 +1280,9 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
           <div class="total-label">Tổng số tiền còn nợ</div>
           <div class="total-amount">${formatCurrency(netDebt)}</div>
         </div>
-        ` : netDebt < 0 ? `
+        `
+            : netDebt < 0
+            ? `
         <div class="section-title">Kết quả cân bằng: ${user2Name} còn nợ</div>
         <div class="bills-section">
           ${generateBillsList(user2BillsRemaining)}
@@ -1310,12 +1291,14 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
           <div class="total-label">Tổng số tiền còn nợ</div>
           <div class="total-amount">${formatCurrency(Math.abs(netDebt))}</div>
         </div>
-        ` : `
+        `
+            : `
         <div class="success-card">
           <div class="success-icon">✅</div>
           <div class="success-text">Tất cả hóa đơn đã được thanh toán hoàn toàn</div>
         </div>
-        `}
+        `
+        }
 
         <p class="action-text">
           Bạn có thể đăng nhập vào ứng dụng để xem chi tiết các hóa đơn đã được cập nhật.
@@ -1330,25 +1313,10 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
 </body>
 </html>`
 
-    // Send email to both users
-    const mailOptions1 = {
-      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: user1Email,
-      subject: `Cân bằng nợ với ${user2Name} - Splitly`,
-      html: htmlContent
-    }
-
-    const mailOptions2 = {
-      from: `"Splitly" <${env.ADMIN_EMAIL_ADDRESS}>`,
-      to: user2Email,
-      subject: `Cân bằng nợ với ${user1Name} - Splitly`,
-      html: htmlContent
-    }
-
-    // Send emails concurrently
+    // Send emails to both users using Brevo
     const [result1, result2] = await Promise.allSettled([
-      transporter.sendMail(mailOptions1),
-      transporter.sendMail(mailOptions2)
+      BrevoEmailProvider.sendEmail(user1Email, `Cân bằng nợ với ${user2Name} - Splitly`, 'Splitly', htmlContent),
+      BrevoEmailProvider.sendEmail(user2Email, `Cân bằng nợ với ${user1Name} - Splitly`, 'Splitly', htmlContent),
     ])
 
     const success1 = result1.status === 'fulfilled'
@@ -1360,12 +1328,370 @@ export const sendDebtBalanceEmail = async ({ user1Email, user1Name, user2Email, 
     } else {
       console.error('Failed to send some debt balance emails:', {
         user1: success1 ? 'sent' : result1.reason?.message,
-        user2: success2 ? 'sent' : result2.reason?.message
+        user2: success2 ? 'sent' : result2.reason?.message,
       })
       return false
     }
   } catch (error) {
     console.error('Failed to send debt balance email:', error)
+    return false
+  }
+}
+
+/**
+ * Send opt-out notification email to both debtor and creditor
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendOptOutEmail = async ({
+  debtorEmail,
+  debtorName,
+  creditorEmail,
+  creditorName,
+  billName,
+  billDescription,
+  amount,
+}) => {
+  try {
+    // Email to debtor (the one who opted out)
+    const debtorHtmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bill-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bill-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .bill-description {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .amount-card {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .amount-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: #d97706;
+      margin: 10px 0;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">🚪</div>
+        <h1>Đã từ chối tham gia</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${debtorName}</strong>,</p>
+        <p class="message">
+          Bạn đã từ chối tham gia hóa đơn "<strong>${billName}</strong>" thành công.
+        </p>
+
+        <div class="bill-info">
+          <div class="bill-title">${billName}</div>
+          ${billDescription ? `<div class="bill-description">${billDescription}</div>` : ''}
+        </div>
+
+        <div class="amount-card">
+          <div class="amount-label">Số tiền đã được miễn trừ</div>
+          <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <p class="action-text">
+          Bạn sẽ không còn chịu trách nhiệm thanh toán cho hóa đơn này nữa. ${creditorName} đã được thông báo về việc từ chối của bạn.
+        </p>
+
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Email to creditor (the bill creator)
+    const creditorHtmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bill-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bill-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .bill-description {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .amount-card {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .amount-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: #d97706;
+      margin: 10px 0;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">🚪</div>
+        <h1>Thông báo từ chối tham gia</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${creditorName}</strong>,</p>
+        <p class="message">
+          <strong>${debtorName}</strong> đã từ chối tham gia hóa đơn "<strong>${billName}</strong>".
+        </p>
+
+        <div class="bill-info">
+          <div class="bill-title">${billName}</div>
+          ${billDescription ? `<div class="bill-description">${billDescription}</div>` : ''}
+        </div>
+
+        <div class="amount-card">
+          <div class="amount-label">Số tiền đã được miễn trừ</div>
+          <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <p class="action-text">
+          ${debtorName} sẽ không còn chịu trách nhiệm thanh toán cho hóa đơn này nữa. Bạn có thể cập nhật hóa đơn hoặc tạo hóa đơn mới nếu cần.
+        </p>
+
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Send emails to both debtor and creditor using Brevo
+    const [debtorResult, creditorResult] = await Promise.allSettled([
+      BrevoEmailProvider.sendEmail(
+        debtorEmail,
+        `🚪 Đã từ chối tham gia "${billName}" - Splitly`,
+        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+        debtorHtmlContent
+      ),
+      BrevoEmailProvider.sendEmail(
+        creditorEmail,
+        `🚪 ${debtorName} đã từ chối tham gia "${billName}" - Splitly`,
+        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+        creditorHtmlContent
+      ),
+    ])
+
+    const debtorSuccess = debtorResult.status === 'fulfilled'
+    const creditorSuccess = creditorResult.status === 'fulfilled'
+
+    if (debtorSuccess && creditorSuccess) {
+      console.log(`Opt-out emails sent successfully to ${debtorEmail} and ${creditorEmail}`)
+      return true
+    } else {
+      console.error('Failed to send some opt-out emails:', {
+        debtor: debtorSuccess ? 'sent' : debtorResult.reason?.message,
+        creditor: creditorSuccess ? 'sent' : creditorResult.reason?.message,
+      })
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to send opt-out email:', error)
     return false
   }
 }

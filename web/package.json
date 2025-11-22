@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "host": "vite --host",
-    "production": "cross-env NODE_ENV=production vite build"
+    "production": "vite preview --port 4173 --host"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -18,9 +18,14 @@
     "@mui/material": "^7.3.4",
     "@reduxjs/toolkit": "^2.9.2",
     "axios": "^1.13.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "cross-env": "^10.1.0",
+    "framer-motion": "^12.23.24",
     "lodash": "^4.17.21",
+    "lucide-react": "^0.554.0",
     "material-ui-confirm": "^4.0.0",
+    "ogl": "^1.0.11",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.66.0",
@@ -29,6 +34,7 @@
     "react-toastify": "^11.0.5",
     "recharts": "^3.4.1",
     "redux-persist": "^6.0.0",
+    "tailwind-merge": "^3.4.0",
     "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {

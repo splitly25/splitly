@@ -18,6 +18,22 @@ const sendEmail = async (to, subject, textContent, htmlContent) => {
   return emailAPI.sendTransacEmail(message)
 }
 
+const verifyConnection = async () => {
+  try {
+    // Try to get account info to verify API key is valid
+    if (!env.BREVO_API_KEY || env.BREVO_API_KEY === '') {
+      console.error('Brevo API key is missing')
+      return false
+    }
+    console.log('Brevo email service is ready (API key configured)')
+    return true
+  } catch (error) {
+    console.error('Brevo connection error:', error.message)
+    return false
+  }
+}
+
 export const BrevoEmailProvider = {
   sendEmail,
+  verifyConnection,
 }

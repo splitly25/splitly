@@ -38,10 +38,10 @@ const ACTIVITY_TYPES = {
   GROUP_BILL_ADDED: 'group_bill_added',
   
   // User activities
-  USER_CREATED: 'user_created',
-  USER_UPDATED: 'user_updated',
-  USER_LOGIN: 'user_login',
-  USER_LOGOUT: 'user_logout'
+  //USER_CREATED: 'user_created',
+  // USER_UPDATED: 'user_updated',
+  // USER_LOGIN: 'user_login',
+  // USER_LOGOUT: 'user_logout'
 }
 
 const ACTIVITY_COLLECTION_SCHEMA = Joi.object({
@@ -328,6 +328,124 @@ const logUserActivity = async (activityType, userId, targetUserId, details = {})
   })
 }
 
+/**
+ * Get activities with filters (types, date range, pagination) and user info
+ * @param {string} userId - User ID
+ * @param {Object} filters - Filter options (limit, offset, types, dateFrom, dateTo)
+ * @returns {Promise<Array>} Array of filtered activities with user info
+ */
+const getActivitiesWithFilters = async (userId, filters = {}) => {
+  try {
+    const { limit = 10, offset = 0, types = null, dateFrom = null, dateTo = null } = filters
+
+    // Build match query
+    const matchQuery = {
+      userId: new ObjectId(userId),
+      _destroy: false
+    }
+
+    // Add types filter if provided
+    if (types && Array.isArray(types) && types.length > 0) {
+      matchQuery.activityType = { $in: types }
+    }
+
+    // Add date range filter if provided
+    if (dateFrom || dateTo) {
+      matchQuery.createdAt = {}
+      if (dateFrom) {
+        matchQuery.createdAt.$gte = dateFrom
+      }
+      if (dateTo) {
+        matchQuery.createdAt.$lte = dateTo
+      }
+    }
+
+    const result = await GET_DB()
+      .collection(ACTIVITY_COLLECTION_NAME)
+      .aggregate([
+        { $match: matchQuery },
+        { $sort: { createdAt: -1 } },
+        { $skip: offset },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userInfo'
+          }
+        },
+        {
+          $addFields: {
+            user: {
+              $let: {
+                vars: { userDoc: { $arrayElemAt: ['$userInfo', 0] } },
+                in: {
+                  _id: '$$userDoc._id',
+                  name: '$$userDoc.name',
+                  email: '$$userDoc.email',
+                  avatar: '$$userDoc.avatar'
+                }
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            userInfo: 0
+          }
+        }
+      ])
+      .toArray()
+
+    return result
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
+/**
+ * Get activity count for a user with optional filters
+ * @param {string} userId - User ID
+ * @param {Object} filters - Filter options (types, dateFrom, dateTo)
+ * @returns {Promise<number>} Count of activities
+ */
+const getActivityCountByUser = async (userId, filters = {}) => {
+  try {
+    const { types = null, dateFrom = null, dateTo = null } = filters
+
+    // Build query
+    const query = {
+      userId: new ObjectId(userId),
+      _destroy: false
+    }
+
+    // Add types filter if provided
+    if (types && Array.isArray(types) && types.length > 0) {
+      query.activityType = { $in: types }
+    }
+
+    // Add date range filter if provided
+    if (dateFrom || dateTo) {
+      query.createdAt = {}
+      if (dateFrom) {
+        query.createdAt.$gte = dateFrom
+      }
+      if (dateTo) {
+        query.createdAt.$lte = dateTo
+      }
+    }
+
+    const count = await GET_DB()
+      .collection(ACTIVITY_COLLECTION_NAME)
+      .countDocuments(query)
+
+    return count
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 export const activityModel = {
   ACTIVITY_COLLECTION_NAME,
   ACTIVITY_COLLECTION_SCHEMA,
@@ -343,5 +461,7 @@ export const activityModel = {
   deleteOneById,
   logBillActivity,
   logGroupActivity,
-  logUserActivity
+  logUserActivity,
+  getActivitiesWithFilters,
+  getActivityCountByUser
 }

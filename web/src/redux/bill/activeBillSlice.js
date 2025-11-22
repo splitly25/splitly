@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { toast } from 'react-toastify'
 import { createBillAPI, fetchUsersAPI, fetchGroupsAPI } from '~/apis'
 
 const initialState = {
@@ -98,6 +97,7 @@ export const loadMoreDataThunk = createAsyncThunk(
   }
 )
 
+// function use to search users and groups
 export const searchDataThunk = createAsyncThunk(
   'activeBill/searchData',
   async ({ page, limit, search, type, append = false }, { rejectWithValue }) => {
@@ -127,6 +127,7 @@ export const searchDataThunk = createAsyncThunk(
   }
 )
 
+// function use to submit bill
 export const submitBillThunk = createAsyncThunk('activeBill/submitBill', async (billData, { rejectWithValue }) => {
   try {
     const response = await createBillAPI(billData)
@@ -137,6 +138,7 @@ export const submitBillThunk = createAsyncThunk('activeBill/submitBill', async (
   }
 })
 
+// Redux slice
 export const activeBillSlice = createSlice({
   name: 'activeBill',
   initialState,
@@ -165,7 +167,33 @@ export const activeBillSlice = createSlice({
     },
 
     removeParticipant: (state, action) => {
+      const removedParticipant = state.participants.find((p) => p.id === action.payload)
       state.participants = state.participants.filter((p) => p.id !== action.payload)
+
+      // check if any groups are now incomplete
+      if (removedParticipant && removedParticipant.groups && removedParticipant.groups.length > 0) {
+        removedParticipant.groups.forEach((groupName) => {
+          const group = state.availableGroups.find((g) => g.name === groupName)
+          if (group) {
+            const allMembersStillPresent = group.members.every(
+              (member) => member.id === action.payload || state.participants.some((p) => p.id === member.id)
+            )
+
+            if (!allMembersStillPresent) {
+              // Remove this group from all remaining participants
+              state.participants = state.participants.map((p) => {
+                if (p.groups && p.groups.includes(groupName)) {
+                  return {
+                    ...p,
+                    groups: p.groups.filter((g) => g !== groupName),
+                  }
+                }
+                return p
+              })
+            }
+          }
+        })
+      }
     },
 
     updateParticipantAmount: (state, action) => {
@@ -217,21 +245,59 @@ export const activeBillSlice = createSlice({
       const total = parseFloat(state.totalAmount) || 0
 
       if (state.splitType === 'equal' && state.participants.length > 0) {
+        // Equal split
         const perPerson = total / state.participants.length
         state.participants.forEach((p) => {
           p.amount = perPerson
         })
       } else if (state.splitType === 'by-person') {
         const totalUsed = state.participants.reduce((sum, p) => sum + (parseFloat(p.usedAmount) || 0), 0)
-        if (totalUsed > 0) {
-          state.participants.forEach((p) => {
-            p.amount = ((parseFloat(p.usedAmount) || 0) / totalUsed) * total
+        if (totalUsed > 0 && state.participants.length > 0) {
+          // Calculate proportional amounts for each participant
+          const proportionalAmounts = state.participants.map((p) => {
+            const usedAmount = parseFloat(p.usedAmount) || 0
+            return (usedAmount / totalUsed) * total // RULE
+          })
+
+          // Apply rounding rules to handle remainder
+          const roundedAmounts = []
+          let sumRounded = 0
+
+          // Find the payer index (person who will get the remainder)
+          const payerIndex = state.participants.findIndex((p) => p.id === state.payer)
+          const payerIdx = payerIndex >= 0 ? payerIndex : state.participants.length - 1
+
+          // Round all amounts except the payer
+          proportionalAmounts.forEach((amount, index) => {
+            if (index !== payerIdx) {
+              // Round based on whether total > totalUsed or total < totalUsed
+              let rounded
+              if (total >= totalUsed) {
+                // Round up for amounts when total is greater
+                rounded = Math.ceil(amount)
+              } else {
+                // Round down for amounts when total is less
+                rounded = Math.floor(amount)
+              }
+              roundedAmounts.push(rounded)
+              sumRounded += rounded
+            } else {
+              roundedAmounts.push(null) // Placeholder for payer
+            }
+          })
+
+          // Payer gets the remainder
+          const payerAmount = total - sumRounded
+          roundedAmounts[payerIdx] = payerAmount
+
+          state.participants.forEach((p, index) => {
+            p.amount = roundedAmounts[index]
           })
         }
       } else if (state.splitType === 'by-item') {
-        const participantAmounts = {}
+        const participantUsedAmounts = {}
         state.participants.forEach((p) => {
-          participantAmounts[p.id] = 0
+          participantUsedAmounts[p.id] = 0
         })
 
         state.items.forEach((item) => {
@@ -242,67 +308,65 @@ export const activeBillSlice = createSlice({
           if (allocatedCount > 0) {
             const perPerson = itemTotalAmount / allocatedCount
             item.allocatedTo.forEach((participantId) => {
-              if (participantAmounts[participantId] !== undefined) {
-                participantAmounts[participantId] += perPerson
+              if (participantUsedAmounts[participantId] !== undefined) {
+                participantUsedAmounts[participantId] += perPerson
               }
             })
           }
         })
 
-        state.participants.forEach((p) => {
-          p.amount = participantAmounts[p.id] || 0
-        })
-      }
-    },
+        // Calculate total used amount from items
+        const totalUsedFromItems = Object.values(participantUsedAmounts).reduce((sum, amount) => sum + amount, 0)
 
-    distributeDifference: (state, action) => {
-      const { difference, shouldAdd } = action.payload
-      const differencePerPerson = difference / state.participants.length
-      state.participants.forEach((p) => {
-        const currentUsedAmount = parseFloat(p.usedAmount) || 0
-        p.usedAmount = currentUsedAmount + (shouldAdd ? differencePerPerson : -differencePerPerson)
-      })
-    },
+        if (totalUsedFromItems > 0 && state.participants.length > 0) {
+          // Calculate proportional amounts
+          const proportionalAmounts = state.participants.map((p) => {
+            const usedAmount = participantUsedAmounts[p.id] || 0
+            return (usedAmount / totalUsedFromItems) * total
+          })
 
-    distributeItemDifference: (state, action) => {
-      const { difference, shouldAdd } = action.payload
-      // Only distribute if there are items
-      if (state.items.length === 0) return
+          // Apply rounding rules
+          const roundedAmounts = []
+          let sumRounded = 0
 
-      const differencePerItem = difference / state.items.length
-      state.items.forEach((item) => {
-        const currentAmount = parseFloat(item.amount) || 0
-        const quantity = parseFloat(item.quantity) || 1
-        // Calculate new unit price
-        const currentTotal = currentAmount * quantity
-        const newTotal = currentTotal + (shouldAdd ? differencePerItem : -differencePerItem)
-        item.amount = newTotal / quantity
-      })
+          // Find the payer index (person who will get the remainder)
+          const payerIndex = state.participants.findIndex((p) => p.id === state.payer)
+          const payerIdx = payerIndex >= 0 ? payerIndex : 0
 
-      // Recalculate participant amounts after distribution
-      const participantAmounts = {}
-      state.participants.forEach((p) => {
-        participantAmounts[p.id] = 0
-      })
-
-      state.items.forEach((item) => {
-        const quantity = parseFloat(item.quantity) || 0
-        const unitPrice = parseFloat(item.amount) || 0
-        const itemTotalAmount = quantity * unitPrice
-        const allocatedCount = item.allocatedTo.length
-        if (allocatedCount > 0) {
-          const perPerson = itemTotalAmount / allocatedCount
-          item.allocatedTo.forEach((participantId) => {
-            if (participantAmounts[participantId] !== undefined) {
-              participantAmounts[participantId] += perPerson
+          // Round all amounts except the payer
+          proportionalAmounts.forEach((amount, index) => {
+            if (index !== payerIdx) {
+              // Round based on whether total > totalUsedFromItems or total < totalUsedFromItems
+              let rounded
+              if (total >= totalUsedFromItems) {
+                // Round up when total is greater
+                rounded = Math.ceil(amount)
+              } else {
+                // Round down when total is less
+                rounded = Math.floor(amount)
+              }
+              roundedAmounts.push(rounded)
+              sumRounded += rounded
+            } else {
+              roundedAmounts.push(null)
             }
           })
-        }
-      })
 
-      state.participants.forEach((p) => {
-        p.amount = participantAmounts[p.id] || 0
-      })
+          // Payer gets the remainder
+          const payerAmount = total - sumRounded
+          roundedAmounts[payerIdx] = payerAmount
+
+          // Assign rounded amounts to participants
+          state.participants.forEach((p, index) => {
+            p.amount = roundedAmounts[index]
+          })
+        } else {
+          // If no items allocated, set all amounts to 0
+          state.participants.forEach((p) => {
+            p.amount = 0
+          })
+        }
+      }
     },
 
     // Reset bill
@@ -519,8 +583,6 @@ export const {
   updateItem,
   toggleItemAllocation,
   calculateAmounts,
-  distributeDifference,
-  distributeItemDifference,
   resetBill,
   initializeBill,
   setSubmitError,

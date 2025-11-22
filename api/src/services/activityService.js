@@ -88,11 +88,41 @@ const findOneById = async (activityId) => {
   }
 }
 
+/**
+ * Get activities with filters (types, date range)
+ * @param {string} userId - User ID
+ * @param {Object} filters - Filter options
+ * @returns {Promise<Array>} Array of filtered activities
+ */
+const getActivitiesWithFilters = async (userId, filters = {}) => {
+  try {
+    return await activityModel.getActivitiesWithFilters(userId, filters)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get activity count for a user with optional filters
+ * @param {string} userId - User ID
+ * @param {Object} filters - Filter options
+ * @returns {Promise<number>} Count of activities
+ */
+const getActivityCountByUser = async (userId, filters = {}) => {
+  try {
+    return await activityModel.getActivityCountByUser(userId, filters)
+  } catch (error) {
+    throw error
+  }
+}
+
 export const activityService = {
   getAll,
   getActivitiesByUser,
   getActivitiesByResource,
   getActivitiesByType,
   getActivitiesByDateRange,
-  findOneById
+  findOneById,
+  getActivitiesWithFilters,
+  getActivityCountByUser
 }

@@ -41,11 +41,11 @@ const update = async (req, res, next) => {
     groupName: Joi.string().min(1).max(100).optional(),
     description: Joi.string().max(500).optional().allow(''),
     members: Joi.array().items(Joi.string()).min(1).optional(),
-    avatar: Joi.string().uri().optional().optional(),
+    avatar: Joi.string().uri().optional().allow(null).allow(''),
   })
 
   try {
-    await correctCondition.validateAsync(req.query, { abortEarly: false, allowUnknown: true })
+    await correctCondition.validateAsync(req.body, { abortEarly: false, allowUnknown: true })
     next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))

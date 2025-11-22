@@ -74,7 +74,8 @@ const getGroupsByUserId = async (req, res, next) => {
 const deleteGroup = async (req, res, next) => {
   try {
     const groupId = req.params.id
-    await groupService.deleteGroup(groupId)
+    const userId = req.jwtDecoded._id
+    await groupService.deleteGroup(groupId, userId)
     res.status(StatusCodes.NO_CONTENT).send()
   } catch (error) {
     next(error)
@@ -84,7 +85,8 @@ const deleteGroup = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const groupId = req.params.id
-    const updatedGroup = await groupService.updateGroup(groupId, req.body)
+    const userId = req.jwtDecoded._id
+    const updatedGroup = await groupService.updateGroup(groupId, req.body, userId)
     res.status(StatusCodes.OK).json(updatedGroup)
   } catch (error) {
     next(error)

@@ -24,6 +24,9 @@ const getDebtsOwedToMe = async (userId) => {
     
     billsAsPayer.forEach(bill => {
       bill.paymentStatus?.forEach(payment => {
+        // Skip if the debtor has opted out from this bill
+        if (bill.optedOutUsers && bill.optedOutUsers.some(id => id.equals(payment.userId))) return
+        
         // Skip if it's the current user
         if (payment.userId.equals(userId)) return
         
@@ -97,6 +100,9 @@ const getDebtsIOwe = async (userId) => {
     const debtsByPayer = {}
     
     bills.forEach(bill => {
+      // Skip if user has opted out from this bill
+      if (bill.optedOutUsers && bill.optedOutUsers.some(id => id.equals(userId))) return
+      
       // Find current user's payment status
       const myPayment = bill.paymentStatus?.find(payment => payment.userId.equals(userId))
       

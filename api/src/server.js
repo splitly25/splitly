@@ -9,6 +9,8 @@ import { APIs_V1 } from '~/routes/v1'
 import { errorHandlingMiddleware } from '~/middlewares/errorHandlingMiddleware'
 import { initializeDatabase } from '~/config/initDB'
 import cookieParser from 'cookie-parser'
+import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider'
+import { NodemailerProvider } from '~/providers/NodemailerProvider'
 
 const START_SERVER = () => {
   const app = express()
@@ -27,13 +29,13 @@ const START_SERVER = () => {
   app.use(errorHandlingMiddleware)
 
   app.listen(PORT, hostname, () => {
-    console.log(`5.Server is running on http://${hostname}:${PORT}`)
+    console.log(`7.Server is running on http://${hostname}:${PORT}`)
   })
 
   exitHook(() => {
-    console.log('\n6.Exiting application, closing MongoDB connection...')
+    console.log('\n8.Exiting application, closing MongoDB connection...')
     CLOSE_DB()
-    console.log('7.MongoDB connection closed.')
+    console.log('9.MongoDB connection closed.')
   })
 }
 
@@ -46,6 +48,26 @@ const START_SERVER = () => {
     console.log('3.Initializing database indexes...')
     await initializeDatabase()
     console.log('4.Database indexes initialized!')
+
+    console.log('5.Verifying email services...')
+
+    // Verify Brevo (for registration emails)
+    const brevoReady = await BrevoEmailProvider.verifyConnection()
+    if (!brevoReady) {
+      console.warn('⚠️  WARNING: Brevo is not configured. Registration emails will fail!')
+      console.warn('   Please check your BREVO_API_KEY environment variable')
+    } else {
+      console.log('6a.Brevo email service verified successfully!')
+    }
+
+    // Verify Nodemailer/SMTP (for other emails)
+    const smtpReady = await NodemailerProvider.verifyConnection()
+    if (!smtpReady) {
+      console.warn('⚠️  WARNING: SMTP is not configured. Other emails may fail!')
+      console.warn('   Please check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD')
+    } else {
+      console.log('6b.SMTP connection verified successfully!')
+    }
 
     START_SERVER()
   } catch (error) {

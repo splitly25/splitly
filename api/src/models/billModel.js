@@ -8,7 +8,7 @@ const BILL_COLLECTION_NAME = 'bills'
 
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(500).optional(),
+  description: Joi.string().max(500).optional().allow(''),
   category: Joi.string().max(100).optional(),
   creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
@@ -115,7 +115,6 @@ const convertIdsToObjectId = (data) => {
 const createNew = async (data) => {
   try {
     const convertedData = convertIdsToObjectId(data)
-    console.log("convertedData:", convertedData) // Debugging line
     const validData = await validateBeforeCreate(convertedData)
     const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(validData)
     return createdBill
@@ -193,10 +192,168 @@ const getBillsByUser = async (userId) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
       .sort({ createdAt: -1 })
       .toArray()
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
+const getBillsWithPagination = async (userId, page, limit, status, fromDate, toDate, isPayer, searchQuery) => {
+  try {
+    const skip = (page - 1) * limit
+    const userObjectId = new ObjectId(userId)
+
+    // Build the base query
+    let query = {
+      _destroy: false,
+    }
+
+    // Priority 1 & 2: User is either payer OR participant
+    // If isPayer is true, only get bills where user is payer
+    if (isPayer === true || isPayer === 'true') {
+      query.payerId = userObjectId
+      query.optedOutUsers = { $ne: userObjectId }
+
+      // If filtering by status and user is payer, add isSettled condition
+      if (status !== undefined && status !== 'all') {
+        if (status === 'paid') {
+          query.isSettled = true
+        } else if (status === 'unpaid') {
+          query.isSettled = { $ne: true }
+        }
+      }
+    } else {
+      // User is either payer or participant
+      if (status !== undefined && status !== 'all') {
+        // For mixed queries (payer OR participant), we need to use $or with complex conditions
+        const payerCondition = {
+          payerId: userObjectId,
+          optedOutUsers: { $ne: userObjectId },
+          ...(status === 'paid' ? { isSettled: true } : { isSettled: { $ne: true } }),
+        }
+
+        const participantCondition = {
+          payerId: { $ne: userObjectId },
+          participants: { $in: [userObjectId] },
+          optedOutUsers: { $ne: userObjectId },
+          paymentStatus: {
+            $elemMatch: {
+              userId: userObjectId,
+              ...(status === 'paid'
+                ? { paidDate: { $ne: null, $exists: true } }
+                : { $or: [{ paidDate: null }, { paidDate: { $exists: false } }] }),
+            },
+          },
+        }
+
+        query.$or = [payerCondition, participantCondition]
+      } else {
+        // No status filter, just check user participation
+        query.$or = [{ payerId: userObjectId }, { participants: { $in: [userObjectId] }, optedOutUsers: { $ne: userObjectId } }]
+      }
+    }
+
+    // Date range filter (check createdAt between fromDate and toDate)
+    if (fromDate || toDate) {
+      query.createdAt = {}
+
+      if (fromDate) {
+        const fromDateMatch = fromDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (fromDateMatch) {
+          const [, day, month, year] = fromDateMatch
+          const startDate = new Date(year, month - 1, day, 0, 0, 0)
+          if (!isNaN(startDate.getTime())) {
+            query.createdAt.$gte = startDate.getTime()
+          }
+        }
+      }
+
+      if (toDate) {
+        const toDateMatch = toDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (toDateMatch) {
+          const [, day, month, year] = toDateMatch
+          const endDate = new Date(year, month - 1, day, 23, 59, 59)
+          if (!isNaN(endDate.getTime())) {
+            query.createdAt.$lte = endDate.getTime()
+          }
+        }
+      }
+
+      if (Object.keys(query.createdAt).length === 0) {
+        delete query.createdAt
+      }
+    }
+
+    // Search query (searchQuery is an object with MongoDB query conditions)
+    if (searchQuery && Object.keys(searchQuery).length > 0) {
+      const baseConditions = { ...query }
+      const finalQuery = {
+        $and: [baseConditions, searchQuery],
+      }
+      for (const key in query) delete query[key]
+      Object.assign(query, finalQuery)
+    }
+
+    // Get bills from database
+    const bills = await GET_DB()
+      .collection(BILL_COLLECTION_NAME)
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    // Post-process for status filter (if status is defined)
+    // let filteredBills = bills
+
+    // if (status !== undefined && status !== 'all') {
+    //   filteredBills = bills.filter((bill) => {
+    //     const isUserPayer = bill.payerId.equals(userObjectId)
+
+    //     console.log(isUserPayer, bill.payerId, userObjectId)
+
+    //     if (isUserPayer) {
+    //       // If user is payer, check bill.isSettled
+    //       if (status === 'paid') {
+    //         return bill.isSettled === true
+    //       } else if (status === 'unpaid') {
+    //         return bill.isSettled !== true
+    //       }
+    //     } else {
+    //       // If user is participant, check their paymentStatus
+    //       const userPaymentStatus = bill.paymentStatus?.find((ps) => ps.userId.equals(userObjectId))
+
+    //       if (userPaymentStatus) {
+    //         const isPaid = userPaymentStatus.paidDate !== null && userPaymentStatus.paidDate !== undefined
+
+    //         if (status === 'paid') {
+    //           return isPaid
+    //         } else if (status === 'unpaid') {
+    //           return !isPaid
+    //         }
+    //       }
+    //     }
+
+    //     return false
+    //   })
+    // }
+
+    // Count total for pagination (using same query but without status filter)
+    const total = await GET_DB().collection(BILL_COLLECTION_NAME).countDocuments(query)
+
+    return {
+      bills,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   } catch (error) {
     throw new Error(error)
   }
@@ -209,6 +366,7 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
       .sort({ createdAt: -1 })
@@ -220,6 +378,7 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
       .collection(BILL_COLLECTION_NAME)
       .countDocuments({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
 
@@ -307,6 +466,11 @@ const markAsPaid = async (billId, userId, amountPaid) => {
 
     const userObjectId = new ObjectId(userId)
 
+    // Check if user has opted out
+    if (bill.optedOutUsers && bill.optedOutUsers.some(id => id.equals(userObjectId))) {
+      throw new Error('User has opted out from this bill')
+    }
+
     // Find the payment status for this user by comparing ObjectIds
     const paymentStatusIndex = bill.paymentStatus.findIndex((ps) => ps.userId.equals(userObjectId))
 
@@ -355,7 +519,7 @@ const optOutUser = async (billId, userId) => {
         { _id: new ObjectId(billId) },
         {
           $addToSet: { optedOutUsers: new ObjectId(userId) },
-          $pull: { participants: new ObjectId(userId) },
+          $pull: { paymentStatus: { userId: new ObjectId(userId) } },
           $set: { updatedAt: Date.now() },
         },
         { returnDocument: 'after' }
@@ -391,6 +555,7 @@ export const billModel = {
   getAllWithPagination,
   getBillsByUser,
   getBillsByUserWithPagination,
+  getBillsWithPagination,
   searchBillsByUserWithPagination,
   getBillsByCreator,
   markAsPaid,

@@ -22,7 +22,16 @@ export const fetchHistorySearchingAPI = async (userId, numPage, limit, search, s
   return response.data
 }
 
-export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer) => {
+export const fetchHistoryFilterAPI = async (
+  userId,
+  numPage,
+  limit,
+  fromDate,
+  toDate,
+  payer,
+  searchDebounced,
+  status
+) => {
   const params = new URLSearchParams({
     page: numPage,
     limit: limit,
@@ -31,8 +40,12 @@ export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, to
   if (fromDate) params.append('fromDate', fromDate)
   if (toDate) params.append('toDate', toDate)
   if (payer) params.append('payer', payer)
+  if (searchDebounced) params.append('search', searchDebounced)
+  if (status && status !== 'all') params.append('status', status)
 
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/filter/${userId}?${params.toString()}`)
+  console.log(params.toString())
+
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?${params.toString()}`)
   return response.data
 }
 
@@ -152,10 +165,26 @@ export const fetchMutualBillsAPI = async (userId, creditorId) => {
   return response.data
 }
 
+// Opt out from a bill
+export const optOutBillAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out?token=${token}`)
+  return response.data
+}
+
+// Verify opt-out token
+export const verifyOptOutTokenAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out/verify?token=${token}`)
+  return response.data
+}
+
 // Balance debts between two users
 export const balanceDebtsAPI = async (userId, otherUserId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/balance`, {
-    otherUserId
+    otherUserId,
   })
   toast.success('Cân bằng nợ thành công!', { theme: 'colored' })
   return response.data
@@ -210,8 +239,8 @@ export const deleteGroupAPI = async (groupId) => {
   return response.data
 }
 
-export const updateGroupMembersAPI = async (groupId, memberIds) => {
-  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}/members`, { memberIds })
+export const updateGroupMembersAPI = async (groupId, members) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}`, { members })
   return response.data
 }
 
@@ -263,7 +292,7 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   let reqMessages = messages.map(({ id, time, ...rest }) => rest)
   reqMessages = filter(reqMessages, (msg) => msg.role !== 'notification')
 
-  console.log("Sending messages to Assistant API:", messages);
+  console.log('Sending messages to Assistant API:', messages)
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/assistant`, {
     userId,
     messages: reqMessages,
@@ -309,4 +338,51 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   // console.log("Assistant API Response:", response);
 
   return { newMessages: resMessages, navigation: response.data.navigation };
+}
+
+// ============================================
+// Activity APIs
+// ============================================
+/*
+Completed APIs
+1. GET /api/activities - Get user activities with filters
+Query Parameters:
+limit (default: 10) - Number of activities to return
+offset (default: 0) - For pagination
+types - Comma-separated activity types filter (e.g., bill_created,bill_paid)
+dateFrom - Filter from timestamp
+dateTo - Filter to timestamp
+Response:
+{
+  "activities": [...],
+  "total": 50,
+  "hasMore": true
+}
+  */
+export const getUserActivitiesAPI = async (userId, params) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/activities/?${new URLSearchParams(params).toString()}`
+  )
+  return response.data
+}
+
+/*
+Response:
+{
+  "total": 50,
+  "unread": 0  // Placeholder for future notification feature
+}
+*/
+export const countUserActivitiesAPI = async () => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/activities/count`)
+  return response.data
+}
+
+// ============================================
+// BANKING APIs
+// ============================================
+export const fetchBankListAPI = async () => {
+  const axios = (await import('axios')).default
+  const response = await axios.get(`https://api.vietqr.io/v2/banks`)
+  return response.data
 }

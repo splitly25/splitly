@@ -11,16 +11,18 @@ import {
 import { Close as CloseIcon, NotificationsActive as NotificationsActiveIcon } from '@mui/icons-material'
 import { remindPaymentAPI } from '~/apis'
 
-const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
+const RemindDialog = ({ open, onClose, debtor, creditorId, bill = null }) => {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
 
   const handleRemindSubmit = async () => {
     setLoading(true)
+    console.log('Remind submit for debtor:', JSON.stringify(debtor))
     try {
       await remindPaymentAPI({
         creditorId: creditorId,
-        debtorId: debtor.userId
+        debtorId: debtor?.userId || debtor?._id,
+        ...(bill && { bill })
       })
       onClose()
     } catch (error) {
@@ -92,7 +94,7 @@ const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
             Gửi nhắc nhở thanh toán
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
-            Bạn có muốn gửi nhắc nhở đến {debtor?.userName}?
+            Bạn có muốn gửi nhắc nhở đến {debtor?.userName || debtor?.name}?
           </Typography>
         </Box>
 
@@ -110,7 +112,7 @@ const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
               Người nợ:
             </Typography>
             <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
-              {debtor?.userName}
+              {debtor?.userName || debtor?.name}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -118,7 +120,7 @@ const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
               Số tiền:
             </Typography>
             <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px', color: 'error.main' }}>
-              {debtor?.totalAmount?.toLocaleString('vi-VN')}₫
+              {debtor?.totalAmount?.toLocaleString('vi-VN') || debtor?.amount?.toLocaleString('vi-VN')}₫
             </Typography>
           </Box>
         </Box>

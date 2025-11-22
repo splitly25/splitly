@@ -37,3 +37,35 @@ export const removeLeadingZeros = (value) => {
   if (typeof value !== 'string') return value
   return value.replace(/^0+(?=\d)/, '')
 }
+
+export const moveGroupCreatorToTopOfList = (members, creatorId) => {
+  const creatorIndex = members.findIndex((member) => member._id === creatorId)
+  if (creatorIndex > -1) {
+    const [creator] = members.splice(creatorIndex, 1)
+    members.unshift(creator)
+  }
+  return members
+}
+
+
+// Helper function to format timestamp
+export const formatDate = (timestamp) => {
+  const date = new Date(timestamp)
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+export const formatTime = (timestamp) => {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export const formatDateTime = (timestamp) => {
+  return `${formatDate(timestamp)} ${formatTime(timestamp)}`
+}

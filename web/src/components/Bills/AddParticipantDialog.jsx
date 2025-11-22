@@ -20,6 +20,7 @@ import PeopleIcon from '@mui/icons-material/People'
 import PeopleProfileToAdd from './PeopleProfileToAdd/PeopleProfileToAdd'
 import { createGuestUserAPI } from '~/apis'
 import { EMAIL_RULE } from '~/utils/validators'
+import { getInitials } from '~/utils/formatters'
 
 const Label = styled(Typography)(({ theme }) => ({
   fontSize: '14px',
@@ -123,6 +124,8 @@ const AddParticipantDialog = ({
   onMarkAsPayer,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
+  const [leftPanelSearch, setLeftPanelSearch] = useState('') // Local search for current participants
+
   // Format: { id: string, name: string, email: string, groups: string[] }
   const [selectedPeople, setSelectedPeople] = useState([])
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -209,16 +212,7 @@ const AddParticipantDialog = ({
     }
   }
 
-  const getInitials = (name) => {
-    if (!name) return '?'
-    const parts = name.trim().split(' ')
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-  }
-
-  const handleTogglePerson = async (person, groupName = null) => {
+  const handleTogglePerson = async (person) => {
     let personToAdd = person
 
     // If this is a temporary guest user (not yet created in backend), create it first
@@ -243,62 +237,25 @@ const AddParticipantDialog = ({
       if (exists) {
         return prev.filter((p) => p.id !== personToAdd.id)
       } else {
-        return [
-          ...prev,
-          {
-            ...personToAdd,
-            groups: groupName ? [groupName] : [],
-          },
-        ]
+        return [...prev, personToAdd]
       }
     })
   }
 
   const handleToggleGroup = (group) => {
+    // add all members of this group that aren't already in the bill or selected
     setSelectedPeople((prev) => {
-      // Check if all members of this group are already selected
-      const allMembersSelected = group.members.every((member) => prev.find((p) => p.id === member.id))
+      const newPeople = [...prev]
+      group.members.forEach((member) => {
+        // Skip members who are already in the bill or already selected
+        if (currentParticipantIds.has(member.id) || prev.find((p) => p.id === member.id)) {
+          return
+        }
 
-      if (allMembersSelected) {
-        // Remove all members of this group
-        const memberIds = new Set(group.members.map((m) => m.id))
-        return prev
-          .map((person) => {
-            if (memberIds.has(person.id)) {
-              // Remove this group from the person's groups array
-              const updatedGroups = person.groups.filter((g) => g !== group.name)
-              if (updatedGroups.length === 0 && person.groups.length > 0) {
-                // If this was the only group, remove the person entirely
-                return null
-              }
-              return { ...person, groups: updatedGroups }
-            }
-            return person
-          })
-          .filter((p) => p !== null)
-      } else {
-        // Add all members of this group
-        const newPeople = [...prev]
-        group.members.forEach((member) => {
-          const existingIndex = newPeople.findIndex((p) => p.id === member.id)
-          if (existingIndex >= 0) {
-            // Person already exists, add this group to their groups array
-            if (!newPeople[existingIndex].groups.includes(group.name)) {
-              newPeople[existingIndex] = {
-                ...newPeople[existingIndex],
-                groups: [...newPeople[existingIndex].groups, group.name],
-              }
-            }
-          } else {
-            // New person, add with this group
-            newPeople.push({
-              ...member,
-              groups: [group.name],
-            })
-          }
-        })
-        return newPeople
-      }
+        // Add member without group tracking
+        newPeople.push(member)
+      })
+      return newPeople
     })
   }
 
@@ -313,6 +270,7 @@ const AddParticipantDialog = ({
   const handleCancel = () => {
     setSelectedPeople([])
     setSearchQuery('')
+    setLeftPanelSearch('')
     onClose()
   }
 
@@ -333,13 +291,45 @@ const AddParticipantDialog = ({
     [peopleToDisplay, currentParticipantIds, selectedPersonIds]
   )
 
-  // Groups are not filtered - we show all groups and indicate which are selected
-  const filteredGroups = useMemo(() => groupsToDisplay, [groupsToDisplay])
+  // Filter out groups where all members are in bill or selected
+  const filteredGroups = useMemo(() => {
+    return groupsToDisplay.filter((group) => {
+      // Check if ALL members are either in the bill OR in selectedPeople
+      const allMembersAddedOrSelected = group.members.every(
+        (member) => currentParticipantIds.has(member.id) || selectedPersonIds.has(member.id)
+      )
+
+      // Only show group if NOT all members are added/selected
+      return !allMembersAddedOrSelected
+    })
+  }, [groupsToDisplay, currentParticipantIds, selectedPersonIds])
 
   const getTotalSelected = () => {
     // Filter out people who are already current participants
     return selectedPeople.filter((p) => !currentParticipantIds.has(p.id)).length
   }
+
+  // Calculate which groups have all members in the bill (for display at top)
+  const completeGroups = useMemo(() => {
+    const participantIds = new Set(currentParticipants.map((p) => p.id))
+
+    return availableGroups.filter((group) => {
+      // Check if all members of this group are in currentParticipants
+      return group.members && group.members.length > 0 && group.members.every((member) => participantIds.has(member.id))
+    })
+  }, [currentParticipants, availableGroups])
+
+  // Filter current participants based on left panel search
+  const filteredCurrentParticipants = useMemo(() => {
+    if (!leftPanelSearch.trim()) {
+      return currentParticipants
+    }
+    const searchLower = leftPanelSearch.toLowerCase()
+    return currentParticipants.filter(
+      (participant) =>
+        participant.name.toLowerCase().includes(searchLower) || participant.email.toLowerCase().includes(searchLower)
+    )
+  }, [currentParticipants, leftPanelSearch])
 
   const isValidEmail = EMAIL_RULE.test(searchQuery.trim())
   const shouldShowGuestOption = isSearching && filteredPeople.length === 0 && isValidEmail
@@ -446,79 +436,156 @@ const AddParticipantDialog = ({
               <Label>Thành viên đã thêm ({currentParticipants.length})</Label>
             </Box>
 
+            {/* Local search for current participants */}
+            {currentParticipants.length > 5 && (
+              <TextField
+                sx={(theme) => ({
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F3F3F5',
+                    fontSize: '14px',
+                    '& fieldset': {
+                      borderColor: theme.palette.divider,
+                      borderWidth: '0.8px',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: theme.palette.primary.main,
+                    },
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    padding: '8px 12px',
+                  },
+                })}
+                fullWidth
+                placeholder="Search participants..."
+                variant="outlined"
+                value={leftPanelSearch}
+                onChange={(e) => setLeftPanelSearch(e.target.value)}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ width: '16px', height: '16px', color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            )}
+
+            {/* Display complete groups as chips */}
+            {completeGroups.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '16px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.04)',
+                  border: (theme) => `0.8px solid ${theme.palette.primary.main}`,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    marginRight: '8px',
+                    alignSelf: 'center',
+                  }}
+                >
+                  Nhóm:
+                </Typography>
+                {completeGroups.map((group) => (
+                  <Chip
+                    key={group.id}
+                    label={`${group.name} (${group.members.length})`}
+                    icon={<GroupIcon sx={{ fontSize: '16px' }} />}
+                    sx={{
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
+                      fontWeight: 500,
+                      fontSize: '13px',
+                      '& .MuiChip-icon': {
+                        color: 'primary.contrastText',
+                      },
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+
             {/* Current Participants - Displayed as list */}
             {currentParticipants.length > 0 ? (
               <Box sx={{ mb: 2 }}>
-                {currentParticipants.map((participant) => (
-                  <PersonRow key={participant.id}>
-                    <UserAvatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        fontSize: '16px',
-                      }}
-                    >
-                      {getInitials(participant.name)}
-                    </UserAvatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
-                        {participant.name}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                {filteredCurrentParticipants.length === 0 ? (
+                  <Box
+                    sx={{
+                      backgroundColor: (theme) =>
+                        theme.palette.mode === 'dark' ? theme.palette.background.paper : '#F4F5F7',
+                      border: (theme) => `0.8px solid ${theme.palette.divider}`,
+                      borderRadius: '8px',
+                      padding: '20px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+                      No participants found matching "{leftPanelSearch}"
+                    </Typography>
+                  </Box>
+                ) : (
+                  filteredCurrentParticipants.map((participant) => (
+                    <PersonRow key={participant.id}>
+                      <UserAvatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '16px',
+                        }}
+                      >
+                        {getInitials(participant.name)}
+                      </UserAvatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
+                          {participant.name}
+                        </Typography>
                         <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
                           {participant.email}
                         </Typography>
-
-                        {participant.groups && participant.groups.length > 0 && (
-                          <>
-                            <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>•</Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                              {participant.groups.map((groupName, idx) => (
-                                <Chip
-                                  key={idx}
-                                  label={groupName}
-                                  size="small"
-                                  sx={{
-                                    height: '20px',
-                                    fontSize: '11px',
-                                    backgroundColor: 'primary.main',
-                                    color: 'primary.contrastText',
-                                    '& .MuiChip-label': {
-                                      px: 1,
-                                    },
-                                  }}
-                                />
-                              ))}
-                            </Box>
-                          </>
-                        )}
                       </Box>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      {/* Mark as payer button */}
-                      <PayerButton
-                        isPayer={currentPayerId === participant.id}
-                        onClick={() => onMarkAsPayer(participant.id)}
-                      >
-                        {currentPayerId === participant.id ? 'Payer' : 'Mark'}
-                      </PayerButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => onRemove(participant.id)}
-                        sx={{
-                          width: '32px',
-                          height: '32px',
-                          color: 'error.main',
-                          '&:hover': {
-                            backgroundColor: 'error.light',
-                          },
-                        }}
-                      >
-                        <CloseIcon sx={{ width: '16px', height: '16px' }} />
-                      </IconButton>
-                    </Box>
-                  </PersonRow>
-                ))}
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {/* Mark as payer button */}
+                        <PayerButton
+                          isPayer={currentPayerId === participant.id}
+                          onClick={() => onMarkAsPayer(participant.id)}
+                        >
+                          {currentPayerId === participant.id ? 'Payer' : 'Mark'}
+                        </PayerButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => onRemove(participant.id)}
+                          sx={{
+                            width: '32px',
+                            height: '32px',
+                            color: 'error.main',
+                            '&:hover': {
+                              backgroundColor: 'error.light',
+                            },
+                          }}
+                        >
+                          <CloseIcon sx={{ width: '16px', height: '16px' }} />
+                        </IconButton>
+                      </Box>
+                    </PersonRow>
+                  ))
+                )}
               </Box>
             ) : (
               <Box
@@ -572,34 +639,9 @@ const AddParticipantDialog = ({
                         <Typography sx={{ fontSize: '16px', color: 'text.primary', fontWeight: 400 }}>
                           {person.name}
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                          <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
-                            {person.email}
-                          </Typography>
-                          {person.groups && person.groups.length > 0 && (
-                            <>
-                              <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>•</Typography>
-                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                {person.groups.map((groupName, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={groupName}
-                                    size="small"
-                                    sx={{
-                                      height: '20px',
-                                      fontSize: '11px',
-                                      backgroundColor: 'primary.main',
-                                      color: 'primary.contrastText',
-                                      '& .MuiChip-label': {
-                                        px: 1,
-                                      },
-                                    }}
-                                  />
-                                ))}
-                              </Box>
-                            </>
-                          )}
-                        </Box>
+                        <Typography sx={{ fontSize: '14px', color: 'text.secondary', fontWeight: 400 }}>
+                          {person.email}
+                        </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         {/* Mark as payer button */}
@@ -864,23 +906,20 @@ const AddParticipantDialog = ({
               ) : (
                 <>
                   {filteredGroups.map((group) => {
-                    // Check how many members of this group are selected
-                    const selectedMemberIds = selectedPeople
-                      .filter((p) => p.groups.includes(group.name))
-                      .map((p) => p.id)
-                    const selectedCount = selectedMemberIds.length
                     const totalMembers = group.members?.length || 0
-                    const isFullySelected = selectedCount === totalMembers && totalMembers > 0
-                    const isPartiallySelected = selectedCount > 0 && selectedCount < totalMembers
-
                     const displayMembers = (group.members || []).slice(0, 3)
                     const remainingCount = totalMembers - 3
+
+                    // Count how many are already added (in bill or selected)
+                    const addedCount = group.members.filter(
+                      (member) => currentParticipantIds.has(member.id) || selectedPersonIds.has(member.id)
+                    ).length
 
                     return (
                       <Box
                         key={group.id}
                         sx={(theme) => ({
-                          border: `0.8px solid ${isFullySelected ? theme.palette.primary.main : theme.palette.divider}`,
+                          border: `0.8px solid ${theme.palette.divider}`,
                           borderRadius: '8px',
                           padding: '16px',
                           display: 'flex',
@@ -888,11 +927,7 @@ const AddParticipantDialog = ({
                           justifyContent: 'space-between',
                           minHeight: '89.6px',
                           marginBottom: '16px',
-                          backgroundColor: isFullySelected
-                            ? theme.palette.mode === 'dark'
-                              ? 'rgba(144, 202, 249, 0.08)'
-                              : 'rgba(25, 118, 210, 0.04)'
-                            : 'transparent',
+                          backgroundColor: 'transparent',
                           [theme.breakpoints.down('sm')]: {
                             flexDirection: 'column',
                             alignItems: 'flex-start',
@@ -908,7 +943,7 @@ const AddParticipantDialog = ({
                               {group.name}
                             </Typography>
                             <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                              ({totalMembers} members{isPartiallySelected ? `, ${selectedCount} selected` : ''})
+                              ({totalMembers} members{addedCount > 0 ? `, ${addedCount} added` : ''})
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: 3 }}>
@@ -925,7 +960,7 @@ const AddParticipantDialog = ({
                           </Box>
                         </Box>
                         <AddButton onClick={() => handleToggleGroup(group)}>
-                          {isFullySelected ? 'Remove All' : isPartiallySelected ? 'Add Remaining' : 'Add All'}
+                          {addedCount > 0 ? 'Add Remaining' : 'Add All'}
                         </AddButton>
                       </Box>
                     )

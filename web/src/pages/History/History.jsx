@@ -2,6 +2,7 @@ import Layout from '~/components/Layout'
 import { useEffect, useState } from 'react'
 import { selectCurrentUser } from '~/redux/user/userSlice'
 import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { fetchHistoryDataAPI, fetchHistorySearchingAPI, fetchHistoryFilterAPI } from '~/apis'
 import {
   Box,
@@ -23,6 +24,7 @@ import {
 import { FilterAlt as FilterListIcon, Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material'
 
 const History = () => {
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [searchText, setSearchText] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -43,15 +45,6 @@ const History = () => {
     toDate: '',
     payer: false,
   })
-
-  const tableHeader = [
-    { id: 1, title: 'Ngày thanh toán' },
-    { id: 2, title: 'Tên hóa đơn' },
-    { id: 3, title: 'Số tiền' },
-    { id: 4, title: 'Người ứng tiền' },
-    { id: 5, title: 'Người tham gia' },
-    { id: 6, title: 'Đã quyết toán' },
-  ]
 
   // Status tabs configuration
   const statusTabs = [
@@ -78,26 +71,18 @@ const History = () => {
     const fetchHistoryData = async () => {
       try {
         setLoading(true)
-        let responseData
-
-        // Priority: Filter > Search > Default
-        if (activeFilters.fromDate || activeFilters.toDate || activeFilters.payer) {
-          // Use filter endpoint
-          responseData = await fetchHistoryFilterAPI(
-            currentUserId,
-            page,
-            5,
-            activeFilters.fromDate,
-            activeFilters.toDate,
-            activeFilters.payer
-          )
-        } else if (debouncedSearch) {
-          // Use search endpoint
-          responseData = await fetchHistorySearchingAPI(currentUserId, page, 5, debouncedSearch, '')
-        } else {
-          // Use regular endpoint
-          responseData = await fetchHistoryDataAPI(currentUserId, page, 5, '', '')
-        }
+        
+        // Use unified filter API with all parameters
+        const responseData = await fetchHistoryFilterAPI(
+          currentUserId,
+          page,
+          6,
+          activeFilters.fromDate,
+          activeFilters.toDate,
+          activeFilters.payer,
+          debouncedSearch,
+          statusFilter
+        )
 
         setHistoryData(responseData.bills || [])
         setTotalPage(responseData.pagination?.totalPages || 1)
@@ -114,7 +99,7 @@ const History = () => {
     }
 
     fetchHistoryData()
-  }, [currentUserId, page, debouncedSearch, activeFilters])
+  }, [currentUserId, page, debouncedSearch, activeFilters, statusFilter])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN').format(amount)
@@ -132,12 +117,6 @@ const History = () => {
 
   const handleSearchChange = (event) => {
     setSearchText(event.target.value)
-  }
-
-  const handleSearchClear = () => {
-    setSearchText('')
-    setDebouncedSearch('')
-    setPage(1)
   }
 
   const handleFilterClick = (event) => {
@@ -188,11 +167,25 @@ const History = () => {
   }
 
   const getStatusBadge = (bill) => {
-    if (bill.settled) {
-      return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' }
+    const isOwner = bill.payer?._id === currentUserId || bill.payer?.id === currentUserId
+    
+    if (isOwner) {
+      // If owner, check bill's isSettled status
+      if (bill.settled) {
+        return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' }
+      }
+      return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' }
+    } else {
+      // If participant, check their payment status
+      const currentUserPayment = bill.paymentStatus?.find(
+        (participant) => participant.userId === currentUserId
+      )
+      console.log(bill.paymentStatus)
+      if (currentUserPayment?.paidDate) {
+        return { label: 'Đã thanh toán', color: '#10B981', bgColor: '#D1FAE5' }
+      }
+      return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' }
     }
-    // You can add more logic here based on bill properties
-    return { label: 'Chưa thanh toán', color: '#F59E0B', bgColor: '#FEF3C7' }
   }
 
   const getCategoryLabel = (bill) => {
@@ -200,16 +193,8 @@ const History = () => {
     return bill.category || 'Ăn uống'
   }
 
-  // Filter data by status
-  const getFilteredData = () => {
-    if (statusFilter === 'all') return historyData
-    if (statusFilter === 'paid') return historyData.filter((bill) => bill.settled)
-    if (statusFilter === 'unpaid') return historyData.filter((bill) => !bill.settled)
-    // For pending, you might need additional logic based on your data structure
-    return historyData
-  }
-
-  const filteredHistoryData = getFilteredData()
+  // No longer need client-side filtering since backend handles it
+  const filteredHistoryData = historyData
   const openFilterPopover = Boolean(filterAnchorEl)
   const hasActiveFilters = activeFilters.fromDate || activeFilters.toDate || activeFilters.payer
   const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
@@ -228,7 +213,7 @@ const History = () => {
 
   return (
     <Layout>
-      <Box className="main-container">
+      <Box className="@container main-container">
         {/* Header */}
         <Box className="mb-6">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">Hóa đơn của tôi</h1>
@@ -487,7 +472,7 @@ const History = () => {
         {/* Results Count */}
         <Box className="mb-4">
           <Typography className="text-sm sm:text-base text-gray-600">
-            Hiển thị {filteredHistoryData.length} hóa đơn
+            Tìm thấy tổng cộng {totalBills} hóa đơn
           </Typography>
         </Box>
 
@@ -516,17 +501,19 @@ const History = () => {
             )}
           </Box>
         ) : (
-          <Box className="space-y-4">
+          <Box className="grid @3xl:grid-cols-2 gap-4">
             {filteredHistoryData.map((bill) => {
               const statusBadge = getStatusBadge(bill)
               return (
                 <Card
                   key={bill.id}
+                  onClick={() => navigate(`/bills/${bill._id || bill.id}`)}
                   sx={{
                     background: '#fff',
                     borderRadius: '16px',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease',
+                    cursor: 'pointer',
                     '&:hover': {
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                       transform: 'translateY(-2px)',
@@ -582,7 +569,7 @@ const History = () => {
                             {/* Date */}
                             <Box className="flex items-center gap-1">
                               <CalendarIcon sx={{ fontSize: '1rem', color: '#9CA3AF' }} />
-                              <Typography sx={{ fontSize: '0.875rem' }}>{formatDate(bill.paymentDate)}</Typography>
+                              <Typography sx={{ fontSize: '0.875rem' }}>{formatDate(bill.createdAt)}</Typography>
                             </Box>
 
                             {/* Category */}
@@ -592,7 +579,7 @@ const History = () => {
                                 color: '#6B7280',
                               }}
                             >
-                              • {getCategoryLabel(bill)}
+                              •{getCategoryLabel(bill)}
                             </Typography>
 
                             {/* Participants */}
@@ -625,7 +612,7 @@ const History = () => {
                       </div>
 
                       {/* Right: Amount and Payer */}
-                      <Box className="flex flex-col items-end justify-between sm:min-w-[180px]">
+                      <Box className="flex flex-col  justify-between items-end ">
                         <p className="md:text-xl font-bold text-[#1F2937]">{formatCurrency(bill.totalAmount)} đ</p>
                         <Box className="text-right">
                           <Typography
@@ -664,24 +651,19 @@ const History = () => {
               page={page}
               onChange={handlePageChange}
               color="primary"
-              shape="rounded"
-              size="medium"
-              siblingCount={{ xs: 0, sm: 1 }}
-              boundaryCount={{ xs: 1, sm: 1 }}
+              // shape="rounded"
+              // size="medium"
+              // siblingCount={{ xs: 0, sm: 1 }}
+              boundaryCount={2}
+              showFirstButton 
+              showLastButton
               sx={{
                 '& .MuiPaginationItem-root': {
                   color: '#6B7280',
                   fontWeight: 600,
                   fontSize: { xs: '0.875rem', sm: '1rem' },
                   '&.Mui-selected': {
-                    backgroundColor: '#574D98',
                     color: '#FFF',
-                    '&:hover': {
-                      backgroundColor: '#463A7A',
-                    },
-                  },
-                  '&:hover': {
-                    backgroundColor: '#F3F4F6',
                   },
                 },
               }}
