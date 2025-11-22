@@ -142,14 +142,11 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
     // Get bot response
     try {
-      const { response, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
-      if (response.error) {
-        toast.error(`Đã có lỗi xảy ra: ${response.error}`);
-      } else {
-        setMessages(prev => [...prev, response]);
-        if (navigation) {
-          navigate(navigation.path, { state: navigation.state })
-        }
+      const { newMessages, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
+
+      setMessages(newMessages);
+      if (navigation) {
+        navigate(navigation.path, { state: navigation.state })
       }
     } catch (error) {
       console.error(`Đã có lỗi xảy ra: ${error.message}`);
@@ -180,14 +177,11 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
     // Get bot response
     try {
-      const { response, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
-      if (response.error) {
-        toast.error(`Đã có lỗi xảy ra: ${response.error}`);
-      } else {
-        setMessages(prev => [...prev, response]);
-        if (navigation) {
-          navigate(navigation.path, { state: navigation.state })
-        }
+      const { newMessages, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
+
+      setMessages(newMessages);
+      if (navigation) {
+        navigate(navigation.path, { state: navigation.state })
       }
     } catch (error) {
       console.error(`Đã có lỗi xảy ra: ${error.message}`);
@@ -296,8 +290,8 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
                   }`}>
                   <div
                     className={`px-4 py-2 rounded-2xl ${message.role === 'user'
-                        ? 'bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] text-white rounded-br-md'
-                        : 'bg-white text-gray-800 rounded-bl-md shadow-sm'
+                      ? 'bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] text-white rounded-br-md'
+                      : 'bg-white text-gray-800 rounded-bl-md shadow-sm'
                       }`}
                   >
                     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
