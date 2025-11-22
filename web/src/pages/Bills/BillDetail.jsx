@@ -120,15 +120,6 @@ const BillDetail = () => {
     navigate(-1)
   }
 
-  const toggleTheme = () => {
-    setMode(mode === 'light' ? 'dark' : 'light')
-  }
-
-  const handleSettleBill = () => {
-    // TODO: Implement settle bill logic
-    console.log('Nhắc nhở thanh toán')
-  }
-
   const handleConfirmPayment = (participant) => {
     setSelectedParticipant(participant)
     setConfirmDialogOpen(true)
@@ -229,36 +220,6 @@ const BillDetail = () => {
                 Chi tiết hóa đơn
               </Typography>
             </Box>
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 1.5,
-              alignItems: 'center',
-              justifyContent: { xs: 'space-between', sm: 'flex-end' },
-            }}
-          >
-            <Button
-              variant="contained"
-              onClick={handleSettleBill}
-              sx={{
-                bgcolor: '#EF9A9A',
-                color: '#1A1A1A',
-                borderRadius: '12px',
-                textTransform: 'none',
-                px: { xs: 2, sm: 3 },
-                py: { xs: 1, sm: 1.5 },
-                fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
-                whiteSpace: 'nowrap',
-                flex: { xs: 1, sm: 'none' },
-                '&:hover': {
-                  bgcolor: '#E57373',
-                },
-              }}
-            >
-              Nhắc nhở thanh toán
-            </Button>
           </Box>
         </Box>
 
