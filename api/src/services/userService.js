@@ -42,7 +42,7 @@ const createNew = async (reqBody, options = {}) => {
 
         // Log account upgrade activity
         try {
-          await activityModel.logUserActivity(
+          await activityModel.logBillActivity(
             activityModel.ACTIVITY_TYPES.USER_UPDATED,
             existingUser._id.toString(),
             existingUser._id.toString(),

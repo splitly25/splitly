@@ -1,3 +1,5 @@
+import { categoryOptions } from "./constants"
+
 export const captializeFirstLetter = (string) => {
   if (!string || typeof string !== 'string') return ''
   return string.charAt(0).toUpperCase() + string.slice(1)
@@ -37,3 +39,8 @@ export const removeLeadingZeros = (value) => {
   if (typeof value !== 'string') return value
   return value.replace(/^0+(?=\d)/, '')
 }
+
+export const getCategoryLabel = (category) => {
+    const option = categoryOptions.find((option) => option.value === category)
+    return option ? option.label : ''
+  }

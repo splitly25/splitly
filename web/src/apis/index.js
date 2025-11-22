@@ -33,9 +33,6 @@ export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, to
   if (payer) params.append('payer', payer)
   if (searchDebounced) params.append('search', searchDebounced)
   if (status && status !== 'all') params.append('status', status)
-
-  console.log(params.toString());
-
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?${params.toString()}`)
   return response.data
 }
@@ -147,6 +144,13 @@ export const fetchUserBillsAPI = async (userId) => {
 // Get a specific bill by ID
 export const fetchBillByIdAPI = async (billId) => {
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/bills/${billId}`)
+  return response.data
+}
+
+// Update an existing bill
+export const updateBillAPI = async (billId, billData) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/bills/${billId}`, billData)
+  toast.success('Hóa đơn đã được cập nhật thành công!', { theme: 'colored' })
   return response.data
 }
 

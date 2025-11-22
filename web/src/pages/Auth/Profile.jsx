@@ -14,8 +14,10 @@ function Profile() {
 
   const dispatch = useDispatch()
   const userFromStore = useSelector(selectCurrentUser)
+  console.log(userFromStore);
   const [currentUser, setCurrentUser] = useState(userFromStore)
   const [isEditing, setIsEditing] = useState(false)
+  
   const [formData, setFormData] = useState({
     name: userFromStore?.name || '',
     phone: userFromStore?.phone || '',

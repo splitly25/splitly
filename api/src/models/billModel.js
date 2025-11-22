@@ -295,8 +295,6 @@ const getBillsWithPagination = async (userId, page, limit, status, fromDate, toD
       Object.assign(query, finalQuery)
     }
 
-    console.log(JSON.stringify(query))
-
     // Get bills from database
     const bills = await GET_DB()
       .collection(BILL_COLLECTION_NAME)
@@ -305,41 +303,6 @@ const getBillsWithPagination = async (userId, page, limit, status, fromDate, toD
       .skip(skip)
       .limit(limit)
       .toArray()
-
-    // Post-process for status filter (if status is defined)
-    // let filteredBills = bills
-
-    // if (status !== undefined && status !== 'all') {
-    //   filteredBills = bills.filter((bill) => {
-    //     const isUserPayer = bill.payerId.equals(userObjectId)
-
-    //     console.log(isUserPayer, bill.payerId, userObjectId)
-
-    //     if (isUserPayer) {
-    //       // If user is payer, check bill.isSettled
-    //       if (status === 'paid') {
-    //         return bill.isSettled === true
-    //       } else if (status === 'unpaid') {
-    //         return bill.isSettled !== true
-    //       }
-    //     } else {
-    //       // If user is participant, check their paymentStatus
-    //       const userPaymentStatus = bill.paymentStatus?.find((ps) => ps.userId.equals(userObjectId))
-
-    //       if (userPaymentStatus) {
-    //         const isPaid = userPaymentStatus.paidDate !== null && userPaymentStatus.paidDate !== undefined
-
-    //         if (status === 'paid') {
-    //           return isPaid
-    //         } else if (status === 'unpaid') {
-    //           return !isPaid
-    //         }
-    //       }
-    //     }
-
-    //     return false
-    //   })
-    // }
 
     // Count total for pagination (using same query but without status filter)
     const total = await GET_DB().collection(BILL_COLLECTION_NAME).countDocuments(query)

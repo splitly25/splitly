@@ -12,6 +12,7 @@ import AccountVerification from './pages/Auth/AccountVerification'
 import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
 import { Ocr, Bills } from './pages/Bills'
 import BillDetail from './pages/Bills/BillDetail'
+import BillEdit from './pages/Bills/BillEdit'
 import Profile from './pages/Auth/Profile'
 import Settings from './pages/Settings/Settings'
 import Group from './pages/Groups/Group'
@@ -39,6 +40,7 @@ function App() {
         <Route path="/create" element={<Bills />} />
         <Route path="/ocr" element={<Ocr />} />
         <Route path="/bills/:billId" element={<BillDetail />} />
+        <Route path="/bills/:billId/edit" element={<BillEdit />} />
         <Route path="/profile" element={<Profile />} />
         {/* <Route path="/settings" element={<Settings />} /> */}
       </Route>
