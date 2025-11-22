@@ -59,7 +59,9 @@ const createNew = async (reqBody, options = {}) => {
         }
 
         // Send verification email with beautiful template
-        const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${updatedUser.email}&token=${updatedUser.verifyToken}`
+        const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${encodeURIComponent(
+          updatedUser.email
+        )}&token=${updatedUser.verifyToken}`
         const emailContent = verificationEmailTemplate(updatedUser.name, verificationLink)
 
         let emailSent = true
@@ -122,7 +124,9 @@ const createNew = async (reqBody, options = {}) => {
     }
 
     // Send verification email with beautiful template
-    const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${getNewUser.email}&token=${getNewUser.verifyToken}`
+    const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${encodeURIComponent(
+      getNewUser.email
+    )}&token=${getNewUser.verifyToken}`
     const emailContent = verificationEmailTemplate(getNewUser.name, verificationLink)
 
     let emailSent = true
@@ -505,6 +509,38 @@ const createGuestUser = async (reqBody) => {
     throw error
   }
 }
+//k2
+const updateProfile = async (userId, reqBody, userAvatarFile) => {
+  try {
+    const existUser = await userModel.findOneById(userId)
+    if (!existUser) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+    if (!existUser.isVerified) {
+      throw new ApiError(StatusCodes.NOT_ACCEPTABLE, 'Account is not active')
+    }
+
+    let updatedUser = {}
+    // case1 change password
+    if (reqBody.currentPassword && reqBody.newPassword) {
+      // verify current password
+      if (!bcryptjs.compareSync(reqBody.currentPassword, existUser.password)) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Current password is incorrect')
+      }
+      // update to new password
+      updatedUser = await userModel.update(existUser._id, {
+        password: bcryptjs.hashSync(reqBody.newPassword, 10),
+      })
+    } else {
+      // udpate general info
+      updatedUser = await userModel.update(existUser._id, reqBody)
+    }
+
+    return pickUser(updatedUser)
+  } catch (error) {
+    throw error
+  }
+}
 
 export const userService = {
   createNew,
@@ -521,4 +557,5 @@ export const userService = {
   fetchUsers,
   editProfile,
   createGuestUser,
+  updateProfile,
 }

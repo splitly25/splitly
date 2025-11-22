@@ -417,6 +417,7 @@ export const sendPaymentReminderEmail = async ({
   creditorBankName,
   creditorBankAccount,
   reminderToken,
+  priorityBill,
 }) => {
   try {
     // Calculate total amount
@@ -690,7 +691,7 @@ export const sendPaymentReminderEmail = async ({
           }
 
           <p style="font-size: 12px; margin-top: 12px; font-style: italic; text-align: center;">
-          Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
+          Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
         `
             : ''
@@ -700,7 +701,7 @@ export const sendPaymentReminderEmail = async ({
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
         </p>
         <div class="login-button">
-          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}">
+          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">
             Xác nhận thanh toán
           </a>
         </div>
@@ -963,6 +964,12 @@ export const sendBillCreationEmail = async ({
     .footer strong {
       color: #64748b;
     }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -999,7 +1006,7 @@ export const sendBillCreationEmail = async ({
           </a>
         </div>
 
-        <p>Bạn không tham gia hóa đơn này? <a href="${WEBSITE_DOMAIN}/bill/opt-out?token=${optOutToken}">Nhấn vào đây để từ chối.</a></p>
+        <p class="action-text">Bạn không tham gia hóa đơn này? <a href="${WEBSITE_DOMAIN}/bill/opt-out?token=${optOutToken}">Nhấn vào đây để từ chối.</a></p>
 
         <div class="footer">
           <p>Trân trọng,<br><strong>Splitly Team</strong></p>
@@ -1327,6 +1334,364 @@ export const sendDebtBalanceEmail = async ({
     }
   } catch (error) {
     console.error('Failed to send debt balance email:', error)
+    return false
+  }
+}
+
+/**
+ * Send opt-out notification email to both debtor and creditor
+ * @param {Object} params - Email parameters
+ * @returns {Promise<boolean>} - Success status
+ */
+export const sendOptOutEmail = async ({
+  debtorEmail,
+  debtorName,
+  creditorEmail,
+  creditorName,
+  billName,
+  billDescription,
+  amount,
+}) => {
+  try {
+    // Email to debtor (the one who opted out)
+    const debtorHtmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bill-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bill-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .bill-description {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .amount-card {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .amount-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: #d97706;
+      margin: 10px 0;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">🚪</div>
+        <h1>Đã từ chối tham gia</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${debtorName}</strong>,</p>
+        <p class="message">
+          Bạn đã từ chối tham gia hóa đơn "<strong>${billName}</strong>" thành công.
+        </p>
+
+        <div class="bill-info">
+          <div class="bill-title">${billName}</div>
+          ${billDescription ? `<div class="bill-description">${billDescription}</div>` : ''}
+        </div>
+
+        <div class="amount-card">
+          <div class="amount-label">Số tiền đã được miễn trừ</div>
+          <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <p class="action-text">
+          Bạn sẽ không còn chịu trách nhiệm thanh toán cho hóa đơn này nữa. ${creditorName} đã được thông báo về việc từ chối của bạn.
+        </p>
+
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Email to creditor (the bill creator)
+    const creditorHtmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #e2e8f0;
+      padding: 40px 20px;
+      width: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .header .icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .content {
+      background: #ffffff;
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .message {
+      font-size: 18px;
+      color: #1e293b;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .bill-info {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .bill-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .bill-description {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .amount-card {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+      border: 2px solid rgba(245, 158, 11, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .amount-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .amount {
+      font-size: 36px;
+      font-weight: 700;
+      color: #d97706;
+      margin: 10px 0;
+    }
+    .action-text {
+      font-size: 16px;
+      color: #475569;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="icon">🚪</div>
+        <h1>Thông báo từ chối tham gia</h1>
+      </div>
+      <div class="content">
+        <p class="greeting">Xin chào <strong>${creditorName}</strong>,</p>
+        <p class="message">
+          <strong>${debtorName}</strong> đã từ chối tham gia hóa đơn "<strong>${billName}</strong>".
+        </p>
+
+        <div class="bill-info">
+          <div class="bill-title">${billName}</div>
+          ${billDescription ? `<div class="bill-description">${billDescription}</div>` : ''}
+        </div>
+
+        <div class="amount-card">
+          <div class="amount-label">Số tiền đã được miễn trừ</div>
+          <div class="amount">${amount.toLocaleString('vi-VN')}₫</div>
+        </div>
+
+        <p class="action-text">
+          ${debtorName} sẽ không còn chịu trách nhiệm thanh toán cho hóa đơn này nữa. Bạn có thể cập nhật hóa đơn hoặc tạo hóa đơn mới nếu cần.
+        </p>
+
+        <div class="footer">
+          <p>Trân trọng,<br><strong>Splitly Team</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim()
+
+    // Send emails to both debtor and creditor using Brevo
+    const [debtorResult, creditorResult] = await Promise.allSettled([
+      BrevoEmailProvider.sendEmail(
+        debtorEmail,
+        `🚪 Đã từ chối tham gia "${billName}" - Splitly`,
+        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+        debtorHtmlContent
+      ),
+      BrevoEmailProvider.sendEmail(
+        creditorEmail,
+        `🚪 ${debtorName} đã từ chối tham gia "${billName}" - Splitly`,
+        'Splitly - Quản lý chi tiêu nhóm dễ dàng',
+        creditorHtmlContent
+      ),
+    ])
+
+    const debtorSuccess = debtorResult.status === 'fulfilled'
+    const creditorSuccess = creditorResult.status === 'fulfilled'
+
+    if (debtorSuccess && creditorSuccess) {
+      console.log(`Opt-out emails sent successfully to ${debtorEmail} and ${creditorEmail}`)
+      return true
+    } else {
+      console.error('Failed to send some opt-out emails:', {
+        debtor: debtorSuccess ? 'sent' : debtorResult.reason?.message,
+        creditor: creditorSuccess ? 'sent' : creditorResult.reason?.message,
+      })
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to send opt-out email:', error)
     return false
   }
 }

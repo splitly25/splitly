@@ -22,7 +22,16 @@ export const fetchHistorySearchingAPI = async (userId, numPage, limit, search, s
   return response.data
 }
 
-export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer, searchDebounced, status) => {
+export const fetchHistoryFilterAPI = async (
+  userId,
+  numPage,
+  limit,
+  fromDate,
+  toDate,
+  payer,
+  searchDebounced,
+  status
+) => {
   const params = new URLSearchParams({
     page: numPage,
     limit: limit,
@@ -33,6 +42,9 @@ export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, to
   if (payer) params.append('payer', payer)
   if (searchDebounced) params.append('search', searchDebounced)
   if (status && status !== 'all') params.append('status', status)
+
+  console.log(params.toString())
+
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?${params.toString()}`)
   return response.data
 }
@@ -160,6 +172,22 @@ export const fetchMutualBillsAPI = async (userId, creditorId) => {
   return response.data
 }
 
+// Opt out from a bill
+export const optOutBillAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out?token=${token}`)
+  return response.data
+}
+
+// Verify opt-out token
+export const verifyOptOutTokenAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out/verify?token=${token}`)
+  return response.data
+}
+
 // Balance debts between two users
 export const balanceDebtsAPI = async (userId, otherUserId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/balance`, {
@@ -218,8 +246,8 @@ export const deleteGroupAPI = async (groupId) => {
   return response.data
 }
 
-export const updateGroupMembersAPI = async (groupId, memberIds) => {
-  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}/members`, { memberIds })
+export const updateGroupMembersAPI = async (groupId, members) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}`, { members })
   return response.data
 }
 
@@ -288,4 +316,13 @@ export const getAssistantResponseAPI = async (userId, messages) => {
 
   console.log('Assistant API Response:', response)
   return { response: assistantResponse, navigation: response.data.navigation }
+}
+
+
+// BANKING APIs
+//https://api.vietqr.io/v2/banks
+export const fetchBankListAPI = async () => {
+  const axios = (await import('axios')).default
+  const response = await axios.get(`https://api.vietqr.io/v2/banks`)
+  return response.data
 }

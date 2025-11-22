@@ -8,7 +8,7 @@ const BILL_COLLECTION_NAME = 'bills'
 
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(500).optional(),
+  description: Joi.string().max(500).optional().allow(''),
   category: Joi.string().max(100).optional(),
   creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
@@ -115,7 +115,6 @@ const convertIdsToObjectId = (data) => {
 const createNew = async (data) => {
   try {
     const convertedData = convertIdsToObjectId(data)
-    console.log("convertedData:", convertedData) // Debugging line
     const validData = await validateBeforeCreate(convertedData)
     const createdBill = await GET_DB().collection(BILL_COLLECTION_NAME).insertOne(validData)
     return createdBill
@@ -193,6 +192,7 @@ const getBillsByUser = async (userId) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
       .sort({ createdAt: -1 })
@@ -216,6 +216,7 @@ const getBillsWithPagination = async (userId, page, limit, status, fromDate, toD
     // If isPayer is true, only get bills where user is payer
     if (isPayer === true || isPayer === 'true') {
       query.payerId = userObjectId
+      query.optedOutUsers = { $ne: userObjectId }
 
       // If filtering by status and user is payer, add isSettled condition
       if (status !== undefined && status !== 'all') {
@@ -231,12 +232,14 @@ const getBillsWithPagination = async (userId, page, limit, status, fromDate, toD
         // For mixed queries (payer OR participant), we need to use $or with complex conditions
         const payerCondition = {
           payerId: userObjectId,
+          optedOutUsers: { $ne: userObjectId },
           ...(status === 'paid' ? { isSettled: true } : { isSettled: { $ne: true } }),
         }
 
         const participantCondition = {
           payerId: { $ne: userObjectId },
           participants: { $in: [userObjectId] },
+          optedOutUsers: { $ne: userObjectId },
           paymentStatus: {
             $elemMatch: {
               userId: userObjectId,
@@ -250,7 +253,7 @@ const getBillsWithPagination = async (userId, page, limit, status, fromDate, toD
         query.$or = [payerCondition, participantCondition]
       } else {
         // No status filter, just check user participation
-        query.$or = [{ payerId: userObjectId }, { participants: { $in: [userObjectId] } }]
+        query.$or = [{ payerId: userObjectId }, { participants: { $in: [userObjectId] }, optedOutUsers: { $ne: userObjectId } }]
       }
     }
 
@@ -328,6 +331,7 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
       .collection(BILL_COLLECTION_NAME)
       .find({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
       .sort({ createdAt: -1 })
@@ -339,6 +343,7 @@ const getBillsByUserWithPagination = async (userId, page = 1, limit = 10) => {
       .collection(BILL_COLLECTION_NAME)
       .countDocuments({
         participants: new ObjectId(userId),
+        optedOutUsers: { $ne: new ObjectId(userId) },
         _destroy: false,
       })
 
@@ -426,6 +431,11 @@ const markAsPaid = async (billId, userId, amountPaid) => {
 
     const userObjectId = new ObjectId(userId)
 
+    // Check if user has opted out
+    if (bill.optedOutUsers && bill.optedOutUsers.some(id => id.equals(userObjectId))) {
+      throw new Error('User has opted out from this bill')
+    }
+
     // Find the payment status for this user by comparing ObjectIds
     const paymentStatusIndex = bill.paymentStatus.findIndex((ps) => ps.userId.equals(userObjectId))
 
@@ -474,7 +484,7 @@ const optOutUser = async (billId, userId) => {
         { _id: new ObjectId(billId) },
         {
           $addToSet: { optedOutUsers: new ObjectId(userId) },
-          $pull: { participants: new ObjectId(userId) },
+          $pull: { paymentStatus: { userId: new ObjectId(userId) } },
           $set: { updatedAt: Date.now() },
         },
         { returnDocument: 'after' }

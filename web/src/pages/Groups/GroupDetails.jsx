@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { Box, Typography, Button, Avatar, Grid, IconButton, Container, Stack, Paper } from '@mui/material'
+import React, { useEffect, useState } from 'react'
+import { Box, Typography, Button, Avatar, IconButton, Container, Stack, Paper, Menu, MenuItem } from '@mui/material'
+import { useConfirm } from 'material-ui-confirm'
 import {
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
@@ -18,205 +19,204 @@ import {
   Paid as PaidIcon,
   MoneyOff as MoneyOffIcon,
 } from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { COLORS } from '~/theme'
 import Layout from '~/components/Layout'
+import { getGroupAndMembersAPI, deleteGroupAPI, updateGroupMembersAPI } from '~/apis'
+import { formatCurrency, getInitials, moveGroupCreatorToTopOfList } from '~/utils/formatters'
+import ManageMembersModal from '~/components/Group/ManageMembersModal'
+import LoadingSpinner from '~/components/Loading/LoadingSpinner'
 
-const groupData = {
-  id: 1,
-  name: 'Gia đình',
-  memberCount: 2,
-  billCount: 3,
-  totalAmount: 5000000,
-  paidAmount: 0,
-  unpaidAmount: 5000000,
-  members: [
-    {
-      id: 1,
-      name: 'Nguyễn Văn A',
-      email: 'nguyenvana@example.com',
-      initials: 'NA',
-      isCurrentUser: true,
-    },
-    {
-      id: 2,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-    {
-      id: 3,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-    {
-      id: 4,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-    {
-      id: 5,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-    {
-      id: 6,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-    {
-      id: 7,
-      name: 'Hoàng Văn E',
-      email: 'hoangvane@example.com',
-      initials: 'HE',
-      isCurrentUser: false,
-    },
-  ],
-  statistics: [
-    {
-      title: 'Tổng hóa đơn',
-      value: '3',
-      icon: <ReceiptIcon sx={{ color: 'white' }} />,
-      color: '#2b7fff',
-    },
-    {
-      title: 'Tổng chi tiêu',
-      value: '5.000.000 ₫',
-      icon: <WalletIcon sx={{ color: 'white' }} />,
-      color: '#ad46ff',
-    },
-    {
-      title: 'Đã thanh toán',
-      value: '0 ₫',
-      icon: <PaidIcon sx={{ color: 'white' }} />,
-      color: '#00c950',
-    },
-    {
-      title: 'Chưa thanh toán',
-      value: '5.000.000 ₫',
-      icon: <MoneyOffIcon sx={{ color: 'white' }} />,
-      color: '#ff6900',
-    },
-  ],
-  insights: [
-    {
-      title: 'Nợ nhiều nhất',
-      value: 'Nguyễn Văn A',
-      description: 'Đang nợ: 3.500.000 ₫',
-      titleColor: '#c10007',
-      descColor: '#e7000b',
-      bgColor: '#fef2f2',
-      borderColor: '#ffc9c9',
-      icon: <TrendingDownIcon />,
-      iconColor: '#c10007',
-    },
-    {
-      title: 'Nên ứng trước kỳ này',
-      value: 'Nguyễn Văn A',
-      description: 'Lịch sử thanh toán tốt (8 lần)',
-      titleColor: '#008236',
-      descColor: '#00a63e',
-      bgColor: '#f0fdf4',
-      borderColor: '#b9f8cf',
-      icon: <CheckCircleIcon />,
-      iconColor: '#008236',
-    },
-    {
-      title: 'Xu hướng trả sớm',
-      value: '0 thành viên',
-      description: '',
-      titleColor: '#1447e6',
-      descColor: '#1447e6',
-      bgColor: '#eff6ff',
-      borderColor: '#bedbff',
-      icon: <ScheduleIcon />,
-      iconColor: '#1447e6',
-    },
-    {
-      title: 'Xu hướng trả muộn',
-      value: '1 thành viên',
-      description: 'Hoàng Văn E',
-      titleColor: '#ca3500',
-      descColor: '#f54900',
-      bgColor: '#fff7ed',
-      borderColor: '#ffd6a7',
-      icon: <WarningIcon />,
-      iconColor: '#ca3500',
-    },
-    {
-      title: 'Nợ tăng liên tục',
-      value: '1 thành viên',
-      description: 'Nguyễn Văn A',
-      titleColor: '#8200db',
-      descColor: '#9810fa',
-      bgColor: '#faf5ff',
-      borderColor: '#e9d4ff',
-      icon: <TrendingUpIcon />,
-      iconColor: '#8200db',
-    },
-    {
-      title: 'Khuyến nghị',
-      value: 'Nên thay đổi chế độ thu chi',
-      description: 'Tỷ lệ thanh toán thấp, cân nhắc thu tiền trước',
-      titleColor: '#bb4d00',
-      descColor: '#e17100',
-      bgColor: '#fefce8',
-      borderColor: '#fee685',
-      icon: <RecommendIcon />,
-      iconColor: '#bb4d00',
-    },
-  ],
-}
+// Static insights data (can be computed from bills data later)
+const insightsData = [
+  {
+    title: 'Nợ nhiều nhất',
+    value: 'N/A',
+    description: '',
+    titleColor: '#c10007',
+    descColor: '#e7000b',
+    bgColor: '#fef2f2',
+    borderColor: '#ffc9c9',
+    icon: <TrendingDownIcon />,
+    iconColor: '#c10007',
+  },
+  {
+    title: 'Nên ứng trước kỳ này',
+    value: 'N/A',
+    description: '',
+    titleColor: '#008236',
+    descColor: '#00a63e',
+    bgColor: '#f0fdf4',
+    borderColor: '#b9f8cf',
+    icon: <CheckCircleIcon />,
+    iconColor: '#008236',
+  },
+  {
+    title: 'Xu hướng trả sớm',
+    value: '0 thành viên',
+    description: '',
+    titleColor: '#1447e6',
+    descColor: '#1447e6',
+    bgColor: '#eff6ff',
+    borderColor: '#bedbff',
+    icon: <ScheduleIcon />,
+    iconColor: '#1447e6',
+  },
+  {
+    title: 'Xu hướng trả muộn',
+    value: '0 thành viên',
+    description: '',
+    titleColor: '#ca3500',
+    descColor: '#f54900',
+    bgColor: '#fff7ed',
+    borderColor: '#ffd6a7',
+    icon: <WarningIcon />,
+    iconColor: '#ca3500',
+  },
+  {
+    title: 'Nợ tăng liên tục',
+    value: '0 thành viên',
+    description: '',
+    titleColor: '#8200db',
+    descColor: '#9810fa',
+    bgColor: '#faf5ff',
+    borderColor: '#e9d4ff',
+    icon: <TrendingUpIcon />,
+    iconColor: '#8200db',
+  },
+  {
+    title: 'Khuyến nghị',
+    value: 'Chưa có dữ liệu',
+    description: '',
+    titleColor: '#bb4d00',
+    descColor: '#e17100',
+    bgColor: '#fefce8',
+    borderColor: '#fee685',
+    icon: <RecommendIcon />,
+    iconColor: '#bb4d00',
+  },
+]
 
 const GroupDetails = () => {
+  // option menu state
+  const [anchorEl, setAnchorEl] = useState(null)
+  const open = Boolean(anchorEl)
+  const handleGroupOptionsClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  const [group, setGroup] = useState(null)
+  const { groupId } = useParams()
   const navigate = useNavigate()
+  const confirmDeleteGroup = useConfirm()
+
+  const handleDeleteGroup = async () => {
+    handleClose()
+    const { confirmed } = await confirmDeleteGroup({
+      title: 'Xác nhận xóa nhóm',
+      description: 'Bạn có chắc chắn muốn xóa nhóm này không? Hành động này không thể hoàn tác.',
+      confirmationText: 'Xóa',
+      cancellationText: 'Hủy',
+    })
+
+    if (confirmed) {
+      await deleteGroupAPI(groupId)
+      navigate('/groups')
+    }
+  }
+
+  // Manage members modal state
+  const [manageMembersModalOpen, setManageMembersModalOpen] = useState(false)
+
+  const handleUpdateMembers = async (groupId, memberIds) => {
+    try {
+      await updateGroupMembersAPI(groupId, memberIds)
+      // Refresh group data after updating members
+      const response = await getGroupAndMembersAPI(groupId)
+      setGroup(response)
+    } catch (error) {
+      console.error('Error updating group members:', error)
+    }
+  }
+
   const [currentTab, setCurrentTab] = useState(1) // 0: Danh sách hóa đơn, 1: Quản lý nhóm
 
-  // Mock data - trong thực tế sẽ lấy từ API
+  useEffect(() => {
+    getGroupAndMembersAPI(groupId)
+      .then((response) => {
+        // Handle the response data as needed
+        // Move creator to top of the members list
+        if (response.creatorId && response.members) {
+          const sortedMembers = moveGroupCreatorToTopOfList([...response.members], response.creatorId)
+          setGroup({ ...response, members: sortedMembers })
+        } else {
+          setGroup(response)
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching group and members data:', error)
+      })
+  }, [groupId])
 
   const handleGoBack = () => {
     navigate('/groups')
   }
 
   const handleCreateBill = () => {
-    navigate('/bills/create', { state: { groupId: groupData.id } })
+    // Format group members as participants for the bill
+    const groupParticipants = (group?.members || []).map((member) => ({
+      id: member._id,
+      name: member.displayName || member.name || member.email?.split('@')[0],
+      email: member.email,
+    }))
+
+    navigate('/create', {
+      state: {
+        billFormData: {
+          participants: groupParticipants,
+        },
+      },
+    })
+  }
+
+  // Compute statistics from group data
+  const statistics = [
+    {
+      title: 'Tổng hóa đơn',
+      value: group?.bills?.length?.toString() || '0',
+      icon: <ReceiptIcon sx={{ color: 'white' }} />,
+      color: '#2b7fff',
+    },
+    {
+      title: 'Tổng chi tiêu',
+      value: formatCurrency(0), // TODO: Calculate from bills
+      icon: <WalletIcon sx={{ color: 'white' }} />,
+      color: '#ad46ff',
+    },
+    {
+      title: 'Đã thanh toán',
+      value: formatCurrency(0), // TODO: Calculate from bills
+      icon: <PaidIcon sx={{ color: 'white' }} />,
+      color: '#00c950',
+    },
+    {
+      title: 'Chưa thanh toán',
+      value: formatCurrency(0), // TODO: Calculate from bills
+      icon: <MoneyOffIcon sx={{ color: 'white' }} />,
+      color: '#ff6900',
+    },
+  ]
+
+  // Show loading state if group data is not yet loaded
+  if (!group) {
+    return <LoadingSpinner caption="Đang tải dữ liệu nhóm..." />
   }
 
   const handleManageMembers = () => {
-    console.log('Quản lý thành viên')
-  }
-
-  const gradientButtonStyle = {
-    background: COLORS.gradientPrimary,
-    color: 'white',
-    borderRadius: '16px',
-    textTransform: 'none',
-    fontWeight: 400,
-    boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
-    '&:hover': {
-      boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.15), 0px 4px 6px -4px rgba(0,0,0,0.15)',
-    },
-  }
-
-  const iconButtonStyle = {
-    width: 46,
-    height: 46,
-    bgcolor: 'white',
-    border: '1px solid',
-    borderColor: 'divider',
-    borderRadius: '16px',
-    '&:hover': {
-      bgcolor: 'grey.50',
-    },
+    setManageMembersModalOpen(true)
   }
 
   return (
@@ -227,7 +227,20 @@ const GroupDetails = () => {
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton onClick={handleGoBack} sx={iconButtonStyle}>
+                <IconButton
+                  onClick={handleGoBack}
+                  sx={{
+                    width: 46,
+                    height: 46,
+                    bgcolor: 'white',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: '16px',
+                    '&:hover': {
+                      bgcolor: 'grey.50',
+                    },
+                  }}
+                >
                   <ArrowBackIcon />
                 </IconButton>
                 <Box>
@@ -241,7 +254,7 @@ const GroupDetails = () => {
                       color: 'text.primary',
                     }}
                   >
-                    {groupData.name}
+                    {group.groupName}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -251,7 +264,7 @@ const GroupDetails = () => {
                       color: 'text.secondary',
                     }}
                   >
-                    {groupData.memberCount} thành viên • {groupData.billCount} hóa đơn
+                    {group.members?.length || 0} thành viên • {group.bills?.length || 0} hóa đơn
                   </Typography>
                 </Box>
               </Box>
@@ -262,7 +275,15 @@ const GroupDetails = () => {
                   startIcon={<AddIcon />}
                   onClick={handleCreateBill}
                   sx={{
-                    ...gradientButtonStyle,
+                    background: COLORS.gradientPrimary,
+                    color: 'white',
+                    borderRadius: '16px',
+                    textTransform: 'none',
+                    fontWeight: 400,
+                    boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
+                    '&:hover': {
+                      boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.15), 0px 4px 6px -4px rgba(0,0,0,0.15)',
+                    },
                     px: 3,
                     py: 1.5,
                     height: 48,
@@ -270,7 +291,20 @@ const GroupDetails = () => {
                 >
                   Tạo hóa đơn theo nhóm
                 </Button>
-                <IconButton sx={iconButtonStyle}>
+                <IconButton
+                  sx={{
+                    width: 46,
+                    height: 46,
+                    bgcolor: 'white',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: '16px',
+                    '&:hover': {
+                      bgcolor: 'grey.50',
+                    },
+                  }}
+                  onClick={handleGroupOptionsClick}
+                >
                   <MoreVertIcon />
                 </IconButton>
               </Box>
@@ -287,34 +321,6 @@ const GroupDetails = () => {
                 gap: 1,
               }}
             >
-              <Box
-                onClick={() => setCurrentTab(0)}
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  py: 1.5,
-                  borderRadius: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  background: currentTab === 0 ? COLORS.gradientPrimary : 'transparent',
-                  '&:hover': {
-                    bgcolor: currentTab === 0 ? undefined : 'grey.100',
-                  },
-                }}
-              >
-                <ReceiptIcon sx={{ fontSize: 20, color: currentTab === 0 ? 'white' : 'text.secondary' }} />
-                <Typography
-                  sx={{
-                    fontSize: '16px',
-                    color: currentTab === 0 ? 'white' : 'text.secondary',
-                  }}
-                >
-                  Danh sách hóa đơn
-                </Typography>
-              </Box>
               <Box
                 onClick={() => setCurrentTab(1)}
                 sx={{
@@ -341,6 +347,34 @@ const GroupDetails = () => {
                   }}
                 >
                   Quản lý nhóm
+                </Typography>
+              </Box>
+              <Box
+                onClick={() => setCurrentTab(0)}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  py: 1.5,
+                  borderRadius: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  background: currentTab === 0 ? COLORS.gradientPrimary : 'transparent',
+                  '&:hover': {
+                    bgcolor: currentTab === 0 ? undefined : 'grey.100',
+                  },
+                }}
+              >
+                <ReceiptIcon sx={{ fontSize: 20, color: currentTab === 0 ? 'white' : 'text.secondary' }} />
+                <Typography
+                  sx={{
+                    fontSize: '16px',
+                    color: currentTab === 0 ? 'white' : 'text.secondary',
+                  }}
+                >
+                  Danh sách hóa đơn
                 </Typography>
               </Box>
             </Paper>
@@ -379,24 +413,28 @@ const GroupDetails = () => {
                         Thành viên
                       </Typography>
                       <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
-                        ({groupData.memberCount})
+                        ({group.members?.length || 0})
                       </Typography>
                     </Box>
                     <Button
                       variant="contained"
                       onClick={handleManageMembers}
                       sx={{
-                        bgcolor: 'grey.50',
-                        color: 'text.primary',
-                        borderRadius: '14px',
+                        background: COLORS.gradientPrimary,
+                        color: '#FAFAFA',
+                        borderRadius: '16px',
                         textTransform: 'none',
                         fontSize: '14px',
-                        px: 2,
-                        py: 1,
-                        boxShadow: 'none',
+                        fontWeight: 500,
+                        padding: '6px 12px',
+                        height: '32px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
                         '&:hover': {
-                          bgcolor: 'grey.100',
-                          boxShadow: 'none',
+                          opacity: 0.9,
                         },
                       }}
                     >
@@ -416,9 +454,9 @@ const GroupDetails = () => {
                       maxWidth: '100%',
                     }}
                   >
-                    {groupData.members.slice(0, 6).map((member) => (
+                    {group.members?.slice(0, 6).map((member) => (
                       <Box
-                        key={member.id}
+                        key={member._id}
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
@@ -432,6 +470,7 @@ const GroupDetails = () => {
                         }}
                       >
                         <Avatar
+                          src={member.avatar}
                           sx={{
                             width: 48,
                             height: 48,
@@ -442,7 +481,7 @@ const GroupDetails = () => {
                             borderRadius: '50%',
                           }}
                         >
-                          {member.initials}
+                          {getInitials(member.name)}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Typography
@@ -456,7 +495,7 @@ const GroupDetails = () => {
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            {member.name} {member.isCurrentUser && '(Bạn)'}
+                            {member.name} {member._id === group.creatorId && '(Chủ nhóm)'}
                           </Typography>
                           <Typography
                             sx={{
@@ -474,7 +513,7 @@ const GroupDetails = () => {
                       </Box>
                     ))}
                   </Box>
-                  {groupData.members.length > 6 && (
+                  {group.members.length > 6 && (
                     <Box sx={{ textAlign: 'center', py: 2 }}>
                       <Typography
                         sx={{
@@ -483,7 +522,7 @@ const GroupDetails = () => {
                           fontWeight: 500,
                         }}
                       >
-                        ... và {groupData.members.length - 6} thành viên khác
+                        ... và {group.members.length - 6} thành viên khác
                       </Typography>
                     </Box>
                   )}
@@ -501,7 +540,7 @@ const GroupDetails = () => {
                     gap: 2,
                   }}
                 >
-                  {groupData.statistics.map((stat, index) => (
+                  {statistics.map((stat, index) => (
                     <Paper
                       key={index}
                       sx={{
@@ -584,7 +623,7 @@ const GroupDetails = () => {
                       gap: 2,
                     }}
                   >
-                    {groupData.insights.map((insight, index) => (
+                    {insightsData.map((insight, index) => (
                       <Box
                         key={index}
                         sx={{
@@ -785,6 +824,34 @@ const GroupDetails = () => {
           </Stack>
         </Container>
       </Box>
+
+      <Menu
+        id="demo-positioned-menu"
+        aria-labelledby="demo-positioned-button"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={handleDeleteGroup} sx={{ color: 'error.main' }}>
+          Xóa nhóm
+        </MenuItem>
+      </Menu>
+
+      <ManageMembersModal
+        open={manageMembersModalOpen}
+        onClose={() => setManageMembersModalOpen(false)}
+        group={group}
+        onUpdateMembers={handleUpdateMembers}
+        creatorId={group?.creatorId}
+      />
     </Layout>
   )
 }

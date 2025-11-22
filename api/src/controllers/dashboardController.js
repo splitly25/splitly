@@ -185,7 +185,7 @@ const calculateDebtData = async (bills, userId) => {
             const payer = await userModel.findOneById(bill.payerId)
             const payerName = payer ? payer.name : 'Unknown'
             if (!debtDetails[payerName]) {
-              debtDetails[payerName] = { amount: 0, billCount: 0 }
+              debtDetails[payerName] = { amount: 0, billCount: 0, userId: bill.payerId }
             }
             debtDetails[payerName].amount += remainingAmount
             debtDetails[payerName].billCount += 1
@@ -206,7 +206,7 @@ const calculateDebtData = async (bills, userId) => {
             const debtor = await userModel.findOneById(status.userId)
             const debtorName = debtor ? debtor.name : 'Unknown'
             if (!creditDetails[debtorName]) {
-              creditDetails[debtorName] = { amount: 0, billCount: 0 }
+              creditDetails[debtorName] = { amount: 0, billCount: 0, userId: status.userId }
             }
             creditDetails[debtorName].amount += remainingAmount
             creditDetails[debtorName].billCount += 1
@@ -221,7 +221,8 @@ const calculateDebtData = async (bills, userId) => {
     .map(([name, data]) => ({ 
       name, 
       amount: data.amount, 
-      billCount: data.billCount 
+      billCount: data.billCount,
+      userId: data.userId
     }))
     .sort((a, b) => b.amount - a.amount)
   
@@ -229,7 +230,8 @@ const calculateDebtData = async (bills, userId) => {
     .map(([name, data]) => ({ 
       name, 
       amount: data.amount, 
-      billCount: data.billCount 
+      billCount: data.billCount,
+      userId: data.userId
     }))
     .sort((a, b) => b.amount - a.amount)
   

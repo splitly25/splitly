@@ -11,6 +11,8 @@ export const pickUser = (user) => {
     'userType',
     'isGuest',
     'lastActivityDate',
+    'bankName',
+    'bankAccount',
     'createdAt',
     'updatedAt',
   ]);

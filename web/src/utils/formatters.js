@@ -44,3 +44,12 @@ export const getCategoryLabel = (category) => {
     const option = categoryOptions.find((option) => option.value === category)
     return option ? option.label : ''
   }
+
+export const moveGroupCreatorToTopOfList = (members, creatorId) => {
+  const creatorIndex = members.findIndex((member) => member._id === creatorId)
+  if (creatorIndex > -1) {
+    const [creator] = members.splice(creatorIndex, 1)
+    members.unshift(creator)
+  }
+  return members
+}

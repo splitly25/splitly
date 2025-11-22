@@ -19,6 +19,7 @@ import Group from './pages/Groups/Group'
 import Payment from './pages/Payment/Payment'
 import PaymentSuccess from './pages/Payment/PaymentSuccess'
 import GroupDetails from './pages/Groups/GroupDetails'
+import OptOut from './pages/Bills/OptOut'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -54,6 +55,7 @@ function App() {
       <Route path="/payment/confirm" element={<PaymentConfirmation />} />
       <Route path="/payment/pay" element={<Payment />} />
       <Route path="/payment/pay/success" element={<PaymentSuccess />} />
+      <Route path="/bill/opt-out" element={<OptOut />} />
 
       {/* Default and Not Found Routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />

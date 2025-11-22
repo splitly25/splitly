@@ -29,9 +29,14 @@ import {
   CalendarToday as CalendarIcon,
   Description as DescriptionIcon,
   Send as SendIcon,
+  NotificationsActive as NotificationsActiveIcon,
   Create as Edit,
 } from '@mui/icons-material'
 import { getInitials } from '~/utils/formatters'
+import { useColorScheme } from '@mui/material/styles'
+import ConfirmPaymentDialog from '~/pages/Debt/ConfirmPaymentDialog'
+import PaymentDialog from '~/pages/Debt/PaymentDialog'
+import RemindDialog from '~/pages/Debt/RemindDialog'
 
 const BillDetail = () => {
   const { billId } = useParams()
@@ -41,6 +46,19 @@ const BillDetail = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
+
+  // States for ConfirmPaymentDialog
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [selectedParticipant, setSelectedParticipant] = useState(null)
+
+  // States for PaymentDialog
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [selectedCreditor, setSelectedCreditor] = useState(null)
+
+  // States for RemindDialog
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false)
+  const [selectedRemindDebtor, setSelectedRemindDebtor] = useState(null)
+
 
   useEffect(() => {
     const fetchBillDetail = async () => {
@@ -108,49 +126,28 @@ const BillDetail = () => {
     navigate(`/history`)
   }
 
-  const handleEditBill = () => {
-    navigate(`/bills/${billId}/edit`)
+  const handleConfirmPayment = (participant) => {
+    setSelectedParticipant(participant)
+    setConfirmDialogOpen(true)
   }
 
-  const handleSettleBill = () => {
-    console.log('Nhắc nhở thanh toán')
+  const handleRemind = (debtor, billId) => {
+    setSelectedRemindDebtor(debtor)
+    setRemindDialogOpen(true)
   }
 
-  const handleConfirmPayment = async (participant) => {
-    try {
-      // TODO: Implement API call to confirm payment
-      console.log('Confirming payment for:', participant)
-
-      // For now, show a confirmation message
-      if (window.confirm(`Xác nhận ${participant.name} đã thanh toán ${formatCurrency(participant.amount)} đ?`)) {
-        // Refresh bill data
-        const response = await fetchBillByIdAPI(billId)
-        setBillData(response)
-      }
-    } catch (error) {
-      console.error('Error confirming payment:', error)
-      alert('Có lỗi xảy ra. Vui lòng thử lại.')
-    }
+  const refetchBillData = async () => {
+    const response = await fetchBillByIdAPI(billId)
+    setBillData(response)
   }
 
-  const handlePayment = async (participant) => {
-    try {
-      // TODO: Implement payment flow
-      console.log('Initiating payment for:', participant)
-
-      // Show payment dialog or redirect to payment page
-      if (window.confirm(`Thanh toán ${formatCurrency(participant.amount)} đ cho hóa đơn "${billData.billName}"?`)) {
-        // Call payment API
-        // await makePaymentAPI(billId, participant.amount)
-
-        // Refresh bill data
-        const response = await fetchBillByIdAPI(billId)
-        setBillData(response)
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error)
-      alert('Có lỗi xảy ra. Vui lòng thử lại.')
-    }
+  const handlePayment = (participant) => {
+    setSelectedCreditor({
+      userId: billData.payer._id,
+      userName: billData.payer.name,
+      totalAmount: participant.amount
+    })
+    setPaymentDialogOpen(true)
   }
 
   // Helper function to determine if current user is the bill owner
@@ -699,10 +696,10 @@ const BillDetail = () => {
                           }}
                         />
                       ) : (
-                        // If not paid, show different buttons based on user role
-                        <>
+                        // If not paid, show buttons
+                        <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
                           {isBillOwner() ? (
-                            // Bill owner sees confirmation button for unpaid participants
+                            // Bill owner sees confirmation button
                             <Button
                               variant="contained"
                               size="small"
@@ -717,7 +714,6 @@ const BillDetail = () => {
                                 fontWeight: 600,
                                 height: { xs: 30, sm: 32 },
                                 whiteSpace: 'nowrap',
-                                minWidth: { xs: 'auto', sm: '120px' },
                                 '&:hover': {
                                   background: 'linear-gradient(90deg, #00a63e 0%, #008e34 100%)',
                                 },
@@ -725,15 +721,16 @@ const BillDetail = () => {
                             >
                               Xác nhận
                             </Button>
-                          ) : participant._id === currentUser?._id ? (
-                            // Current participant sees payment button for their own unpaid item
+                          ) : (
+                            // Others see payment button
                             <Button
                               variant="contained"
                               size="small"
                               startIcon={<SendIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                               onClick={() => handlePayment(participant)}
+                              disabled={participant._id !== currentUser?._id}
                               sx={{
-                                background: 'linear-gradient(90deg, #ff6900 0%, #f54900 100%)',
+                                background: participant._id === currentUser?._id ? 'linear-gradient(90deg, #ff6900 0%, #f54900 100%)' : 'grey.400',
                                 color: 'white',
                                 borderRadius: '16px',
                                 textTransform: 'none',
@@ -741,30 +738,42 @@ const BillDetail = () => {
                                 fontWeight: 600,
                                 height: { xs: 30, sm: 32 },
                                 whiteSpace: 'nowrap',
-                                minWidth: { xs: 'auto', sm: '120px' },
                                 '&:hover': {
-                                  background: 'linear-gradient(90deg, #f54900 0%, #e03d00 100%)',
+                                  background: participant._id === currentUser?._id ? 'linear-gradient(90deg, #f54900 0%, #e03d00 100%)' : 'grey.400',
+                                },
+                                '&.Mui-disabled': {
+                                  background: 'grey.300',
+                                  color: 'grey.500',
                                 },
                               }}
                             >
                               Thanh toán
                             </Button>
-                          ) : (
-                            // Other participants see pending badge for unpaid items
-                            <Chip
-                              label="Chưa thanh toán"
-                              size="small"
-                              sx={{
-                                bgcolor: '#FED7AA',
-                                color: '#FF9800',
-                                fontWeight: 600,
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                height: { xs: 30, sm: 32 },
-                                minWidth: { xs: 'auto', sm: '120px' },
-                              }}
-                            />
                           )}
-                        </>
+                          {/* Remind button for all unpaid */}
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<NotificationsActiveIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                            onClick={() => handleRemind(participant, billId)}
+                            sx={{
+                              borderColor: 'divider',
+                              color: 'text.primary',
+                              borderRadius: '16px',
+                              textTransform: 'none',
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              fontWeight: 600,
+                              height: { xs: 30, sm: 32 },
+                              whiteSpace: 'nowrap',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                bgcolor: 'rgba(0,0,0,0.02)',
+                              },
+                            }}
+                          >
+                            Nhắc nhở
+                          </Button>
+                        </Box>
                       )}
                     </Box>
                   ))}
@@ -810,6 +819,48 @@ const BillDetail = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Confirm Payment Dialog */}
+      <ConfirmPaymentDialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        myId={currentUser?._id}
+        debtor={selectedParticipant ? {
+          userId: selectedParticipant._id,
+          userName: selectedParticipant.name,
+          totalAmount: selectedParticipant.amount,
+          bills: [{
+            billId: billId,
+            billName: billData.billName,
+            remainingAmount: selectedParticipant.amount
+          }]
+        } : null}
+        defaultAmount={selectedParticipant?.amount}
+        bills={selectedParticipant ? [{
+          billId: billId,
+          billName: billData.billName,
+          remainingAmount: selectedParticipant.amount
+        }] : []}
+        refetch={refetchBillData}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        creditor={selectedCreditor}
+        currentUserId={currentUser?._id}
+        refetch={refetchBillData}
+      />
+
+      {/* Remind Dialog */}
+      <RemindDialog
+        open={remindDialogOpen}
+        onClose={() => setRemindDialogOpen(false)}
+        debtor={selectedRemindDebtor}
+        creditorId={billData.payer._id}
+        bill={billId}
+      />
     </Layout>
   )
 }
