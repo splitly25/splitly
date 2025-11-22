@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -93,6 +93,7 @@ const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirm
 
   return (
     <Card
+      id={`${type === 'iOwe' ? 'debtor' : 'creditor'}_${person.userId}`}
       sx={{
         border: '1px solid',
         borderColor: 'divider',
@@ -237,6 +238,28 @@ const Debt = () => {
   const currentUserId = currentUser?._id
   
   const { loading, error, debtData, refetch } = useDebt(currentUserId)
+
+  // Smooth scroll to user card based on URL hash
+  useEffect(() => {
+    if (!loading && debtData) {
+      const handleHashChange = () => {
+        const hash = window.location.hash
+        if (hash.startsWith('#creditor_') || hash.startsWith('#debtor_')) {
+          const elementId = hash.substring(1) // remove #
+          const element = document.getElementById(elementId)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' })
+          }
+        }
+      }
+
+      // Check on mount and when hash changes
+      window.addEventListener('hashchange', handleHashChange)
+      handleHashChange()
+
+      return () => window.removeEventListener('hashchange', handleHashChange)
+    }
+  }, [loading, debtData])
 
   // Filter debts based on search term
   const filterDebts = (debts) => {
