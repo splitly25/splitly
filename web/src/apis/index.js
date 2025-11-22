@@ -310,3 +310,12 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   console.log('Assistant API Response:', response)
   return { response: assistantResponse, navigation: response.data.navigation }
 }
+
+
+// BANKING APIs
+//https://api.vietqr.io/v2/banks
+export const fetchBankListAPI = async () => {
+  const axios = (await import('axios')).default
+  const response = await axios.get(`https://api.vietqr.io/v2/banks`)
+  return response.data
+}
