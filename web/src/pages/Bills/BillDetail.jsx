@@ -33,6 +33,7 @@ import {
 import { getInitials } from '~/utils/formatters'
 import { useColorScheme } from '@mui/material/styles'
 import ConfirmPaymentDialog from '~/pages/Debt/ConfirmPaymentDialog'
+import PaymentDialog from '~/pages/Debt/PaymentDialog'
 
 const BillDetail = () => {
   const { billId } = useParams()
@@ -47,6 +48,10 @@ const BillDetail = () => {
   // States for ConfirmPaymentDialog
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedParticipant, setSelectedParticipant] = useState(null)
+
+  // States for PaymentDialog
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [selectedCreditor, setSelectedCreditor] = useState(null)
 
 
   useEffect(() => {
@@ -134,24 +139,13 @@ const BillDetail = () => {
     setBillData(response)
   }
 
-  const handlePayment = async (participant) => {
-    try {
-      // TODO: Implement payment flow
-      console.log('Initiating payment for:', participant)
-      
-      // Show payment dialog or redirect to payment page
-      if (window.confirm(`Thanh toán ${formatCurrency(participant.amount)} đ cho hóa đơn "${billData.billName}"?`)) {
-        // Call payment API
-        // await makePaymentAPI(billId, participant.amount)
-        
-        // Refresh bill data
-        const response = await fetchBillByIdAPI(billId)
-        setBillData(response)
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error)
-      alert('Có lỗi xảy ra. Vui lòng thử lại.')
-    }
+  const handlePayment = (participant) => {
+    setSelectedCreditor({
+      userId: billData.payer._id,
+      userName: billData.payer.name,
+      totalAmount: participant.amount
+    })
+    setPaymentDialogOpen(true)
   }
 
   // Helper function to determine if current user is the bill owner
@@ -841,6 +835,15 @@ const BillDetail = () => {
           billName: billData.billName,
           remainingAmount: selectedParticipant.amount
         }] : []}
+        refetch={refetchBillData}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        creditor={selectedCreditor}
+        currentUserId={currentUser?._id}
         refetch={refetchBillData}
       />
     </Layout>
