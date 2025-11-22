@@ -162,6 +162,31 @@ const deleteOneById = async (userId) => {
   }
 }
 
+const findManyByKeys = async (keys) => {
+  try {
+    if (!keys || !keys.length) return []
+
+  const results = await Promise.all(
+    keys.map(async (key) => {
+      const user = await GET_DB()
+        .collection(USER_COLLECTION_NAME)
+        .findOne({
+          _destroy: false,
+          $or: [
+            { email: { $regex: key, $options: 'i' } },
+            { name: { $regex: key, $options: 'i' } },
+          ],
+        })
+      return user
+    })
+  )
+
+  return results.filter(Boolean)
+  } catch (error) {
+    throw new Error(error)
+  }
+}
+
 export const userModel = {
   USER_COLLECTION_NAME,
   USER_COLLECTION_SCHEMA,
@@ -174,4 +199,5 @@ export const userModel = {
   fetchUsers,
   findManyByIds,
   deleteOneById,
+  findManyByKeys
 }

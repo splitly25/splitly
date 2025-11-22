@@ -7,8 +7,9 @@ const validateAIRequest = async (req, res, next) => {
         userId: Joi.string().required(),
         messages: Joi.array().items(
             Joi.object({
-                role: Joi.string().valid('user', 'assistant').required(),
-                content: Joi.string().required()
+                role: Joi.string().valid('user', 'assistant', 'tool', 'system').required(),
+                content: Joi.string().required(),
+                toolCallId: Joi.string().optional(),
             })
         ).min(1).required()
     })
