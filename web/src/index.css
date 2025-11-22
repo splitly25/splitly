@@ -3,3 +3,179 @@
 .main-container {
     @apply p-3 sm:p-4 md:p-6 lg:p-10 min-h-screen bg-gray-50;
 }
+
+/* Landing Page Animations */
+@keyframes fade-in-hero {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-badge {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-heading {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-subheading {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-buttons {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-trust {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes slide-left-mobile {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes mobile-menu-item {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-hero {
+  animation: fade-in-hero 1s ease-out forwards;
+}
+
+.animate-fade-in-badge {
+  animation: fade-in-badge 0.8s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-heading {
+  animation: fade-in-heading 1s ease-out 0.4s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-subheading {
+  animation: fade-in-subheading 1s ease-out 0.6s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-buttons {
+  animation: fade-in-buttons 1s ease-out 0.8s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-trust {
+  animation: fade-in-trust 1s ease-out 1s forwards;
+  opacity: 0;
+}
+
+.animate-slide-left {
+  animation: slide-left 20s linear infinite;
+}
+
+.animate-slide-left-mobile {
+  animation: slide-left-mobile 15s linear infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-mobile-menu-item {
+  animation: mobile-menu-item 0.3s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-hero 0.6s ease-out forwards;
+}
+
+/* Hide scrollbar for testimonials */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
