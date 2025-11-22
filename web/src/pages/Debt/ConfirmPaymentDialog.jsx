@@ -374,7 +374,7 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                     variant="body2"
                     sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
                   >
-                    Hóa đơn bạn trả
+                    Hóa đơn bạn nợ
                   </Typography>
                   <Box sx={{ 
                     bgcolor: '#f5f5f5',
@@ -413,7 +413,7 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                     variant="body2"
                     sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
                   >
-                    Hóa đơn {debtor?.userName} trả
+                    Hóa đơn {debtor?.userName} nợ
                   </Typography>
                   <Box sx={{ 
                     bgcolor: '#f5f5f5',
@@ -456,9 +456,9 @@ const ConfirmPaymentDialog = ({ open, onClose, myId, debtor, defaultAmount, bill
                 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '14px', color: '#92400e' }}>
                     {mutualBills.totalUser1Owes > mutualBills.totalUser2Owes
-                      ? `Sau khi cân bằng nợ, bạn sẽ còn nợ ${debtor?.userName} ${formatCurrency(mutualBills.totalUser1Owes - mutualBills.totalUser2Owes)}`
+                      ? `Sau khi cân bằng nợ, ${debtor?.userName} sẽ còn nợ bạn ${formatCurrency(mutualBills.totalUser1Owes - mutualBills.totalUser2Owes)}`
                       : mutualBills.totalUser2Owes > mutualBills.totalUser1Owes
-                      ? `Sau khi cân bằng nợ, ${debtor?.userName} sẽ còn nợ bạn ${formatCurrency(mutualBills.totalUser2Owes - mutualBills.totalUser1Owes)}`
+                      ? `Sau khi cân bằng nợ, bạn sẽ còn nợ ${debtor?.userName} ${formatCurrency(mutualBills.totalUser2Owes - mutualBills.totalUser1Owes)}`
                       : 'Sau khi cân bằng nợ, tất cả các hóa đơn sẽ được thanh toán hoàn toàn'
                     }
                   </Typography>

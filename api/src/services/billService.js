@@ -774,7 +774,7 @@ const getMutualBills = async (userId1, userId2) => {
     const user1UnpaidBills = billsUser1Owes
       .filter((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
-        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers.some(id => id.equals(user1ObjectId))
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers?.some(id => id.equals(user1ObjectId))
       })
       .map((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
@@ -796,7 +796,7 @@ const getMutualBills = async (userId1, userId2) => {
     const user2UnpaidBills = billsUser2Owes
       .filter((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
-        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers.some(id => id.equals(user2ObjectId))
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers?.some(id => id.equals(user2ObjectId))
       })
       .map((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
