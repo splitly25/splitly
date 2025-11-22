@@ -4,6 +4,16 @@ export const options = [
   { value: 'by-item', label: 'Theo món' },
 ]
 
+// category
+export const categoryOptions = [
+  { value: 'food', label: 'Ăn uống' },
+  { value: 'entertainment', label: 'Giải trí' },
+  { value: 'transportation', label: 'Di chuyển' },
+  { value: 'shopping', label: 'Mua sắm' },
+  { value: 'utilities', label: 'Tiện ích' },
+  { value: 'other', label: 'Khác' },
+]
+
 /* eslint-disable no-undef */
 let apiRoot = ''
 
