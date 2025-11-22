@@ -59,7 +59,7 @@ const createNew = async (reqBody, options = {}) => {
         }
 
         // Send verification email with beautiful template
-        const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${updatedUser.email}&token=${updatedUser.verifyToken}`
+        const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${encodeURIComponent(updatedUser.email)}&token=${updatedUser.verifyToken}`
         const emailContent = verificationEmailTemplate(updatedUser.name, verificationLink)
 
         let emailSent = true
@@ -122,7 +122,7 @@ const createNew = async (reqBody, options = {}) => {
     }
 
     // Send verification email with beautiful template
-    const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${getNewUser.email}&token=${getNewUser.verifyToken}`
+    const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${encodeURIComponent(getNewUser.email)}&token=${getNewUser.verifyToken}`
     const emailContent = verificationEmailTemplate(getNewUser.name, verificationLink)
 
     let emailSent = true
