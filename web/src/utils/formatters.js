@@ -37,3 +37,12 @@ export const removeLeadingZeros = (value) => {
   if (typeof value !== 'string') return value
   return value.replace(/^0+(?=\d)/, '')
 }
+
+export const moveGroupCreatorToTopOfList = (members, creatorId) => {
+  const creatorIndex = members.findIndex((member) => member._id === creatorId)
+  if (creatorIndex > -1) {
+    const [creator] = members.splice(creatorIndex, 1)
+    members.unshift(creator)
+  }
+  return members
+}

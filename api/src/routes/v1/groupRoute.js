@@ -9,16 +9,16 @@ Router.route('/getAllGroupAndMembers').get(authMiddleware.isAuthorized, groupCon
 
 Router.route('/getGroupAndMembers/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupAndMembers)
 
-Router.route('/')
-  .get(authMiddleware.isAuthorized, groupValidation.fetchGroups, groupController.fetchGroups)
-  .post(authMiddleware.isAuthorized, groupValidation.createNew, groupController.createNew)
+Router.route('/user/:userId').get(authMiddleware.isAuthorized, groupController.getGroupsByUserId)
 
 Router.route('/:groupId').get(authMiddleware.isAuthorized, groupController.getGroupById)
 
-Router.route('/user/:userId').get(authMiddleware.isAuthorized, groupController.getGroupsByUserId)
-
 Router.route('/:id')
   .put(authMiddleware.isAuthorized, groupValidation.update, groupController.update)
-  .delete(authMiddleware.isAuthorized,groupController.deleteGroup)
+  .delete(authMiddleware.isAuthorized, groupController.deleteGroup)
+
+Router.route('/')
+  .get(authMiddleware.isAuthorized, groupValidation.fetchGroups, groupController.fetchGroups)
+  .post(authMiddleware.isAuthorized, groupValidation.createNew, groupController.createNew)
 
 export const groupRoute = Router
