@@ -28,7 +28,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
 import { COLORS } from '~/theme'
-import { fetchMonthlyReportAPI } from '~/apis'
+import { fetchMonthlyReportAPI, fetchAIAnalysisAPI } from '~/apis'
 import { toast } from 'react-toastify'
 import SpendingTrendChart from '~/components/charts/SpendingTrendChart'
 import CategorySpendingChart from '~/components/charts/CategorySpendingChart'
@@ -239,7 +239,9 @@ const Report = () => {
   const currentUser = useSelector((state) => state.user.currentUser)
   const [selectedMonth, setSelectedMonth] = useState(dayjs())
   const [reportData, setReportData] = useState(null)
+  const [aiAnalysis, setAiAnalysis] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadingAI, setLoadingAI] = useState(false)
 
   // Fetch report data when month changes
   useEffect(() => {
@@ -264,6 +266,27 @@ const Report = () => {
 
     fetchReportData()
   }, [selectedMonth, currentUser])
+
+  // Fetch AI analysis once when component mounts
+  useEffect(() => {
+    const fetchAIAnalysis = async () => {
+      if (!currentUser?._id) return
+
+      try {
+        setLoadingAI(true)
+        const analysis = await fetchAIAnalysisAPI(currentUser._id)
+        setAiAnalysis(analysis)
+      } catch (error) {
+        console.error('Error fetching AI analysis:', error)
+        // Don't show error toast for AI analysis - it's not critical
+        setAiAnalysis(null)
+      } finally {
+        setLoadingAI(false)
+      }
+    }
+
+    fetchAIAnalysis()
+  }, [currentUser])
 
   const handleMonthChange = (newValue) => {
     setSelectedMonth(newValue)
@@ -654,7 +677,55 @@ const Report = () => {
         </Box>
 
         {/* AI Insight Section */}
-        {reportData?.aiInsights && reportData.aiInsights.length > 0 ? (
+        {loadingAI ? (
+          <Card
+            sx={{
+              borderRadius: '16px',
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+              mb: 3,
+              p: 4,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <CircularProgress sx={{ color: COLORS.primary }} size={30} />
+            <Typography sx={{ ml: 2, color: 'text.secondary' }}>Đang phân tích dữ liệu...</Typography>
+          </Card>
+        ) : aiAnalysis ? (
+          <>
+            {aiAnalysis.monthlyAdvice && (
+              <AIInsightCard
+                title="Dự đoán chi tiêu tháng tới"
+                description={aiAnalysis.monthlyAdvice}
+                suggestion="Dựa trên phân tích từ TingTing AI"
+              />
+            )}
+            {aiAnalysis.productAdvice && (
+              <AIInsightCard
+                title="Phân tích chi tiêu theo danh mục"
+                description={aiAnalysis.productAdvice}
+                suggestion="Cân bằng chi tiêu giữa các danh mục"
+              />
+            )}
+            {aiAnalysis.debtAdvice && (
+              <AIInsightCard
+                title="Quản lý khoản nợ của bạn"
+                description={aiAnalysis.debtAdvice}
+                suggestion="Ưu tiên thanh toán đúng hạn"
+              />
+            )}
+            {aiAnalysis.oweAdvice && (
+              <AIInsightCard
+                title="Quản lý khoản cho vay"
+                description={aiAnalysis.oweAdvice}
+                suggestion="Nhắc nhở một cách lịch sự"
+              />
+            )}
+          </>
+        ) : reportData?.aiInsights && reportData.aiInsights.length > 0 ? (
           reportData.aiInsights.map((insight, index) => (
             <AIInsightCard key={index} {...insight} />
           ))

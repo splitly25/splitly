@@ -24,6 +24,16 @@ export const fetchMonthlyReportAPI = async (userId, year, month) => {
   return response.data
 }
 
+/**
+ * Fetch AI-powered analysis and recommendations for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} AI analysis including debt advice, spending predictions, and recommendations
+ */
+export const fetchAIAnalysisAPI = async (userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/assistant/analysis/${userId}`)
+  return response.data
+}
+
 export const fetchHistoryDataAPI = async (userId, numPage, limit, search, settled) => {
   const response = await authorizedAxiosInstance.get(
     `${API_ROOT}/v1/history/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`

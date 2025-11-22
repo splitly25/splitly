@@ -268,19 +268,19 @@ const analysisByAssistant = async (userId) => {
 
         const prompts = {
             debtAdvice: {
-                prompt: `You are TingTing, a friendly assistant for managing shared expense bills. Read the user's debt data, including amounts owed, upcoming deadlines, and overdue bills. Provide 1 - 2 concise, actionable recommendations in Vietnamese to help the user prioritize payments, avoid overdue penalties, and manage debts effectively. Keep advice short, clear, and practical.`,
+                prompt: `Bạn là TingTing, trợ lý thân thiện giúp quản lý hóa đơn chia tiền. Hãy đọc dữ liệu về các khoản nợ của người dùng, bao gồm số tiền nợ, hạn thanh toán sắp tới, và các hóa đơn quá hạn. Đưa ra 1-2 lời khuyên ngắn gọn, thiết thực bằng Tiếng Việt để giúp người dùng ưu tiên thanh toán, tránh bị phạt quá hạn, và quản lý nợ hiệu quả. Lời khuyên phải ngắn gọn, rõ ràng và dễ thực hiện.`,
                 dataKey: 'debtsIOwe'
             },
             oweAdvice: {
-                prompt: `You are TingTing, a friendly assistant for managing shared expense bills. Read the user's data on who owes them money, including overdue bills, amounts, and days overdue. Provide 1-2 concise, actionable recommendations in Vietnamese to help the user politely remind or collect payments early, prioritize the largest or oldest debts, and reduce risk of non-payment. Keep advice short, clear, and practical.`,
+                prompt: `Bạn là TingTing, trợ lý thân thiện giúp quản lý hóa đơn chia tiền. Hãy đọc dữ liệu về những người nợ tiền người dùng, bao gồm hóa đơn quá hạn, số tiền, và số ngày quá hạn. Đưa ra 1-2 lời khuyên ngắn gọn, thiết thực bằng Tiếng Việt để giúp người dùng nhắc nhở lịch sự hoặc thu tiền sớm, ưu tiên các khoản nợ lớn nhất hoặc lâu nhất, và giảm rủi ro không thu được tiền. Lời khuyên phải ngắn gọn, rõ ràng và dễ thực hiện.`,
                 dataKey: 'debtsOwedToMe'
             },
             monthlyAdvice: {
-                prompt: `You are TingTing, a friendly assistant for managing shared expense bills. Read the user's spending data for this month, including categories, total amounts, and number of bills. Provide a short prediction for next month's spending and 1-2 practical recommendations in Vietnamese to help the user manage expenses better, optimize budgets, and avoid overspending. Keep advice concise, clear, and actionable.`,
+                prompt: `Bạn là TingTing, trợ lý thân thiện giúp quản lý hóa đơn chia tiền. Hãy đọc dữ liệu chi tiêu của người dùng trong tháng này, bao gồm danh mục, tổng số tiền, và số lượng hóa đơn. Đưa ra dự đoán ngắn gọn về chi tiêu tháng sau và 1-2 lời khuyên thiết thực bằng Tiếng Việt để giúp người dùng quản lý chi tiêu tốt hơn, tối ưu ngân sách, và tránh chi tiêu quá mức. Lời khuyên phải ngắn gọn, rõ ràng và dễ thực hiện.`,
                 dataKey: 'monthlyStats'
             },
             productAdvice: {
-                prompt: `You are TingTing, a friendly assistant for managing shared expense bills. Analyze the user's spending data for this month, including categories, total amounts, and number of bills. Identify which areas the user is spending most and provide 1-2 practical recommendations in Vietnamese to balance their expenses, avoid overspending, and promote healthier financial habits. Keep advice concise, clear, and actionable.`,
+                prompt: `Bạn là TingTing, trợ lý thân thiện giúp quản lý hóa đơn chia tiền. Hãy phân tích dữ liệu chi tiêu của người dùng trong tháng này, bao gồm danh mục, tổng số tiền, và số lượng hóa đơn. Xác định những lĩnh vực người dùng đang chi tiêu nhiều nhất và đưa ra 1-2 lời khuyên thiết thực bằng Tiếng Việt để cân bằng chi tiêu, tránh chi tiêu quá mức, và thúc đẩy thói quen tài chính lành mạnh hơn. Lời khuyên phải ngắn gọn, rõ ràng và dễ thực hiện.`,
                 dataKey: 'productsThisMonth'
             }
         }
@@ -325,7 +325,26 @@ const analysisByAssistant = async (userId) => {
     }
 };
 
+const getAIAnalysis = async (req, res, next) => {
+    try {
+        const { userId } = req.params;
+
+        // Security check: Verify that the authenticated user is requesting their own data
+        if (req.jwtDecoded._id !== userId) {
+            throw new ApiError(StatusCodes.FORBIDDEN, 'You can only access your own analysis data');
+        }
+
+        const analysis = await analysisByAssistant(userId);
+        res.status(StatusCodes.OK).json(analysis);
+    } catch (error) {
+        console.error('Error in getAIAnalysis:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        const customError = new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, errorMessage);
+        next(customError);
+    }
+};
+
 export const assistantController = {
     processAIRequest,
-    analysisByAssistant
+    analysisByAssistant: getAIAnalysis
 };
