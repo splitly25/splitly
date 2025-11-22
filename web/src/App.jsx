@@ -20,6 +20,7 @@ import Payment from './pages/Payment/Payment'
 import PaymentSuccess from './pages/Payment/PaymentSuccess'
 import GroupDetails from './pages/Groups/GroupDetails'
 import OptOut from './pages/Bills/OptOut'
+import Activity from './pages/Activity/Activity'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -40,6 +41,7 @@ function App() {
         <Route path="/boards/:boardId" element={<Board />} />
         <Route path="/create" element={<Bills />} />
         <Route path="/ocr" element={<Ocr />} />
+        <Route path="/activity" element={<Activity />} />
         <Route path="/bills/:billId" element={<BillDetail />} />
         <Route path="/bills/:billId/edit" element={<BillEdit />} />
         <Route path="/profile" element={<Profile />} />

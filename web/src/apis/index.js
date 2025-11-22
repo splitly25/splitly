@@ -318,9 +318,47 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   return { response: assistantResponse, navigation: response.data.navigation }
 }
 
+// ============================================
+// Activity APIs
+// ============================================
+/*
+Completed APIs
+1. GET /api/activities - Get user activities with filters
+Query Parameters:
+limit (default: 10) - Number of activities to return
+offset (default: 0) - For pagination
+types - Comma-separated activity types filter (e.g., bill_created,bill_paid)
+dateFrom - Filter from timestamp
+dateTo - Filter to timestamp
+Response:
+{
+  "activities": [...],
+  "total": 50,
+  "hasMore": true
+}
+  */
+export const getUserActivitiesAPI = async (userId, params) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/activities/?${new URLSearchParams(params).toString()}`
+  )
+  return response.data
+}
 
+/*
+Response:
+{
+  "total": 50,
+  "unread": 0  // Placeholder for future notification feature
+}
+*/
+export const countUserActivitiesAPI = async () => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/activities/count`)
+  return response.data
+}
+
+// ============================================
 // BANKING APIs
-//https://api.vietqr.io/v2/banks
+// ============================================
 export const fetchBankListAPI = async () => {
   const axios = (await import('axios')).default
   const response = await axios.get(`https://api.vietqr.io/v2/banks`)

@@ -105,23 +105,23 @@ const createNew = async (reqBody, options = {}) => {
     const createdUser = await userModel.createNew(newUser)
     const getNewUser = await userModel.findOneById(createdUser.insertedId.toString())
 
-    // Log user creation activity
-    try {
-      await activityModel.logUserActivity(
-        activityModel.ACTIVITY_TYPES.USER_CREATED,
-        createdUser.insertedId.toString(),
-        createdUser.insertedId.toString(),
-        {
-          userEmail: newUser.email,
-          userName: newUser.name,
-          ipAddress: options.ipAddress,
-          userAgent: options.userAgent,
-          description: `New user account created: ${newUser.email}`,
-        }
-      )
-    } catch (activityError) {
-      console.warn('Failed to log user creation activity:', activityError.message)
-    }
+    // // Log user creation activity
+    // try {
+    //   await activityModel.logUserActivity(
+    //     activityModel.ACTIVITY_TYPES.USER_CREATED,
+    //     createdUser.insertedId.toString(),
+    //     createdUser.insertedId.toString(),
+    //     {
+    //       userEmail: newUser.email,
+    //       userName: newUser.name,
+    //       ipAddress: options.ipAddress,
+    //       userAgent: options.userAgent,
+    //       description: `New user account created: ${newUser.email}`,
+    //     }
+    //   )
+    // } catch (activityError) {
+    //   console.warn('Failed to log user creation activity:', activityError.message)
+    // }
 
     // Send verification email with beautiful template
     const verificationLink = `${WEBSITE_DOMAIN}/account/verification?email=${encodeURIComponent(
@@ -222,22 +222,22 @@ const login = async (reqBody, loginDetails = {}) => {
     })
 
     // Log login activity
-    try {
-      await activityModel.logUserActivity(
-        activityModel.ACTIVITY_TYPES.USER_LOGIN,
-        existingUser._id.toString(),
-        existingUser._id.toString(),
-        {
-          userEmail: existingUser.email,
-          userName: existingUser.name,
-          ipAddress: loginDetails.ipAddress,
-          userAgent: loginDetails.userAgent,
-          description: `User logged in: ${existingUser.email}`,
-        }
-      )
-    } catch (activityError) {
-      console.warn('Failed to log user login activity:', activityError.message)
-    }
+    // try {
+    //   await activityModel.logUserActivity(
+    //     activityModel.ACTIVITY_TYPES.USER_LOGIN,
+    //     existingUser._id.toString(),
+    //     existingUser._id.toString(),
+    //     {
+    //       userEmail: existingUser.email,
+    //       userName: existingUser.name,
+    //       ipAddress: loginDetails.ipAddress,
+    //       userAgent: loginDetails.userAgent,
+    //       description: `User logged in: ${existingUser.email}`,
+    //     }
+    //   )
+    // } catch (activityError) {
+    //   console.warn('Failed to log user login activity:', activityError.message)
+    // }
 
     const userInfo = {
       _id: existingUser._id,
@@ -266,17 +266,17 @@ const logout = async (userId, logoutDetails = {}) => {
     if (!user) return
 
     // Log logout activity
-    try {
-      await activityModel.logUserActivity(activityModel.ACTIVITY_TYPES.USER_LOGOUT, userId, userId, {
-        userEmail: user.email,
-        userName: user.name,
-        ipAddress: logoutDetails.ipAddress,
-        userAgent: logoutDetails.userAgent,
-        description: `User logged out: ${user.email}`,
-      })
-    } catch (activityError) {
-      console.warn('Failed to log user logout activity:', activityError.message)
-    }
+    // try {
+    //   await activityModel.logUserActivity(activityModel.ACTIVITY_TYPES.USER_LOGOUT, userId, userId, {
+    //     userEmail: user.email,
+    //     userName: user.name,
+    //     ipAddress: logoutDetails.ipAddress,
+    //     userAgent: logoutDetails.userAgent,
+    //     description: `User logged out: ${user.email}`,
+    //   })
+    // } catch (activityError) {
+    //   console.warn('Failed to log user logout activity:', activityError.message)
+    // }
   } catch (error) {
     throw error
   }
@@ -359,28 +359,28 @@ const findManyByIds = async (userIds) => {
 const update = async (userId, updateData, updatedBy) => {
   try {
     // Get original user data for activity logging
-    const originalUser = await userModel.findOneById(userId)
+    //const originalUser = await userModel.findOneById(userId)
 
     const result = await userModel.update(userId, updateData)
 
-    // Log activity if updatedBy is provided
-    if (updatedBy && originalUser) {
-      try {
-        await activityModel.logUserActivity(activityModel.ACTIVITY_TYPES.USER_UPDATED, updatedBy, userId, {
-          userEmail: originalUser.email,
-          userName: originalUser.name,
-          previousValue: {
-            name: originalUser.name,
-            phone: originalUser.phone,
-            avatar: originalUser.avatar,
-          },
-          newValue: updateData,
-          description: `Updated user profile: ${originalUser.email}`,
-        })
-      } catch (activityError) {
-        console.warn('Failed to log user update activity:', activityError.message)
-      }
-    }
+    // // Log activity if updatedBy is provided
+    // if (updatedBy && originalUser) {
+    //   try {
+    //     await activityModel.logUserActivity(activityModel.ACTIVITY_TYPES.USER_UPDATED, updatedBy, userId, {
+    //       userEmail: originalUser.email,
+    //       userName: originalUser.name,
+    //       previousValue: {
+    //         name: originalUser.name,
+    //         phone: originalUser.phone,
+    //         avatar: originalUser.avatar,
+    //       },
+    //       newValue: updateData,
+    //       description: `Updated user profile: ${originalUser.email}`,
+    //     })
+    //   } catch (activityError) {
+    //     console.warn('Failed to log user update activity:', activityError.message)
+    //   }
+    // }
     return result
   } catch (error) {
     throw error
