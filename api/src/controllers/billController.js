@@ -4,6 +4,7 @@ import { JwtProvider } from '~/providers/JwtProvider.js'
 import { env } from '~/config/environment.js'
 import APIError from '~/utils/APIError.js'
 import { WEBSITE_DOMAIN } from '~/utils/constants.js'
+import { sendOptOutEmail } from '~/utils/emailService.js'
 
 const createNew = async (req, res, next) => {
   try {
@@ -78,7 +79,47 @@ const optOut = async (req, res, next) => {
       throw new APIError(StatusCodes.BAD_REQUEST, 'User has already opted out from this bill')
     }
     
+    // Get the amount the debtor was supposed to pay BEFORE opting out
+    const debtorPaymentStatus = bill.paymentStatus.find(ps => ps.userId.toString() === userId)
+    const amount = debtorPaymentStatus ? debtorPaymentStatus.amountOwed : 0
+    
     await billService.optOutUser(billId, userId, userId)
+
+    // Send opt-out notification emails
+    try {
+      // Get updated bill data
+      const updatedBill = await billService.findOneById(billId)
+      
+      // Get debtor (user who opted out) info
+      const { userModel } = await import('~/models/userModel.js')
+      const debtor = await userModel.findOneById(userId)
+      if (!debtor) {
+        console.warn('Debtor not found, skipping opt-out email')
+        return res.status(StatusCodes.OK).json({ message: 'Successfully opted out from the bill', billId })
+      }
+      
+      // Get creditor (bill creator/payer) info
+      const creditor = await userModel.findOneById(updatedBill.payerId.toString())
+      if (!creditor) {
+        console.warn('Creditor not found, skipping opt-out email')
+        return res.status(StatusCodes.OK).json({ message: 'Successfully opted out from the bill', billId })
+      }
+      
+      // Send emails to both debtor and creditor
+      await sendOptOutEmail({
+        debtorEmail: debtor.email,
+        debtorName: debtor.name,
+        creditorEmail: creditor.email,
+        creditorName: creditor.name,
+        billName: updatedBill.billName,
+        billDescription: updatedBill.description || '',
+        amount: amount,
+      })
+    } catch (emailError) {
+      console.error('Failed to send opt-out emails:', emailError)
+      // Don't fail the opt-out operation if email fails
+    }
+
     // Return success response
     res.status(StatusCodes.OK).json({ message: 'Successfully opted out from the bill', billId })
   } catch (error) {
