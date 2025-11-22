@@ -165,6 +165,22 @@ export const fetchMutualBillsAPI = async (userId, creditorId) => {
   return response.data
 }
 
+// Opt out from a bill
+export const optOutBillAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out?token=${token}`)
+  return response.data
+}
+
+// Verify opt-out token
+export const verifyOptOutTokenAPI = async (token) => {
+  // Use regular axios for public API
+  const axios = (await import('axios')).default
+  const response = await axios.get(`${API_ROOT}/v1/bills/opt-out/verify?token=${token}`)
+  return response.data
+}
+
 // Balance debts between two users
 export const balanceDebtsAPI = async (userId, otherUserId) => {
   const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/debts/${userId}/balance`, {

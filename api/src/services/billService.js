@@ -126,10 +126,7 @@ const createNew = async (reqBody) => {
         (participant) => participant._id.toString() !== reqBody.payerId.toString()
       )
 
-      console.log(`Sending bill creation emails to ${participantsToEmail.length} participants`)
-
       if (participantsToEmail.length === 0) {
-        console.log('No participants to email (all are payers or no participants found)')
         return getNewBill
       }
 
@@ -158,7 +155,13 @@ const createNew = async (reqBody) => {
           debtorId: participant._id,
         })
 
-        console.log(`Sending email to ${participant.email} (${participant.name}) for bill ${reqBody.billName}`)
+        // Create opt-out token
+        const optOutPayload = {
+          billId: createdBill.insertedId.toString(),
+          userId: participant._id.toString(),
+          type: 'bill_opt_out',
+        }
+        const optOutToken = await JwtProvider.generateToken(optOutPayload, env.ACCESS_JWT_SECRET_KEY, '30d')
 
         return sendBillCreationEmail({
           participantEmail: participant.email,
@@ -174,7 +177,7 @@ const createNew = async (reqBody) => {
             name: p.name,
             amount: p.amount,
           })),
-          optOutToken: createdBill.insertedId.toString(),
+          optOutToken,
           paymentToken,
           billId: createdBill.insertedId.toString(),
         })
@@ -185,8 +188,6 @@ const createNew = async (reqBody) => {
       const successCount = emailResults.filter((result) => result.status === 'fulfilled' && result.value).length
       const failCount = emailResults.length - successCount
 
-      console.log(`Bill creation email results: ${successCount} sent, ${failCount} failed`)
-
       // Log any failures
       emailResults.forEach((result, index) => {
         if (result.status === 'rejected') {
@@ -195,7 +196,7 @@ const createNew = async (reqBody) => {
       })
 
       if (successCount > 0) {
-        console.log(`Bill creation emails sent successfully: ${successCount} sent, ${failCount} failed`)
+        // Email sending completed successfully
       }
     } catch (emailError) {
       console.error('Failed to send bill creation emails:', emailError)
@@ -753,6 +754,7 @@ const getMutualBills = async (userId1, userId2) => {
       .find({
         payerId: user2ObjectId,
         participants: user1ObjectId,
+        optedOutUsers: { $ne: user1ObjectId },
         _destroy: false,
       })
       .toArray()
@@ -763,6 +765,7 @@ const getMutualBills = async (userId1, userId2) => {
       .find({
         payerId: user1ObjectId,
         participants: user2ObjectId,
+        optedOutUsers: { $ne: user2ObjectId },
         _destroy: false,
       })
       .toArray()
@@ -771,7 +774,7 @@ const getMutualBills = async (userId1, userId2) => {
     const user1UnpaidBills = billsUser1Owes
       .filter((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
-        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers.some(id => id.equals(user1ObjectId))
       })
       .map((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user1ObjectId))
@@ -782,7 +785,7 @@ const getMutualBills = async (userId1, userId2) => {
           totalAmount: bill.totalAmount,
           amountOwed: paymentStatus.amountOwed,
           amountPaid: paymentStatus.amountPaid,
-          remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+          remainingAmount: (paymentStatus.amountOwed || 0) - (paymentStatus.amountPaid || 0),
           paymentDate: bill.paymentDate || bill.createdAt,
           payerId: bill.payerId,
           createdAt: bill.createdAt,
@@ -793,7 +796,7 @@ const getMutualBills = async (userId1, userId2) => {
     const user2UnpaidBills = billsUser2Owes
       .filter((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
-        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed
+        return paymentStatus && paymentStatus.amountPaid < paymentStatus.amountOwed && !bill.optedOutUsers.some(id => id.equals(user2ObjectId))
       })
       .map((bill) => {
         const paymentStatus = bill.paymentStatus.find((ps) => ps.userId.equals(user2ObjectId))
@@ -804,7 +807,7 @@ const getMutualBills = async (userId1, userId2) => {
           totalAmount: bill.totalAmount,
           amountOwed: paymentStatus.amountOwed,
           amountPaid: paymentStatus.amountPaid,
-          remainingAmount: paymentStatus.amountOwed - paymentStatus.amountPaid,
+          remainingAmount: (paymentStatus.amountOwed || 0) - (paymentStatus.amountPaid || 0),
           paymentDate: bill.paymentDate || bill.createdAt,
           payerId: bill.payerId,
           createdAt: bill.createdAt,
