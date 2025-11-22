@@ -268,7 +268,9 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
 
             {/* Messages List */}
-            {messages.map((message) => (
+            {messages.filter((message) => {
+              return message.role === 'user' || message.role === 'assistant' || message.role === 'notification'
+            }).map((message) => (
               <div
                 key={message.id}
                 className={`flex gap-2 items-end animate-fadeIn ${message.role === 'user' ? 'justify-end' : 'justify-start'
