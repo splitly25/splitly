@@ -14,6 +14,7 @@ function GroupCard({ group, onClick, onDelete }) {
         borderRadius: '16px',
         cursor: 'pointer',
         transition: 'all 0.2s ease-in-out',
+        backgroundColor: 'white',
         border: (theme) => `1px solid ${theme.palette.divider}`,
         '&:hover': {
           transform: 'translateY(-2px)',

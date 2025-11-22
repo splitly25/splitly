@@ -10,6 +10,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
 import { Add } from '@mui/icons-material'
 import { COLORS } from '~/theme'
 import TextField from '@mui/material/TextField'
@@ -19,6 +20,42 @@ import LoadingSpinner from '~/components/Loading/LoadingSpinner'
 import CreateGroupModal from '~/components/Group/CreateGroupModal'
 import GroupCard from '~/components/Group/GroupCard'
 import Container from '@mui/material/Container'
+import { Skeleton } from '@mui/material'
+
+function GroupCardSkeleton() {
+  return (
+    <Card
+      sx={{
+        borderRadius: '16px',
+        border: (theme) => `1px solid ${theme.palette.divider}`,
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+            <Skeleton variant="rectangular" width={56} height={56} sx={{ borderRadius: '14px' }} />
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width="60%" height={24} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width="80%" height={16} />
+            </Box>
+          </Box>
+          <Skeleton variant="circular" width={32} height={32} />
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Skeleton variant="text" width={80} height={18} />
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} variant="circular" width={28} height={28} />
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+}
 
 function Group() {
   const navigate = useNavigate()
@@ -218,18 +255,41 @@ function Group() {
 
           {/* Groups Grid */}
           {loading ? (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '400px',
-                width: '100%',
-                py: 8,
-              }}
-            >
-              <LoadingSpinner caption="Đang tải nhóm..." />
+            <Box sx={{ width: '100%' }}>
+              {/* Header Skeleton */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '32px',
+                  gap: '16px',
+                }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="200px" height={40} sx={{ mb: 1 }} />
+                  <Skeleton variant="text" width="300px" height={24} />
+                </Box>
+                <Skeleton variant="rectangular" width={140} height={48} sx={{ borderRadius: '12px' }} />
+              </Box>
+
+              {/* Search Skeleton */}
+              <Box sx={{ mb: 4 }}>
+                <Skeleton variant="rectangular" width="100%" height={56} sx={{ borderRadius: '4px' }} />
+              </Box>
+
+              {/* Group Cards Skeleton */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: { xs: 3, md: 4 },
+                  maxWidth: '100%',
+                }}
+              >
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <GroupCardSkeleton key={i} />
+                ))}
+              </Box>
             </Box>
           ) : filteredGroups.length === 0 ? (
             <Card sx={{ borderRadius: '16px', p: 6, textAlign: 'center' }}>

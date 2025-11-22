@@ -10,7 +10,8 @@ import {
   Button,
   Chip,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Skeleton
 } from '@mui/material'
 import {
   Send as SendIcon,
@@ -30,8 +31,38 @@ import ConfirmPaymentDialog from './ConfirmPaymentDialog'
 import RemindDialog from './RemindDialog'
 
 // Summary Card Component
-const SummaryCard = ({ title, amount, icon, bgColor, textColor, iconBgColor, cardBgColor }) => {
+const SummaryCard = ({ title, amount, icon, bgColor, textColor, iconBgColor, cardBgColor, loading }) => {
   const Icon = icon
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          border: '1px solid',
+          borderColor: bgColor,
+          borderRadius: '20px',
+          boxShadow: 'none',
+          height: '100%',
+          bgcolor: cardBgColor,
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            transition: 'all 0.3s'
+          }
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Skeleton variant="text" width={120} height={20} sx={{ mb: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Skeleton variant="text" width={100} height={40} sx={{ mb: 1 }} />
+            </Box>
+            <Skeleton variant="circular" width={64} height={64} />
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
   <Card
     sx={{
@@ -77,10 +108,54 @@ const SummaryCard = ({ title, amount, icon, bgColor, textColor, iconBgColor, car
 }
 
 // Person Debt Card Component
-const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirmPayment }) => {
+const PersonDebtCard = ({ person, type, onPaymentClick, onRemindClick, onConfirmPayment, loading }) => {
   const isIOwe = type === 'iOwe'
   const bgColor = isIOwe ? 'rgba(255, 214, 167, 0.3)' : 'rgba(185, 248, 207, 0.3)'
   const amountColor = isIOwe ? '#ca3500' : '#008236'
+
+  if (loading) {
+    return (
+      <Card
+        sx={{
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '20px',
+          boxShadow: 'none',
+          bgcolor: bgColor,
+          '&:hover': {
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            transition: 'all 0.3s'
+          }
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <Skeleton variant="circular" width={56} height={56} />
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width={150} height={28} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width={120} height={32} sx={{ mb: 2 }} />
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+                {[1, 2].map((i) => (
+                  <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Skeleton variant="text" width={100} height={16} />
+                    <Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: '12px' }} />
+                  </Box>
+                ))}
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Skeleton variant="rectangular" width="100%" height={36} sx={{ borderRadius: '18px' }} />
+                {!isIOwe && (
+                  <Skeleton variant="rectangular" width="100%" height={36} sx={{ borderRadius: '18px' }} />
+                )}
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const getInitials = (name) => {
     return name
@@ -302,8 +377,86 @@ const Debt = () => {
   if (loading) {
     return (
       <Layout>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <CircularProgress />
+        <Box
+          className="bg-gray-50"
+          sx={{ p: { xs: 2, sm: 3, md: 4 }, height: '100%', overflow: 'auto', backgroundColor: '#F9FAFB' }}>
+          {/* Header */}
+          <Box sx={{ mb: 3 }}>
+            <Skeleton variant="text" width={200} height={40} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width={300} height={24} />
+          </Box>
+
+          {/* Search Bar */}
+          <Box sx={{ mb: 3 }}>
+            <Skeleton variant="rectangular" width="100%" height={56} sx={{ borderRadius: '20px' }} />
+          </Box>
+
+          {/* Summary Cards */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 3,
+              mb: 3
+            }}
+          >
+            <SummaryCard
+              loading={true}
+              title="Tổng mình nợ"
+              icon={TrendingDownIcon}
+              bgColor="#ffd6a7"
+              textColor="#ca3500"
+              iconBgColor="#ffd6a8"
+              cardBgColor="rgba(255, 214, 167, 0.2)"
+            />
+            <SummaryCard
+              loading={true}
+              title="Tổng người khác nợ"
+              icon={TrendingUpIcon}
+              bgColor="#b9f8cf"
+              textColor="#008236"
+              iconBgColor="#b9f8cf"
+              cardBgColor="rgba(185, 248, 207, 0.2)"
+            />
+          </Box>
+
+          {/* Debt Lists */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 3,
+              alignItems: 'start'
+            }}
+          >
+            {/* I Owe Section */}
+            <Box>
+              <Skeleton variant="text" width={200} height={28} sx={{ mb: 2 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[1, 2, 3].map((i) => (
+                  <PersonDebtCard
+                    key={i}
+                    loading={true}
+                    type="iOwe"
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            {/* Owed To Me Section */}
+            <Box>
+              <Skeleton variant="text" width={200} height={28} sx={{ mb: 2 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[1, 2, 3].map((i) => (
+                  <PersonDebtCard
+                    key={i}
+                    loading={true}
+                    type="owedToMe"
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
         </Box>
       </Layout>
     )
