@@ -8,6 +8,22 @@ export const fetchDashboardDataAPI = async (userId) => {
   return response.data
 }
 
+// ============================================
+// REPORT APIs
+// ============================================
+
+/**
+ * Fetch monthly report data for a user
+ * @param {string} userId - User ID
+ * @param {number} year - Year (YYYY)
+ * @param {number} month - Month (1-12)
+ * @returns {Promise<Object>} Report data including metrics, trends, and insights
+ */
+export const fetchMonthlyReportAPI = async (userId, year, month) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/reports/${userId}?year=${year}&month=${month}`)
+  return response.data
+}
+
 export const fetchHistoryDataAPI = async (userId, numPage, limit, search, settled) => {
   const response = await authorizedAxiosInstance.get(
     `${API_ROOT}/v1/history/${userId}?page=${numPage}&limit=${limit}&search=${search}&settled=${settled}`

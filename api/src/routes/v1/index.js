@@ -11,6 +11,7 @@ import { groupRoute } from './groupRoute'
 import { paymentConfirmationRoute } from './paymentConfirmationRoute'
 import { testRoute } from './testRoute'
 import { activityRoute } from './activityRoute'
+import { reportRoute } from './reportRoute'
 
 const Router = express.Router()
 
@@ -45,6 +46,9 @@ Router.use('/payment-confirmation', paymentConfirmationRoute)
 
 // Activity API routes
 Router.use('/activities', activityRoute)
+
+// Report API routes
+Router.use('/reports', reportRoute)
 
 // Test API routes (for debugging SMTP and other services)
 Router.use('/test', testRoute)

@@ -44,7 +44,7 @@ function App() {
         <Route path="/activity" element={<Activity />} />
         <Route path="/bills/:billId" element={<BillDetail />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/report" element={<Report />} />
+        <Route path="/reports" element={<Report />} />
         {/* <Route path="/settings" element={<Settings />} /> */}
       </Route>
 
