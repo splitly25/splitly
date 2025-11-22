@@ -304,6 +304,8 @@ const YouOweCard = ({ debtData, loading, navigate }) => {
 const TheyOweYouCard = ({ debtData, loading, navigate }) => {
   const [showAmount, setShowAmount] = useState(true)
 
+  console.log('TheyOweYouCard debtData:', debtData)
+
   const toggleVisibility = () => {
     setShowAmount(!showAmount)
   }
@@ -397,7 +399,7 @@ const TheyOweYouCard = ({ debtData, loading, navigate }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {debtData.debtCount || 0}
+              {debtData.creditCount || 0}
             </Typography>
           </Box>
         </Box>
