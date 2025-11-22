@@ -332,6 +332,7 @@ const OptOut = () => {
                         textTransform: 'none',
                         fontSize: '15px',
                         fontWeight: 500,
+                        color: 'white',
                         background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
                         '&:hover': {
                           background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
@@ -394,6 +395,7 @@ const OptOut = () => {
                         textTransform: 'none',
                         fontSize: '15px',
                         fontWeight: 500,
+                        color: 'white',
                         background: 'linear-gradient(135deg, #ef9a9a 0%, #ce93d8 100%)',
                         '&:hover': {
                           background: 'linear-gradient(135deg, #e57373 0%, #ba68c8 100%)'
