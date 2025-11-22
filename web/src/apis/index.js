@@ -275,15 +275,16 @@ export const getAssistantResponseAPI = async (userId, messages) => {
   let resMessages = [];
   try {
     let i = 0, j = 0;
-    console.log("Merging messages:", messages, newMessages);
+    // console.log("Merging messages:", messages, newMessages);
     while (i < messages.length && j < newMessages.length) {
-      console.log("Comparing messages:", messages[i], newMessages[j]);
-      if (messages[i].role === newMessages[j].role && messages[i].content === newMessages[j].content) {
+      // console.log("Comparing messages:", messages[i], newMessages[j]);
+      if (newMessages[j].role === 'system') {
+        j++;
+      } else if (messages[i].role === 'system') {
+        i++;
+      } else if (messages[i].role === newMessages[j].role && messages[i].content === newMessages[j].content) {
         resMessages.push(messages[i]);
         i++;
-        j++;
-      } else if (newMessages[j].role === 'system') {
-        resMessages.push(newMessages[j]);
         j++;
       } else if (messages[i].role === 'notification') {
         resMessages.push(messages[i]);

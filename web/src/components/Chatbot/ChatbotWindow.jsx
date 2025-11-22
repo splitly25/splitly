@@ -29,28 +29,28 @@ const QUICK_REPLIES = [
     hoverBgColor: '#EF9A9A',
     iconColor: '#EF9A9A'
   },
-  {
-    id: 'warnings',
-    message: 'Tình hình hóa đơn của tôi thế nào?',
-    title: 'Điều bạn nên biết',
-    subtitle: 'Về tình hình hóa đơn của bạn',
-    icon: WarningIcon,
-    borderColor: '#F48FB1',
-    hoverBorderColor: '#F06292',
-    hoverBgColor: '#F48FB1',
-    iconColor: '#F48FB1'
-  },
-  {
-    id: 'payment-suggestion',
-    message: 'Hôm nay ai nên ứng tiền?',
-    title: 'Hôm nay ai trả?',
-    subtitle: 'Gợi ý xem hôm nay ai nên ứng tiền',
-    icon: LightbulbIcon,
-    borderColor: '#CE93D8',
-    hoverBorderColor: '#BA68C8',
-    hoverBgColor: '#CE93D8',
-    iconColor: '#CE93D8'
-  },
+  // {
+  //   id: 'warnings',
+  //   message: 'Tình hình hóa đơn của tôi thế nào?',
+  //   title: 'Điều bạn nên biết',
+  //   subtitle: 'Về tình hình hóa đơn của bạn',
+  //   icon: WarningIcon,
+  //   borderColor: '#F48FB1',
+  //   hoverBorderColor: '#F06292',
+  //   hoverBgColor: '#F48FB1',
+  //   iconColor: '#F48FB1'
+  // },
+  // {
+  //   id: 'payment-suggestion',
+  //   message: 'Hôm nay ai nên ứng tiền?',
+  //   title: 'Hôm nay ai trả?',
+  //   subtitle: 'Gợi ý xem hôm nay ai nên ứng tiền',
+  //   icon: LightbulbIcon,
+  //   borderColor: '#CE93D8',
+  //   hoverBorderColor: '#BA68C8',
+  //   hoverBgColor: '#CE93D8',
+  //   iconColor: '#CE93D8'
+  // },
   {
     id: 'explore',
     message: 'TingTing có thể làm được gì?',
@@ -73,20 +73,20 @@ const SUGGESTIONS = [
     icon: CreateIcon,
     gradient: { from: '#EF9A9A', to: '#CE93D8' }
   },
-  {
-    id: 'warnings-quick',
-    message: 'Tình hình hóa đơn của tôi thế nào?',
-    label: 'Điều bạn nên biết',
-    icon: WarningIcon,
-    gradient: { from: '#F48FB1', to: '#E1BEE7' }
-  },
-  {
-    id: 'payment-quick',
-    message: 'Hôm nay ai nên ứng tiền?',
-    label: 'Hôm nay ai trả?',
-    icon: LightbulbIcon,
-    gradient: { from: '#CE93D8', to: '#B39DDB' }
-  },
+  // {
+  //   id: 'warnings-quick',
+  //   message: 'Tình hình hóa đơn của tôi thế nào?',
+  //   label: 'Điều bạn nên biết',
+  //   icon: WarningIcon,
+  //   gradient: { from: '#F48FB1', to: '#E1BEE7' }
+  // },
+  // {
+  //   id: 'payment-quick',
+  //   message: 'Hôm nay ai nên ứng tiền?',
+  //   label: 'Hôm nay ai trả?',
+  //   icon: LightbulbIcon,
+  //   gradient: { from: '#CE93D8', to: '#B39DDB' }
+  // },
   {
     id: 'explore-quick',
     message: 'TingTing có thể làm được gì?',

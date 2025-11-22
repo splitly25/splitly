@@ -1,6 +1,7 @@
 import { WEBSITE_DOMAIN } from '~/utils/constants.js';
 import { allRequestTypes } from '~/utils/tools.js';
 import { billModel } from '~/models/billModel.js';
+import { userModel } from '~/models/userModel.js';
 import { ObjectId } from 'mongodb';
 
 export const generateUrl = (path, payload) => {
@@ -54,7 +55,7 @@ export const navigateBillCreateForm = ({
     };
 };
 
-export const analysisByAssistant = async (userId) => {
+export const getDataForAnalysis = async (userId) => {
     try {
         // Get all bills for the user
         const bills = await billModel.getBillsByUser(userId);
@@ -80,7 +81,7 @@ export const analysisByAssistant = async (userId) => {
         const categoryStats = {};
         
         // 5. Danh sách các sản phẩm user đã dùng trong tháng này
-        const productsThisMonth = new Set();
+        const productsThisMonth = [];
         
         bills.forEach(bill => {
             const paymentDeadline = new Date(bill.paymentDeadline);
@@ -179,12 +180,26 @@ export const analysisByAssistant = async (userId) => {
                     categoryStats[category].totalAmount += userExpense;
                     categoryStats[category].billCount++;
                     
-                    // Collect products/items
-                    if (bill.items && Array.isArray(bill.items)) {
+                    // Collect products/items with detailed information
+                    if (bill.items && Array.isArray(bill.items) && bill.items.length > 0) {
+                        // For item-based bills, add each item
                         bill.items.forEach(item => {
-                            if (item.name) {
-                                productsThisMonth.add(item.name);
-                            }
+                            productsThisMonth.push({
+                                billName: bill.billName,
+                                itemName: item.name || null,
+                                quantity: item.quantity || null,
+                                category: category,
+                                userExpense: userExpense
+                            });
+                        });
+                    } else {
+                        // For bills without items, add bill as single entry
+                        productsThisMonth.push({
+                            billName: bill.billName,
+                            itemName: null,
+                            quantity: null,
+                            category: category,
+                            userExpense: userExpense
                         });
                     }
                 }
@@ -207,6 +222,49 @@ export const analysisByAssistant = async (userId) => {
         overdueDebts.sort((a, b) => b.daysOverdue - a.daysOverdue);
         upcomingDeadlines.sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
         
+        // Get all unique user IDs (creditors and debtors)
+        const allUserIds = new Set();
+        debtsIOwe.forEach(debt => allUserIds.add(debt.creditorId));
+        debtsOwedToMe.forEach(debt => allUserIds.add(debt.debtorId));
+        overdueDebts.forEach(debt => allUserIds.add(debt.debtorId));
+        if (biggestDebtor) allUserIds.add(biggestDebtor);
+        
+        // Fetch user details
+        const userIds = Array.from(allUserIds);
+        const users = userIds.length > 0 ? await userModel.findManyByIds(userIds) : [];
+        const userMap = {};
+        users.forEach(user => {
+            userMap[user._id.toString()] = {
+                name: user.name,
+                email: user.email
+            };
+        });
+        
+        // Add user info to debts
+        debtsIOwe.forEach(debt => {
+            const userInfo = userMap[debt.creditorId];
+            if (userInfo) {
+                debt.creditorName = userInfo.name;
+                debt.creditorEmail = userInfo.email;
+            }
+        });
+        
+        debtsOwedToMe.forEach(debt => {
+            const userInfo = userMap[debt.debtorId];
+            if (userInfo) {
+                debt.debtorName = userInfo.name;
+                debt.debtorEmail = userInfo.email;
+            }
+        });
+        
+        overdueDebts.forEach(debt => {
+            const userInfo = userMap[debt.debtorId];
+            if (userInfo) {
+                debt.debtorName = userInfo.name;
+                debt.debtorEmail = userInfo.email;
+            }
+        });
+        
         return {
             // 1. Debts user owes
             debtsIOwe: {
@@ -224,6 +282,8 @@ export const analysisByAssistant = async (userId) => {
                 overdueDebts,
                 biggestDebtor: biggestDebtor ? {
                     debtorId: biggestDebtor,
+                    debtorName: userMap[biggestDebtor]?.name,
+                    debtorEmail: userMap[biggestDebtor]?.email,
                     totalAmount: maxDebt
                 } : null
             },
@@ -241,7 +301,7 @@ export const analysisByAssistant = async (userId) => {
             },
             
             // 5. Products used this month
-            productsThisMonth: Array.from(productsThisMonth)
+            productsThisMonth: productsThisMonth
         };
     } catch (error) {
         console.error('Error in analysisByAssistant:', error);
@@ -385,6 +445,26 @@ export const suggestPayers = async (userId) => {
         
         // Sort by suggestion score (highest first)
         userSuggestions.sort((a, b) => b.suggestionScore - a.suggestionScore);
+        
+        // Get user details for all participants
+        const participantIds = Object.keys(userStats);
+        const participantUsers = participantIds.length > 0 ? await userModel.findManyByIds(participantIds) : [];
+        const participantMap = {};
+        participantUsers.forEach(user => {
+            participantMap[user._id.toString()] = {
+                name: user.name,
+                email: user.email
+            };
+        });
+        
+        // Add user info to suggestions
+        userSuggestions.forEach(suggestion => {
+            const userInfo = participantMap[suggestion.userId];
+            if (userInfo) {
+                suggestion.userName = userInfo.name;
+                suggestion.userEmail = userInfo.email;
+            }
+        });
         
         // Categorize suggestions
         const recommendations = {
