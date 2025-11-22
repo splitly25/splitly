@@ -66,7 +66,7 @@ function GeneralInformationSection({ formData, onFieldChange, getPayerName, onOp
       {/* Row 3: Dates and Payer */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', mb: 3 }}>
         <CustomDatePicker
-          label="Thời gian tạo"
+          label="Thời gian"
           value={formData.creationDate}
           onChange={(date) => onFieldChange('creationDate', date)}
         />
