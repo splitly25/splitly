@@ -1,5 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import { billService } from '~/services/billService.js'
+import { JwtProvider } from '~/providers/JwtProvider.js'
+import { env } from '~/config/environment.js'
+import APIError from '~/utils/APIError.js'
+import { WEBSITE_DOMAIN } from '~/utils/constants.js'
 
 const createNew = async (req, res, next) => {
   try {
@@ -48,10 +52,90 @@ const getMutualBills = async (req, res, next) => {
   }
 }
 
+const optOut = async (req, res, next) => {
+  try {
+    const { token } = req.query
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+    } catch (error) {
+      console.error('Token verification error in optOut:', error)
+      throw new APIError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token')
+    }
+    if (decoded.type !== 'bill_opt_out') {
+      throw new APIError(StatusCodes.BAD_REQUEST, 'Invalid token type')
+    }
+    const { billId, userId } = decoded
+    
+    // Check if user has already opted out
+    const bill = await billService.findOneById(billId)
+    if (!bill) {
+      throw new APIError(StatusCodes.NOT_FOUND, 'Bill not found')
+    }
+    
+    const hasOptedOut = bill.optedOutUsers && bill.optedOutUsers.some(u => u.toString() === userId)
+    if (hasOptedOut) {
+      throw new APIError(StatusCodes.BAD_REQUEST, 'User has already opted out from this bill')
+    }
+    
+    await billService.optOutUser(billId, userId, userId)
+    // Return success response
+    res.status(StatusCodes.OK).json({ message: 'Successfully opted out from the bill', billId })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const verifyOptOutToken = async (req, res, next) => {
+  try {
+    const { token } = req.query
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_JWT_SECRET_KEY)
+    } catch (error) {
+      throw new APIError(StatusCodes.UNAUTHORIZED, 'Invalid or expired token')
+    }
+    
+    if (decoded.type !== 'bill_opt_out') {
+      throw new APIError(StatusCodes.BAD_REQUEST, 'Invalid token type')
+    }
+    const { billId, userId } = decoded
+    
+    // Verify bill exists and user is a participant
+    const bill = await billService.findOneById(billId)
+    if (!bill) {
+      throw new APIError(StatusCodes.NOT_FOUND, 'Bill not found')
+    }
+    
+    // Check if user is still a participant (not already opted out)
+    const isParticipant = bill.participants.some(p => p.toString() === userId)
+    if (!isParticipant) {
+      throw new APIError(StatusCodes.BAD_REQUEST, 'User is not a participant in this bill')
+    }
+    
+    // Check if user has already opted out
+    const hasOptedOut = bill.optedOutUsers && bill.optedOutUsers.some(u => u.toString() === userId)
+    if (hasOptedOut) {
+      throw new APIError(StatusCodes.BAD_REQUEST, 'User has already opted out from this bill')
+    }
+    
+    // Return bill info for display
+    res.status(StatusCodes.OK).json({ 
+      billName: bill.billName,
+      billId: bill._id,
+      valid: true
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const billController = {
   createNew, 
   scan,
   getBillsByUserId,
   getBillById,
   getMutualBills,
+  optOut,
+  verifyOptOutToken,
 }

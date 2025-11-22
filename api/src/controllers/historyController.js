@@ -17,8 +17,6 @@ const getHistoryData = async (req, res, next) => {
     const { userId } = req.params;
     const { page, limit, fromDate, toDate, payer, search, status } = req.query;
 
-    console.log(req.query);
-
     const user = await userModel.findOneById(userId);
     if (!user) {
       throw new ApiError(StatusCodes.NOT_FOUND, "User not found");

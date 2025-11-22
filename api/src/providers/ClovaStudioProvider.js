@@ -73,7 +73,6 @@ class ClovaXClient {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.log("ERROR Response:", errorText);
                 throw new Error(
                     `ClovaX API error: ${response.status} ${response.statusText} - ${errorText}`
                 );

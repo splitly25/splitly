@@ -16,6 +16,7 @@ import {
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material'
 import { formatCurrency } from '~/utils/formatters'
 import { submitReminderPaymentAPI } from '~/apis'
+import ErrorIcon from '@mui/icons-material/Error'
 
 const PaymentPage = () => {
   const [searchParams] = useSearchParams()
@@ -60,7 +61,7 @@ const PaymentPage = () => {
           // Set amount based on whether we're showing filtered or all bills
           const hasMatchingBill = bill && data.bills?.some(b => b.billId === bill)
           const initialAmount = bill && hasMatchingBill
-            ? data.bills.filter(b => b.billId === bill).reduce((sum, b) => sum + b.amount, 0)
+            ? data.bills.filter(b => b.billId === bill).reduce((sum, b) => sum + b.remainingAmount, 0)
             : data.totalAmount
           setAmount(initialAmount.toString())
         }
@@ -279,6 +280,13 @@ const PaymentPage = () => {
             }}
           >
             <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <ErrorIcon
+                sx={{
+                  fontSize: 80,
+                  color: 'error.main',
+                  mb: 3
+                }}
+              />
               <Typography
                 variant="h5"
                 sx={{
@@ -325,7 +333,7 @@ const PaymentPage = () => {
     ? reminderData?.bills?.filter(b => b.billId === bill)
     : reminderData?.bills
   const displayTotalAmount = bill && hasMatchingBill && !showAllBills
-    ? displayFilteredBills?.reduce((sum, b) => sum + b.amount, 0)
+    ? displayFilteredBills?.reduce((sum, b) => sum + b.remainingAmount, 0)
     : reminderData?.totalAmount
 
   // Calculate additional bills count
@@ -336,7 +344,8 @@ const PaymentPage = () => {
   const handleShowAllBills = () => {
     setShowAllBills(true)
     // Update amount to full total when showing all bills
-    setAmount((reminderData?.totalAmount || 0).toString())
+    const fullTotal = reminderData?.bills?.reduce((sum, b) => sum + b.remainingAmount, 0) || 0
+    setAmount(fullTotal.toString())
     // Clear any amount validation errors
     if (errors.amount) {
       setErrors({ ...errors, amount: '' })
@@ -440,7 +449,7 @@ const PaymentPage = () => {
                           {bill.billName}
                         </Typography>
                         <Typography variant="body2" fontWeight="600" sx={{ fontSize: '14px' }}>
-                          {formatCurrency(bill.amount)}
+                          {formatCurrency(bill.remainingAmount)}
                         </Typography>
                       </Box>
                     ))}
@@ -671,7 +680,7 @@ const PaymentPage = () => {
                       Xác nhận thanh toán
                     </Typography>
                     <Typography variant="body1" sx={{ fontSize: '16px', color: 'text.primary', mb: 2 }}>
-                      Bạn đã thanh toán <strong>{formatCurrency(parseFloat(amount) || 0)}₫</strong> cho <strong>{creditor?.name}</strong>?
+                      Bạn đã thanh toán <strong>{formatCurrency(parseFloat(amount) || 0)}</strong> cho <strong>{creditor?.name}</strong>?
                     </Typography>
                   </Box>
 
