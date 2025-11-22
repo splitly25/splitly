@@ -22,7 +22,16 @@ export const fetchHistorySearchingAPI = async (userId, numPage, limit, search, s
   return response.data
 }
 
-export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, toDate, payer, searchDebounced, status) => {
+export const fetchHistoryFilterAPI = async (
+  userId,
+  numPage,
+  limit,
+  fromDate,
+  toDate,
+  payer,
+  searchDebounced,
+  status
+) => {
   const params = new URLSearchParams({
     page: numPage,
     limit: limit,
@@ -34,7 +43,7 @@ export const fetchHistoryFilterAPI = async (userId, numPage, limit, fromDate, to
   if (searchDebounced) params.append('search', searchDebounced)
   if (status && status !== 'all') params.append('status', status)
 
-  console.log(params.toString());
+  console.log(params.toString())
 
   const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/history/${userId}?${params.toString()}`)
   return response.data
@@ -214,8 +223,8 @@ export const deleteGroupAPI = async (groupId) => {
   return response.data
 }
 
-export const updateGroupMembersAPI = async (groupId, memberIds) => {
-  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}/members`, { memberIds })
+export const updateGroupMembersAPI = async (groupId, members) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/groups/${groupId}`, { members })
   return response.data
 }
 

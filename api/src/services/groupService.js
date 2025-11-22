@@ -315,6 +315,10 @@ const updateGroup = async (groupId, reqBody) => {
     const updateData = {
       ...reqBody,
     }
+    // Convert member IDs to ObjectId if members array is provided
+    if (updateData.members && Array.isArray(updateData.members)) {
+      updateData.members = updateData.members.map((memberId) => new ObjectId(memberId))
+    }
     const updatedGroup = await groupModel.update(groupId, updateData)
     return updatedGroup
   } catch (error) {
