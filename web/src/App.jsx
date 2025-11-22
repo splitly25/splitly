@@ -13,7 +13,6 @@ import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation
 import { Ocr, Bills } from './pages/Bills'
 import BillDetail from './pages/Bills/BillDetail'
 import Profile from './pages/Auth/Profile'
-import Settings from './pages/Settings/Settings'
 import Group from './pages/Groups/Group'
 import Payment from './pages/Payment/Payment'
 import PaymentSuccess from './pages/Payment/PaymentSuccess'
@@ -21,6 +20,7 @@ import GroupDetails from './pages/Groups/GroupDetails'
 import OptOut from './pages/Bills/OptOut'
 import Activity from './pages/Activity/Activity'
 import Landing from './pages/Landing/Landing'
+import Report from './pages/Report/Report'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -44,6 +44,7 @@ function App() {
         <Route path="/activity" element={<Activity />} />
         <Route path="/bills/:billId" element={<BillDetail />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/report" element={<Report />} />
         {/* <Route path="/settings" element={<Settings />} /> */}
       </Route>
 
