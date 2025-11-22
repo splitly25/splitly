@@ -243,7 +243,9 @@ const YouOweCard = ({ debtData, loading, navigate }) => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  cursor: 'pointer',
                 }}
+                onClick={() => navigate('/debt#debtor_' + debt.userId)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Avatar
@@ -415,7 +417,9 @@ const TheyOweYouCard = ({ debtData, loading, navigate }) => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  cursor: 'pointer',
                 }}
+                onClick={() => navigate('/debt#creditor_' + credit.userId)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Avatar
@@ -547,7 +551,7 @@ const PendingBillsCard = ({ pendingBills, navigate, loading }) => {
                   '&:hover': { backgroundColor: 'action.hover' },
                   cursor: 'pointer',
                 }}
-                onClick={() => navigate('/groups')}
+                onClick={() => navigate('/bills/' + bill.id)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar
@@ -793,7 +797,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
                   '&:hover': { backgroundColor: 'action.hover' },
                   cursor: 'pointer',
                 }}
-                onClick={() => navigate('/groups')}
+                onClick={() => navigate(`/groups/${group._id}`)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Box sx={{ display: 'flex', ml: -0.5 }}>
