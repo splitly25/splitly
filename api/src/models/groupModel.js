@@ -134,15 +134,19 @@ const fetchGroups = async (page = 1, limit = 10, search = '') => {
   }
 }
 
-// find all group user is member of and join member details
+// find all group user is member of OR created by user, and join member details
 const getGroupsByUser = async (userId) => {
   try {
+    const userObjectId = new ObjectId(userId)
     const result = await GET_DB()
       .collection(GROUP_COLLECTION_NAME)
       .aggregate([
         {
           $match: {
-            members: new ObjectId(userId),
+            $or: [
+              { members: userObjectId },
+              { creatorId: userObjectId }
+            ],
             _destroy: false,
           },
         },
