@@ -8,7 +8,7 @@ const BILL_COLLECTION_NAME = 'bills'
 
 const BILL_COLLECTION_SCHEMA = Joi.object({
   billName: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(500).optional(),
+  description: Joi.string().max(500).optional().allow(''),
   category: Joi.string().max(100).optional(),
   creatorId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
   payerId: Joi.alternatives().try(Joi.string(), Joi.object().instance(ObjectId)).required(),
