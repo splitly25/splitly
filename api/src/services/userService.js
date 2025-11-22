@@ -336,6 +336,20 @@ const findOneByEmail = async (email) => {
   }
 }
 
+const findManyByKeys = async (keys) => {
+  try {
+    const users = await userModel.findManyByKeys(keys)
+    users.map((user) => {
+      if (user) {
+        return pickUser(user)
+      }
+    })
+    return users
+  } catch (error) {
+    throw error
+  }
+}
+
 /**
  * Get multiple users by IDs
  * @param {Array<string>} userIds - Array of user IDs

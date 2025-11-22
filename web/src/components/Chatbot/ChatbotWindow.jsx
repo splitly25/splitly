@@ -29,28 +29,28 @@ const QUICK_REPLIES = [
     hoverBgColor: '#EF9A9A',
     iconColor: '#EF9A9A'
   },
-  {
-    id: 'warnings',
-    message: 'Tình hình hóa đơn của tôi thế nào?',
-    title: 'Điều bạn nên biết',
-    subtitle: 'Về tình hình hóa đơn của bạn',
-    icon: WarningIcon,
-    borderColor: '#F48FB1',
-    hoverBorderColor: '#F06292',
-    hoverBgColor: '#F48FB1',
-    iconColor: '#F48FB1'
-  },
-  {
-    id: 'payment-suggestion',
-    message: 'Hôm nay ai nên ứng tiền?',
-    title: 'Hôm nay ai trả?',
-    subtitle: 'Gợi ý xem hôm nay ai nên ứng tiền',
-    icon: LightbulbIcon,
-    borderColor: '#CE93D8',
-    hoverBorderColor: '#BA68C8',
-    hoverBgColor: '#CE93D8',
-    iconColor: '#CE93D8'
-  },
+  // {
+  //   id: 'warnings',
+  //   message: 'Tình hình hóa đơn của tôi thế nào?',
+  //   title: 'Điều bạn nên biết',
+  //   subtitle: 'Về tình hình hóa đơn của bạn',
+  //   icon: WarningIcon,
+  //   borderColor: '#F48FB1',
+  //   hoverBorderColor: '#F06292',
+  //   hoverBgColor: '#F48FB1',
+  //   iconColor: '#F48FB1'
+  // },
+  // {
+  //   id: 'payment-suggestion',
+  //   message: 'Hôm nay ai nên ứng tiền?',
+  //   title: 'Hôm nay ai trả?',
+  //   subtitle: 'Gợi ý xem hôm nay ai nên ứng tiền',
+  //   icon: LightbulbIcon,
+  //   borderColor: '#CE93D8',
+  //   hoverBorderColor: '#BA68C8',
+  //   hoverBgColor: '#CE93D8',
+  //   iconColor: '#CE93D8'
+  // },
   {
     id: 'explore',
     message: 'TingTing có thể làm được gì?',
@@ -73,20 +73,20 @@ const SUGGESTIONS = [
     icon: CreateIcon,
     gradient: { from: '#EF9A9A', to: '#CE93D8' }
   },
-  {
-    id: 'warnings-quick',
-    message: 'Tình hình hóa đơn của tôi thế nào?',
-    label: 'Điều bạn nên biết',
-    icon: WarningIcon,
-    gradient: { from: '#F48FB1', to: '#E1BEE7' }
-  },
-  {
-    id: 'payment-quick',
-    message: 'Hôm nay ai nên ứng tiền?',
-    label: 'Hôm nay ai trả?',
-    icon: LightbulbIcon,
-    gradient: { from: '#CE93D8', to: '#B39DDB' }
-  },
+  // {
+  //   id: 'warnings-quick',
+  //   message: 'Tình hình hóa đơn của tôi thế nào?',
+  //   label: 'Điều bạn nên biết',
+  //   icon: WarningIcon,
+  //   gradient: { from: '#F48FB1', to: '#E1BEE7' }
+  // },
+  // {
+  //   id: 'payment-quick',
+  //   message: 'Hôm nay ai nên ứng tiền?',
+  //   label: 'Hôm nay ai trả?',
+  //   icon: LightbulbIcon,
+  //   gradient: { from: '#CE93D8', to: '#B39DDB' }
+  // },
   {
     id: 'explore-quick',
     message: 'TingTing có thể làm được gì?',
@@ -142,14 +142,11 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
     // Get bot response
     try {
-      const { response, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
-      if (response.error) {
-        toast.error(`Đã có lỗi xảy ra: ${response.error}`);
-      } else {
-        setMessages(prev => [...prev, response]);
-        if (navigation) {
-          navigate(navigation.path, { state: navigation.state })
-        }
+      const { newMessages, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
+
+      setMessages(newMessages);
+      if (navigation) {
+        navigate(navigation.path, { state: navigation.state })
       }
     } catch (error) {
       console.error(`Đã có lỗi xảy ra: ${error.message}`);
@@ -180,14 +177,11 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
     // Get bot response
     try {
-      const { response, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
-      if (response.error) {
-        toast.error(`Đã có lỗi xảy ra: ${response.error}`);
-      } else {
-        setMessages(prev => [...prev, response]);
-        if (navigation) {
-          navigate(navigation.path, { state: navigation.state })
-        }
+      const { newMessages, navigation } = await getAssistantResponseAPI(currentUser?._id, [...messages, userMessage]);
+
+      setMessages(newMessages);
+      if (navigation) {
+        navigate(navigation.path, { state: navigation.state })
       }
     } catch (error) {
       console.error(`Đã có lỗi xảy ra: ${error.message}`);
@@ -274,7 +268,9 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
 
 
             {/* Messages List */}
-            {messages.map((message) => (
+            {messages.filter((message) => {
+              return message.role === 'user' || message.role === 'assistant' || message.role === 'notification'
+            }).map((message) => (
               <div
                 key={message.id}
                 className={`flex gap-2 items-end animate-fadeIn ${message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -296,8 +292,8 @@ const ChatbotWindow = ({ isOpen, setIsOpen }) => {
                   }`}>
                   <div
                     className={`px-4 py-2 rounded-2xl ${message.role === 'user'
-                        ? 'bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] text-white rounded-br-md'
-                        : 'bg-white text-gray-800 rounded-bl-md shadow-sm'
+                      ? 'bg-gradient-to-r from-[#EF9A9A] to-[#CE93D8] text-white rounded-br-md'
+                      : 'bg-white text-gray-800 rounded-bl-md shadow-sm'
                       }`}
                   >
                     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
