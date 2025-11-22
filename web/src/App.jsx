@@ -20,6 +20,7 @@ import PaymentSuccess from './pages/Payment/PaymentSuccess'
 import GroupDetails from './pages/Groups/GroupDetails'
 import OptOut from './pages/Bills/OptOut'
 import Activity from './pages/Activity/Activity'
+import Landing from './pages/Landing/Landing'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
@@ -57,8 +58,10 @@ function App() {
       <Route path="/payment/pay/success" element={<PaymentSuccess />} />
       <Route path="/bill/opt-out" element={<OptOut />} />
 
+      {/* Landing Page - Redirect to dashboard if logged in */}
+      <Route path="/" element={currentUser ? <Navigate to="/dashboard" replace={true} /> : <Landing />} />
+
       {/* Default and Not Found Routes */}
-      <Route path="/" element={<Navigate to="/dashboard" replace={true} />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

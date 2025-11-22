@@ -1,11 +1,10 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, Link } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
-import backgroundImage from '~/assets/background.jpg'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
-import { COLORS } from '~/theme'
+import Aurora from '~/pages/Landing/components/Aurora'
 
 function Auth() {
   const location = useLocation()
@@ -15,9 +14,8 @@ function Auth() {
 
   const currentUser = useSelector(selectCurrentUser)
   if (currentUser) {
-    return <Navigate to="/" replace={true} />
+    return <Navigate to="/dashboard" replace={true} />
   }
-
 
   return (
     <Box
@@ -27,23 +25,60 @@ function Auth() {
         minHeight: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
         position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `linear-gradient(135deg, ${COLORS.primary}15 0%, ${COLORS.accent}10 100%)`,
-          zIndex: 1,
-        },
+        overflow: 'hidden',
+        backgroundColor: '#FFF5F5',
       }}
     >
+      {/* Aurora Background - Light Pink Theme */}
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 0,
+        }}
+      >
+        <Aurora
+          colorStops={["#F8BBD0", "#EF9A9A", "#E57373"]}
+          amplitude={1.0}
+          blend={0.5}
+          speed={0.6}
+        />
+      </Box>
+
+      {/* Logo - Back to Landing */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+        }}
+      >
+        <Link
+          to="/"
+          style={{
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: '#1e293b',
+            }}
+          >
+            Split<span style={{ color: '#EF9A9A' }}>ly</span>
+          </span>
+        </Link>
+      </Box>
+
+      {/* Form Container */}
       <Box sx={{ position: 'relative', zIndex: 2 }}>
         {isLogin && <LoginForm />}
         {isRegister && <RegisterForm />}

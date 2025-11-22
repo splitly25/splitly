@@ -28,8 +28,6 @@ import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
 import { useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 import { loginUserAPI } from '~/redux/user/userSlice'
-import { COLORS } from '~/theme'
-
 function LoginForm() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -56,7 +54,7 @@ function LoginForm() {
         pending: 'Logging in...',
       })
       .then((response) => {
-        if (!response.error) navigate('/')
+        if (!response.error) navigate('/dashboard')
       })
   }
 
@@ -72,10 +70,11 @@ function LoginForm() {
           maxWidth: 450,
           width: '100%',
           mx: 2,
-          boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
-          borderRadius: '16px',
-          background: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(10px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
         }}
       >
         <CardContent sx={{ p: 4 }}>
@@ -90,10 +89,10 @@ function LoginForm() {
             <Avatar
               sx={{
                 m: 1,
-                background: COLORS.gradientPrimary,
+                background: 'linear-gradient(135deg, #EF9A9A 0%, #E57373 100%)',
                 width: 56,
                 height: 56,
-                boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)',
+                boxShadow: '0 10px 30px -10px rgba(244, 63, 94, 0.4)',
               }}
             >
               <LockOutlinedIcon sx={{ fontSize: 28, color: '#fff' }} />
@@ -178,16 +177,20 @@ function LoginForm() {
               type="submit"
               fullWidth
               variant="contained"
-              color="primary"
               sx={{
                 mt: 3,
                 mb: 2,
                 py: 1.5,
-                fontWeight: 500,
+                fontWeight: 600,
                 fontSize: '1rem',
+                background: 'linear-gradient(135deg, #EF9A9A 0%, #E57373 100%)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 30px -10px rgba(244, 63, 94, 0.4)',
                 transition: 'all 0.3s ease',
                 '&:hover': {
                   transform: 'translateY(-2px)',
+                  boxShadow: '0 15px 35px -10px rgba(244, 63, 94, 0.5)',
+                  background: 'linear-gradient(135deg, #E57373 0%, #EF5350 100%)',
                 },
                 '&:disabled': {
                   opacity: 0.7,
@@ -238,8 +241,8 @@ function LoginForm() {
                   to="/register"
                   style={{
                     textDecoration: 'none',
-                    color: COLORS.primary,
-                    fontWeight: '500',
+                    color: '#E57373',
+                    fontWeight: '600',
                   }}
                 >
                   Sign Up
