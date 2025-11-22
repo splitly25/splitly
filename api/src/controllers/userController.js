@@ -107,6 +107,16 @@ const createGuestUser = async (req, res, next) => {
   }
 }
 
+const update = async (req, res, next) => {
+  try {
+    const userId = req.jwtDecoded._id
+    const updatedUser = await userService.updateProfile(userId, req.body)
+    res.status(StatusCodes.OK).json(updatedUser)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const userController = {
   createNew,
   verifyAccount,
@@ -118,4 +128,5 @@ export const userController = {
   fetchUsers,
   editProfile,
   createGuestUser,
+  update,
 }

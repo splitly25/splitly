@@ -12,6 +12,7 @@ import Settings from '@mui/icons-material/Settings'
 import Logout from '@mui/icons-material/Logout'
 
 
+
 function Profile() {
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
@@ -21,6 +22,11 @@ function Profile() {
   const handleClose = () => {
     setAnchorEl(null)
   }
+
+  // fetch bank data
+  useState(()=>{
+    
+  },[])
 
   return (
     <Box>

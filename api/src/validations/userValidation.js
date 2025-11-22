@@ -1,7 +1,7 @@
-import Joi from 'joi';
-import { StatusCodes } from 'http-status-codes';
-import { EMAIL_RULE_MESSAGE, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } from '~/utils/constants';
-import ApiError from '~/utils/APIError.js';
+import Joi from 'joi'
+import { StatusCodes } from 'http-status-codes'
+import { EMAIL_RULE_MESSAGE, PASSWORD_RULE, PASSWORD_RULE_MESSAGE } from '~/utils/constants'
+import ApiError from '~/utils/APIError.js'
 
 const createNew = async (req, res, next) => {
   const correctCondition = Joi.object({
@@ -11,73 +11,95 @@ const createNew = async (req, res, next) => {
     phone: Joi.string()
       .optional()
       .pattern(/^\d{10,11}$/),
-  });
-
-  
+  })
 
   try {
-    await correctCondition.validateAsync(req.body, { abortEarly: false });
-    next();
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
   } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
-};
+}
 
 const verifyAccount = async (req, res, next) => {
   const correctCondition = Joi.object({
     email: Joi.string().email().required().trim().message(EMAIL_RULE_MESSAGE),
     token: Joi.string().required(),
-  });
+  })
 
   try {
-    await correctCondition.validateAsync(req.body, { abortEarly: false });
-    next();
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
   } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
-};
+}
 
 const login = async (req, res, next) => {
   const correctCondition = Joi.object({
     email: Joi.string().email().required().trim().message(EMAIL_RULE_MESSAGE),
     password: Joi.string().required().pattern(PASSWORD_RULE).message(PASSWORD_RULE_MESSAGE),
-  });
+  })
 
   try {
-    await correctCondition.validateAsync(req.body, { abortEarly: false });
-    next();
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
   } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
-};
+}
 
 const fetchUsers = async (req, res, next) => {
   const correctCondition = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(10),
     search: Joi.string().trim().allow('').optional(),
-  });
+  })
 
   try {
-    await correctCondition.validateAsync(req.query, { abortEarly: false });
-    next();
+    await correctCondition.validateAsync(req.query, { abortEarly: false })
+    next()
   } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
-};
+}
 
 const createGuestUser = async (req, res, next) => {
   const correctCondition = Joi.object({
     email: Joi.string().email().required().trim().message(EMAIL_RULE_MESSAGE),
     name: Joi.string().optional().min(3).max(30).trim(),
     //userType: Joi.string().valid('guest').required(),
-  });
+  })
 
   try {
-    await correctCondition.validateAsync(req.body, { abortEarly: false });
-    next();
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
   } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
+const update = async (req, res, next) => {
+  const correctCondition = Joi.object({
+    name: Joi.string().trim().strict(),
+    phone: Joi.string()
+      .optional()
+      .pattern(/^[0-9]{10,11}$/),
+    bankName: Joi.string().optional().default(null),
+    bankAccount: Joi.string().optional().default(null),
+    currentPassword: Joi.string()
+      .pattern(PASSWORD_RULE)
+      .message('current_password: ' + PASSWORD_RULE_MESSAGE),
+    newPassword: Joi.string()
+      .pattern(PASSWORD_RULE)
+      .message('new_password: ' + PASSWORD_RULE_MESSAGE),
+  })
+
+  try {
+    await correctCondition.validateAsync(req.body, { abortEarly: false })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
 }
 
@@ -86,5 +108,6 @@ export const userValidation = {
   verifyAccount,
   login,
   fetchUsers,
-  createGuestUser
-};
+  createGuestUser,
+  update,
+}

@@ -13,6 +13,8 @@
   name: String (required, 2-100 characters),
   avatar: String (URL, optional),
   phone: String (10-11 digits, optional),
+  bankName: String (optional), //code
+  bankAccount: String (optional),
   password: String (hashed, required),
   isVerified: Boolean (email verified),
   userType: String (enum: 'member', 'guest', default: 'member'),
