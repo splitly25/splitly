@@ -37,7 +37,6 @@ function Group() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const groupsResponse = await getGroupsByUserIdAPI(currentUser._id)
-    // API returns array directly, not { groups: [...] }
     setGroups(Array.isArray(groupsResponse) ? groupsResponse : [])
     setLoading(false)
   }, [currentUser._id])
