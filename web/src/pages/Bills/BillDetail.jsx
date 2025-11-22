@@ -29,11 +29,13 @@ import {
   CalendarToday as CalendarIcon,
   Description as DescriptionIcon,
   Send as SendIcon,
+  NotificationsActive as NotificationsActiveIcon,
 } from '@mui/icons-material'
 import { getInitials } from '~/utils/formatters'
 import { useColorScheme } from '@mui/material/styles'
 import ConfirmPaymentDialog from '~/pages/Debt/ConfirmPaymentDialog'
 import PaymentDialog from '~/pages/Debt/PaymentDialog'
+import RemindDialog from '~/pages/Debt/RemindDialog'
 
 const BillDetail = () => {
   const { billId } = useParams()
@@ -42,7 +44,6 @@ const BillDetail = () => {
   const [billData, setBillData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { mode, setMode } = useColorScheme()
   const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
 
   // States for ConfirmPaymentDialog
@@ -52,6 +53,10 @@ const BillDetail = () => {
   // States for PaymentDialog
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedCreditor, setSelectedCreditor] = useState(null)
+
+  // States for RemindDialog
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false)
+  const [selectedRemindDebtor, setSelectedRemindDebtor] = useState(null)
 
 
   useEffect(() => {
@@ -123,6 +128,11 @@ const BillDetail = () => {
   const handleConfirmPayment = (participant) => {
     setSelectedParticipant(participant)
     setConfirmDialogOpen(true)
+  }
+
+  const handleRemind = (debtor) => {
+    setSelectedRemindDebtor(debtor)
+    setRemindDialogOpen(true)
   }
 
   const refetchBillData = async () => {
@@ -663,10 +673,10 @@ const BillDetail = () => {
                           }}
                         />
                       ) : (
-                        // If not paid, show different buttons based on user role
-                        <>
+                        // If not paid, show buttons
+                        <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
                           {isBillOwner() ? (
-                            // Bill owner sees confirmation button for unpaid participants
+                            // Bill owner sees confirmation button
                             <Button
                               variant="contained"
                               size="small"
@@ -681,7 +691,6 @@ const BillDetail = () => {
                                 fontWeight: 600,
                                 height: { xs: 30, sm: 32 },
                                 whiteSpace: 'nowrap',
-                                minWidth: { xs: 'auto', sm: '120px' },
                                 '&:hover': {
                                   background: 'linear-gradient(90deg, #00a63e 0%, #008e34 100%)',
                                 },
@@ -689,15 +698,16 @@ const BillDetail = () => {
                             >
                               Xác nhận
                             </Button>
-                          ) : participant._id === currentUser?._id ? (
-                            // Current participant sees payment button for their own unpaid item
+                          ) : (
+                            // Others see payment button
                             <Button
                               variant="contained"
                               size="small"
                               startIcon={<SendIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                               onClick={() => handlePayment(participant)}
+                              disabled={participant._id !== currentUser?._id}
                               sx={{
-                                background: 'linear-gradient(90deg, #ff6900 0%, #f54900 100%)',
+                                background: participant._id === currentUser?._id ? 'linear-gradient(90deg, #ff6900 0%, #f54900 100%)' : 'grey.400',
                                 color: 'white',
                                 borderRadius: '16px',
                                 textTransform: 'none',
@@ -705,30 +715,42 @@ const BillDetail = () => {
                                 fontWeight: 600,
                                 height: { xs: 30, sm: 32 },
                                 whiteSpace: 'nowrap',
-                                minWidth: { xs: 'auto', sm: '120px' },
                                 '&:hover': {
-                                  background: 'linear-gradient(90deg, #f54900 0%, #e03d00 100%)',
+                                  background: participant._id === currentUser?._id ? 'linear-gradient(90deg, #f54900 0%, #e03d00 100%)' : 'grey.400',
+                                },
+                                '&.Mui-disabled': {
+                                  background: 'grey.300',
+                                  color: 'grey.500',
                                 },
                               }}
                             >
                               Thanh toán
                             </Button>
-                          ) : (
-                            // Other participants see pending badge for unpaid items
-                            <Chip
-                              label="Chưa thanh toán"
-                              size="small"
-                              sx={{
-                                bgcolor: '#FED7AA',
-                                color: '#FF9800',
-                                fontWeight: 600,
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                height: { xs: 30, sm: 32 },
-                                minWidth: { xs: 'auto', sm: '120px' },
-                              }}
-                            />
                           )}
-                        </>
+                          {/* Remind button for all unpaid */}
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<NotificationsActiveIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                            onClick={() => handleRemind(participant)}
+                            sx={{
+                              borderColor: 'divider',
+                              color: 'text.primary',
+                              borderRadius: '16px',
+                              textTransform: 'none',
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              fontWeight: 600,
+                              height: { xs: 30, sm: 32 },
+                              whiteSpace: 'nowrap',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                bgcolor: 'rgba(0,0,0,0.02)',
+                              },
+                            }}
+                          >
+                            Nhắc nhở
+                          </Button>
+                        </Box>
                       )}
                     </Box>
                   ))}
@@ -806,6 +828,14 @@ const BillDetail = () => {
         creditor={selectedCreditor}
         currentUserId={currentUser?._id}
         refetch={refetchBillData}
+      />
+
+      {/* Remind Dialog */}
+      <RemindDialog
+        open={remindDialogOpen}
+        onClose={() => setRemindDialogOpen(false)}
+        debtor={selectedRemindDebtor}
+        creditorId={billData.payer._id}
       />
     </Layout>
   )
