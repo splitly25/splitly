@@ -161,7 +161,7 @@ const confirmPayment = async (req, res, next) => {
  */
 const remindPayment = async (req, res, next) => {
   try {
-    const { creditorId, debtorId } = req.body
+    const { creditorId, debtorId, bill } = req.body
 
     // Security: Only creditor can send reminder
     if (req.jwtDecoded._id !== creditorId) {
@@ -221,7 +221,8 @@ const remindPayment = async (req, res, next) => {
       bills: debt.bills.map(b => ({ billName: b.billName, amount: b.remainingAmount })),
       creditorBankName: creditor.bankName,
       creditorBankAccount: creditor.bankAccount,
-      reminderToken: token
+      reminderToken: token,
+      priorityBill: bill
     })
 
     res.status(StatusCodes.OK).json({

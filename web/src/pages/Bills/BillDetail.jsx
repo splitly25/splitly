@@ -130,7 +130,7 @@ const BillDetail = () => {
     setConfirmDialogOpen(true)
   }
 
-  const handleRemind = (debtor) => {
+  const handleRemind = (debtor, billId) => {
     setSelectedRemindDebtor(debtor)
     setRemindDialogOpen(true)
   }
@@ -732,7 +732,7 @@ const BillDetail = () => {
                             variant="outlined"
                             size="small"
                             startIcon={<NotificationsActiveIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
-                            onClick={() => handleRemind(participant)}
+                            onClick={() => handleRemind(participant, billId)}
                             sx={{
                               borderColor: 'divider',
                               color: 'text.primary',
@@ -836,6 +836,7 @@ const BillDetail = () => {
         onClose={() => setRemindDialogOpen(false)}
         debtor={selectedRemindDebtor}
         creditorId={billData.payer._id}
+        bill={billId}
       />
     </Layout>
   )

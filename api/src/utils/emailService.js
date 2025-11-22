@@ -417,6 +417,7 @@ export const sendPaymentReminderEmail = async ({
   creditorBankName,
   creditorBankAccount,
   reminderToken,
+  priorityBill,
 }) => {
   try {
     // Calculate total amount
@@ -690,7 +691,7 @@ export const sendPaymentReminderEmail = async ({
           }
 
           <p style="font-size: 12px; margin-top: 12px; font-style: italic; text-align: center;">
-          Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}">Nhấn vào đây để tùy chỉnh số tiền.</a>
+          Bạn chỉ muốn thanh toán một phần? <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">Nhấn vào đây để tùy chỉnh số tiền.</a>
         </div>
         `
             : ''
@@ -700,7 +701,7 @@ export const sendPaymentReminderEmail = async ({
           Nếu bạn đã thanh toán, vui lòng nhấn vào nút bên dưới để xác nhận.
         </p>
         <div class="login-button">
-          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}">
+          <a href="${WEBSITE_DOMAIN}/payment/pay?token=${reminderToken}${priorityBill ? `&bill=${priorityBill}` : ''}">
             Xác nhận thanh toán
           </a>
         </div>

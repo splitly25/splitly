@@ -11,7 +11,7 @@ import {
 import { Close as CloseIcon, NotificationsActive as NotificationsActiveIcon } from '@mui/icons-material'
 import { remindPaymentAPI } from '~/apis'
 
-const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
+const RemindDialog = ({ open, onClose, debtor, creditorId, bill = null }) => {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
 
@@ -21,7 +21,8 @@ const RemindDialog = ({ open, onClose, debtor, creditorId }) => {
     try {
       await remindPaymentAPI({
         creditorId: creditorId,
-        debtorId: debtor?.userId || debtor?._id
+        debtorId: debtor?.userId || debtor?._id,
+        ...(bill && { bill })
       })
       onClose()
     } catch (error) {
