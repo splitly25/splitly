@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material'
 import { getInitials } from '~/utils/formatters'
 import { useColorScheme } from '@mui/material/styles'
+import ConfirmPaymentDialog from '~/pages/Debt/ConfirmPaymentDialog'
 
 const BillDetail = () => {
   const { billId } = useParams()
@@ -42,6 +43,10 @@ const BillDetail = () => {
   const [error, setError] = useState(null)
   const { mode, setMode } = useColorScheme()
   const hoverGradient = 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)'
+
+  // States for ConfirmPaymentDialog
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [selectedParticipant, setSelectedParticipant] = useState(null)
 
 
   useEffect(() => {
@@ -119,24 +124,14 @@ const BillDetail = () => {
     console.log('Nhắc nhở thanh toán')
   }
 
-  const handleConfirmPayment = async (participant) => {
-    try {
-      // TODO: Implement API call to confirm payment
-      console.log('Confirming payment for:', participant)
-      
-      // For now, show a confirmation message
-      if (window.confirm(`Xác nhận ${participant.name} đã thanh toán ${formatCurrency(participant.amount)} đ?`)) {
-        // Call API to mark as paid
-        // await markAsPaidAPI(billId, participant._id, participant.amount)
-        
-        // Refresh bill data
-        const response = await fetchBillByIdAPI(billId)
-        setBillData(response)
-      }
-    } catch (error) {
-      console.error('Error confirming payment:', error)
-      alert('Có lỗi xảy ra. Vui lòng thử lại.')
-    }
+  const handleConfirmPayment = (participant) => {
+    setSelectedParticipant(participant)
+    setConfirmDialogOpen(true)
+  }
+
+  const refetchBillData = async () => {
+    const response = await fetchBillByIdAPI(billId)
+    setBillData(response)
   }
 
   const handlePayment = async (participant) => {
@@ -824,6 +819,30 @@ const BillDetail = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Confirm Payment Dialog */}
+      <ConfirmPaymentDialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        myId={currentUser?._id}
+        debtor={selectedParticipant ? {
+          userId: selectedParticipant._id,
+          userName: selectedParticipant.name,
+          totalAmount: selectedParticipant.amount,
+          bills: [{
+            billId: billId,
+            billName: billData.billName,
+            remainingAmount: selectedParticipant.amount
+          }]
+        } : null}
+        defaultAmount={selectedParticipant?.amount}
+        bills={selectedParticipant ? [{
+          billId: billId,
+          billName: billData.billName,
+          remainingAmount: selectedParticipant.amount
+        }] : []}
+        refetch={refetchBillData}
+      />
     </Layout>
   )
 }
