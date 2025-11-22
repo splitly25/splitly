@@ -797,7 +797,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
                   '&:hover': { backgroundColor: 'action.hover' },
                   cursor: 'pointer',
                 }}
-                onClick={() => navigate('/groups')}
+                onClick={() => navigate(`/groups/${group._id}`)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Box sx={{ display: 'flex', ml: -0.5 }}>
