@@ -62,7 +62,8 @@ const confirmPayment = async (req, res, next) => {
 const remindPayment = async (req, res, next) => {
   const correctCondition = Joi.object({
     creditorId: Joi.string().required(),
-    debtorId: Joi.string().required()
+    debtorId: Joi.string().required(),
+    bill: Joi.string().optional()
   })
 
   try {

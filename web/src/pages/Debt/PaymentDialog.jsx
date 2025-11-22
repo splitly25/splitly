@@ -427,7 +427,7 @@ const PaymentDialog = ({ open, onClose, creditor, currentUserId, refetch }) => {
                         variant="body2"
                         sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
                       >
-                        Hóa đơn bạn trả
+                        Hóa đơn bạn nợ
                       </Typography>
                       <Box sx={{ 
                         bgcolor: '#f5f5f5',
@@ -466,7 +466,7 @@ const PaymentDialog = ({ open, onClose, creditor, currentUserId, refetch }) => {
                         variant="body2"
                         sx={{ fontWeight: 500, mb: 1, fontSize: '14px' }}
                       >
-                        Hóa đơn {creditor?.userName} trả
+                        Hóa đơn {creditor?.userName} nợ
                       </Typography>
                       <Box sx={{ 
                         bgcolor: '#f5f5f5',
