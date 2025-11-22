@@ -18,8 +18,14 @@ export const logoutUserAPI = createAsyncThunk('user/logoutUserAPI', async (showS
   return response.data
 })
 
-export const updateUserProfileAPI = createAsyncThunk('user/updateUserProfileAPI', async ({ userId, profileData }) => {
-  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/${userId}/profile`, profileData)
+export const updateUserProfileAPI = createAsyncThunk('user/updateUserProfileAPI', async ({ profileData }) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/update`, profileData)
+  return response.data
+})
+
+// Fetch fresh user data from API
+export const refreshCurrentUserAPI = createAsyncThunk('user/refreshCurrentUserAPI', async (userId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users/${userId}`)
   return response.data
 })
 
@@ -42,6 +48,9 @@ export const userSlice = createSlice({
       state.currentUser = null
     })
     builder.addCase(updateUserProfileAPI.fulfilled, (state, action) => {
+      state.currentUser = { ...state.currentUser, ...action.payload }
+    })
+    builder.addCase(refreshCurrentUserAPI.fulfilled, (state, action) => {
       state.currentUser = { ...state.currentUser, ...action.payload }
     })
   },
