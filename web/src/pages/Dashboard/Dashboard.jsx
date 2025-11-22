@@ -131,7 +131,7 @@ const TotalSpendingCard = ({ debtData, loading }) => {
 }
 
 // You Owe Card Component
-const YouOweCard = ({ debtData, loading }) => {
+const YouOweCard = ({ debtData, loading, navigate }) => {
   const [showAmount, setShowAmount] = useState(true)
 
   const toggleVisibility = () => {
@@ -301,8 +301,10 @@ const YouOweCard = ({ debtData, loading }) => {
 }
 
 // They Owe You Card Component
-const TheyOweYouCard = ({ debtData, loading }) => {
+const TheyOweYouCard = ({ debtData, loading, navigate }) => {
   const [showAmount, setShowAmount] = useState(true)
+
+  console.log('TheyOweYouCard debtData:', debtData)
 
   const toggleVisibility = () => {
     setShowAmount(!showAmount)
@@ -397,7 +399,7 @@ const TheyOweYouCard = ({ debtData, loading }) => {
               variant="h5"
               sx={{ fontWeight: 700, fontSize: '24px', color: '#008236' }}
             >
-              {debtData.debtCount || 0}
+              {debtData.creditCount || 0}
             </Typography>
           </Box>
         </Box>
@@ -545,7 +547,7 @@ const PendingBillsCard = ({ pendingBills, navigate, loading }) => {
                   '&:hover': { backgroundColor: 'action.hover' },
                   cursor: 'pointer',
                 }}
-                onClick={() => navigate('/history')}
+                onClick={() => navigate('/groups')}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar
@@ -848,7 +850,7 @@ const GroupsCard = ({ groups, navigate, loading }) => {
         <Button
           size="small"
           startIcon={<ArrowForwardIcon />}
-          onClick={() => navigate('/history')}
+          onClick={() => navigate('/groups')}
           sx={{
             textTransform: 'none',
             color: 'text.secondary',
@@ -1038,7 +1040,7 @@ const Dashboard = () => {
               maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
             }}
           >
-            <YouOweCard debtData={debtData} loading={loading} />
+            <YouOweCard debtData={debtData} loading={loading} navigate={navigate} />
           </Grid>
 
           {/* Người khác nợ mình Card */}
@@ -1053,7 +1055,7 @@ const Dashboard = () => {
               maxWidth: shouldUseThreeColumns ? 'calc(33.333% - 10.67px)' : (shouldUseTwoColumns ? 'calc(50% - 8px)' : '100%')
             }}
           >
-            <TheyOweYouCard debtData={debtData} loading={loading} />
+            <TheyOweYouCard debtData={debtData} loading={loading} navigate={navigate} />
           </Grid>
         </Grid>
 
