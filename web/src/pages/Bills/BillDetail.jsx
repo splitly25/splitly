@@ -33,7 +33,7 @@ import {
   Create as Edit,
 } from '@mui/icons-material'
 import { getInitials } from '~/utils/formatters'
-import { useColorScheme } from '@mui/material/styles'
+// import { useColorScheme } from '@mui/material/styles'
 import ConfirmPaymentDialog from '~/pages/Debt/ConfirmPaymentDialog'
 import PaymentDialog from '~/pages/Debt/PaymentDialog'
 import RemindDialog from '~/pages/Debt/RemindDialog'
@@ -126,6 +126,10 @@ const BillDetail = () => {
     navigate(`/history`)
   }
 
+  const handleEditBill = () => {
+    navigate(`/bills/${billId}/edit`)
+  }
+
   const handleConfirmPayment = (participant) => {
     setSelectedParticipant(participant)
     setConfirmDialogOpen(true)
@@ -150,8 +154,11 @@ const BillDetail = () => {
     setPaymentDialogOpen(true)
   }
 
-  // Helper function to determine if current user is the bill owner
   const isBillOwner = () => {
+    return currentUser?._id === billData?.payerId
+  }
+
+  const isBillPayer = () => {
     return currentUser?._id === billData?.payerId
   }
 
@@ -226,28 +233,30 @@ const BillDetail = () => {
               justifyContent: { xs: 'space-between', sm: 'flex-end' },
             }}
           >
-            <Button
-              variant="contained"
-              onClick={handleEditBill}
-              className='flex gap-2'
-              sx={{
-                background: 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)',
-                color: '#ffff',
-                borderRadius: '12px',
-                textTransform: 'none',
-                px: { xs: 2, sm: 3 },
-                py: { xs: 1, sm: 1.5 },
-                fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
-                whiteSpace: 'nowrap',
-                flex: {  sm: 'none' },
-                '&:hover': {
-                  bgcolor: '#E57373',
-                },
-              }}
-            >
-              <Edit />
-              Chỉnh sửa hóa đơn
-            </Button>
+            {isBillPayer() && (
+              <Button
+                variant="contained"
+                onClick={handleEditBill}
+                className='flex gap-2'
+                sx={{
+                  background: 'linear-gradient(135deg, #EF9A9A 0%, #CE93D8 100%)',
+                  color: '#ffff',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  px: { xs: 2, sm: 3 },
+                  py: { xs: 1, sm: 1.5 },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
+                  whiteSpace: 'nowrap',
+                  flex: {  sm: 'none' },
+                  '&:hover': {
+                    bgcolor: '#E57373',
+                  },
+                }}
+              >
+                <Edit />
+                Chỉnh sửa hóa đơn
+              </Button>
+            )}
           </Box>
         </Box>
 
