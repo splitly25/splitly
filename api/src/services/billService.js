@@ -3,6 +3,7 @@ import { billModel } from '~/models/billModel.js'
 import { activityModel } from '~/models/activityModel.js'
 import { userModel } from '~/models/userModel.js'
 import { paymentModel } from '~/models/paymentModel.js'
+import { notificationService } from '~/services/notificationService.js'
 import { ClovaXClient } from '~/providers/ClovaStudioProvider'
 import { JwtProvider } from '~/providers/JwtProvider.js'
 import { env } from '~/config/environment.js'
@@ -106,6 +107,27 @@ const createNew = async (reqBody) => {
         )
       } catch (activityError) {
         console.warn('Failed to log bill creation activity:', activityError.message)
+      }
+
+      // Send notifications to participants (except payer/creator)
+      try {
+        const creator = await userModel.findOneById(reqBody.creatorId)
+        const creatorName = creator?.name || 'Someone'
+        const otherParticipants = reqBody.participants
+          .filter(id => id.toString() !== reqBody.payerId.toString())
+          .map(id => id.toString())
+        if (otherParticipants.length > 0) {
+          await notificationService.notifyBillAdded(
+            reqBody.creatorId,
+            creatorName,
+            otherParticipants,
+            createdBill.insertedId.toString(),
+            reqBody.billName,
+            reqBody.totalAmount
+          )
+        }
+      } catch (notifError) {
+        console.warn('Failed to send bill creation notifications:', notifError.message)
       }
     }
 
@@ -382,6 +404,26 @@ const update = async (billId, updateData, updatedBy) => {
       } catch (activityError) {
         console.warn('Failed to log bill update activity:', activityError.message)
       }
+
+      // Send notifications to participants (except updater)
+      try {
+        const updater = await userModel.findOneById(updatedBy)
+        const updaterName = updater?.name || 'Someone'
+        const otherParticipants = originalBill.participants
+          ?.filter(id => id.toString() !== updatedBy)
+          ?.map(id => id.toString()) || []
+        if (otherParticipants.length > 0) {
+          await notificationService.notifyBillUpdated(
+            updatedBy,
+            updaterName,
+            otherParticipants,
+            billId,
+            originalBill.billName
+          )
+        }
+      } catch (notifError) {
+        console.warn('Failed to send bill update notifications:', notifError.message)
+      }
     }
 
     return result
@@ -396,9 +438,10 @@ const update = async (billId, updateData, updatedBy) => {
  * @param {string} userId - User ID who paid
  * @param {number} amountPaid - Amount paid
  * @param {string} paidBy - User ID who marked as paid (for logging)
+ * @param {boolean} skipNotification - Skip sending notifications (used when called from payment confirmation)
  * @returns {Promise<Object>} Update result
  */
-const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
+const markAsPaid = async (billId, userId, amountPaid, paidBy, skipNotification = false) => {
   try {
     const bill = await billModel.findOneById(billId)
     const result = await billModel.markAsPaid(billId, userId, amountPaid)
@@ -410,11 +453,6 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
           amountPaid: amountPaid,
           paymentStatus: 'paid',
           description: `Payment of ${amountPaid} for bill: ${bill.billName}`,
-        })
-        await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_PAID, paidBy, billId, {
-          billName: bill.billName,
-          paymentStatus: 'paid',
-          description: `Marked payment as completed for bill: ${bill.billName}`,
         })
       } catch (activityError) {
         console.warn('Failed to log bill payment activity:', activityError.message)
@@ -440,6 +478,28 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy) => {
           })
         } catch (activityError) {
           console.warn('Failed to log bill settlement activity:', activityError.message)
+        }
+
+        // Send notifications to all participants that bill is settled (skip if called from payment confirmation)
+        if (!skipNotification) {
+          try {
+            const payer = await userModel.findOneById(paidBy)
+            const payerName = payer?.name || 'Someone'
+            const otherParticipants = bill.participants
+              ?.filter(id => id.toString() !== paidBy)
+              ?.map(id => id.toString()) || []
+            if (otherParticipants.length > 0) {
+              await notificationService.notifyBillSettled(
+                paidBy,
+                payerName,
+                otherParticipants,
+                billId,
+                bill.billName
+              )
+            }
+          } catch (notifError) {
+            console.warn('Failed to send bill settled notifications:', notifError.message)
+          }
         }
       }
     }
@@ -504,6 +564,26 @@ const deleteOneById = async (billId, deletedBy) => {
       } catch (activityError) {
         console.warn('Failed to log bill deletion activity:', activityError.message)
       }
+
+      // Send notifications to participants (except deleter)
+      try {
+        const deleter = await userModel.findOneById(deletedBy)
+        const deleterName = deleter?.name || 'Someone'
+        const otherParticipants = bill.participants
+          ?.filter(id => id.toString() !== deletedBy)
+          ?.map(id => id.toString()) || []
+        if (otherParticipants.length > 0) {
+          await notificationService.notifyBillDeleted(
+            deletedBy,
+            deleterName,
+            otherParticipants,
+            billId,
+            bill.billName
+          )
+        }
+      } catch (notifError) {
+        console.warn('Failed to send bill deletion notifications:', notifError.message)
+      }
     }
 
     return result
@@ -524,8 +604,9 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
   try {
     const bill = await billModel.findOneById(billId)
 
-    // Here you would implement your actual reminder logic
-    // For example: await emailService.sendReminder(...)
+    // Get recipient's payment status to know the amount
+    const recipientPayment = bill.paymentStatus.find(ps => ps.userId.toString() === recipientUserId.toString())
+    const amountOwed = recipientPayment ? (recipientPayment.amountOwed - (recipientPayment.amountPaid || 0)) : 0
 
     // Log reminder activity
     if (sentByUserId) {
@@ -538,6 +619,22 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
         })
       } catch (activityError) {
         console.warn('Failed to log bill reminder activity:', activityError.message)
+      }
+
+      // Send notification to recipient
+      try {
+        const sender = await userModel.findOneById(sentByUserId)
+        const senderName = sender?.name || 'Someone'
+        await notificationService.notifyBillReminder(
+          sentByUserId,
+          senderName,
+          recipientUserId,
+          billId,
+          bill.billName,
+          amountOwed
+        )
+      } catch (notifError) {
+        console.warn('Failed to send bill reminder notification:', notifError.message)
       }
     }
 

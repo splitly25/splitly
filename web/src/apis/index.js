@@ -313,6 +313,7 @@ export const confirmPaymentAPI = async (token, isConfirmed) => {
 
 export const getAssistantResponseAPI = async (userId, messages) => {
   // remove id and time field
+  // eslint-disable-next-line no-unused-vars
   const leng = messages.length
   // eslint-disable-next-line no-unused-vars
   let reqMessages = messages.map(({ id, time, ...rest }) => rest)
@@ -324,84 +325,54 @@ export const getAssistantResponseAPI = async (userId, messages) => {
     messages: reqMessages,
   })
 
-  let newMessages = response.data.messages;
+  let newMessages = response.data.messages
 
   // merge messages and newMessages
-  let resMessages = [];
+  let resMessages = []
   try {
-    let i = 0, j = 0;
+    let i = 0,
+      j = 0
     // console.log("Merging messages:", messages, newMessages);
     while (i < messages.length && j < newMessages.length) {
       // console.log("Comparing messages:", messages[i], newMessages[j]);
       if (newMessages[j].role === 'system') {
-        j++;
+        j++
       } else if (messages[i].role === 'system') {
-        i++;
+        i++
       } else if (messages[i].role === newMessages[j].role && messages[i].content === newMessages[j].content) {
-        resMessages.push(messages[i]);
-        i++;
-        j++;
+        resMessages.push(messages[i])
+        i++
+        j++
       } else if (messages[i].role === 'notification') {
-        resMessages.push(messages[i]);
-        i++;
+        resMessages.push(messages[i])
+        i++
       } else if (newMessages[j].role === 'tool') {
-        j++;
+        j++
       }
-      
-      console.log("Current merged messages:", resMessages);
+
+      console.log('Current merged messages:', resMessages)
     }
     while (j < newMessages.length) {
       if (newMessages[j].role === 'assistant') {
-        resMessages.push({ ...newMessages[j], id: resMessages.length, time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN') });
+        resMessages.push({
+          ...newMessages[j],
+          id: resMessages.length,
+          time:
+            new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
+            ' ' +
+            new Date().toLocaleDateString('vi-VN'),
+        })
       }
-      j++;
+      j++
     }
   } catch (error) {
-    console.error("Error merging messages:", error);
+    console.error('Error merging messages:', error)
     // Fallback to just append newMessages
   }
 
   // console.log("Assistant API Response:", response);
 
-  return { newMessages: resMessages, navigation: response.data.navigation };
-}
-
-// ============================================
-// Activity APIs
-// ============================================
-/*
-Completed APIs
-1. GET /api/activities - Get user activities with filters
-Query Parameters:
-limit (default: 10) - Number of activities to return
-offset (default: 0) - For pagination
-types - Comma-separated activity types filter (e.g., bill_created,bill_paid)
-dateFrom - Filter from timestamp
-dateTo - Filter to timestamp
-Response:
-{
-  "activities": [...],
-  "total": 50,
-  "hasMore": true
-}
-  */
-export const getUserActivitiesAPI = async (userId, params) => {
-  const response = await authorizedAxiosInstance.get(
-    `${API_ROOT}/v1/activities/?${new URLSearchParams(params).toString()}`
-  )
-  return response.data
-}
-
-/*
-Response:
-{
-  "total": 50,
-  "unread": 0  // Placeholder for future notification feature
-}
-*/
-export const countUserActivitiesAPI = async () => {
-  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/activities/count`)
-  return response.data
+  return { newMessages: resMessages, navigation: response.data.navigation }
 }
 
 // ============================================

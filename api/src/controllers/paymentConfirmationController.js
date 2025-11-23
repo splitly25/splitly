@@ -8,6 +8,7 @@ import { billService } from '~/services/billService'
 import { userModel } from '~/models/userModel'
 import { paymentConfirmationModel } from '~/models/paymentConfirmationModel'
 import { sendPaymentResponseEmail } from '~/utils/emailService'
+import { notificationService } from '~/services/notificationService'
 
 /**
  * Generate a payment confirmation token
@@ -182,7 +183,8 @@ const confirmPayment = async (req, res, next) => {
                 priorityBillDoc._id.toString(),
                 payerId,
                 paymentForThisBill,
-                recipientId
+                recipientId,
+                true // skipNotification - notification is sent separately
               )
               if (updateResult) {
                 remainingAmount -= paymentForThisBill
@@ -224,7 +226,8 @@ const confirmPayment = async (req, res, next) => {
                 bill._id.toString(),
                 payerId, // The person who owes money (who sent the payment)
                 paymentForThisBill,
-                recipientId // paidBy parameter for activity logging (recipient confirms)
+                recipientId, // paidBy parameter for activity logging (recipient confirms)
+                true // skipNotification - notification is sent separately
               )
               
               if (updateResult) {
@@ -257,6 +260,19 @@ const confirmPayment = async (req, res, next) => {
         })
       } catch (activityError) {
         console.warn('Failed to log payment confirmation activity:', activityError.message)
+      }
+
+      // Send notification to payer that payment was confirmed
+      try {
+        await notificationService.notifyPaymentConfirmed(
+          recipientId,
+          recipient.name,
+          payerId,
+          paymentId,
+          amount
+        )
+      } catch (notifError) {
+        console.warn('Failed to send payment confirmation notification:', notifError.message)
       }
 
       // Send email notification to payer
@@ -294,6 +310,19 @@ const confirmPayment = async (req, res, next) => {
         })
       } catch (activityError) {
         console.warn('Failed to log payment rejection activity:', activityError.message)
+      }
+
+      // Send notification to payer that payment was rejected
+      try {
+        await notificationService.notifyPaymentRejected(
+          recipientId,
+          recipient.name,
+          payerId,
+          paymentId,
+          amount
+        )
+      } catch (notifError) {
+        console.warn('Failed to send payment rejection notification:', notifError.message)
       }
 
       // Send email notification to payer

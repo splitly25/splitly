@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Typography,
-  Avatar,
   Card,
   Button,
   Checkbox,
@@ -25,24 +24,39 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   Notifications as NotificationsIcon,
-  ExitToApp as ExitToAppIcon,
-  AccountBalanceWallet as WalletIcon,
   Cancel as CancelIcon,
   AddCircle as AddCircleIcon,
   Close as CloseIcon,
+  DoneAll as DoneAllIcon,
 } from '@mui/icons-material'
 import { COLORS } from '~/theme'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { selectCurrentUser } from '~/redux/user/userSlice'
-import { getUserActivitiesAPI } from '~/apis'
-import { formatCurrency, formatDate, formatDateTime, getInitials } from '~/utils/formatters'
+import {
+  fetchNotificationsAPI,
+  markNotificationReadAPI,
+  markAllNotificationsReadAPI,
+  addNotification,
+  setNotificationRead,
+  setAllNotificationsRead,
+  setUnreadCount,
+  selectCurrentNotifications,
+  selectNotificationTotal,
+  selectUnreadCount,
+  selectHasMore,
+  selectNotificationLoading,
+  selectNotificationLoadingMore,
+} from '~/redux/notification/notificationSlice'
+import { formatDate, formatDateTime } from '~/utils/formatters'
+import { socketIoInstance } from '~/main'
+import { toast } from 'react-toastify'
 
-// Helper function to get navigation path based on activity
-const getNavigationPath = (activity) => {
-  const { resourceType, resourceId, activityType } = activity
+// Helper function to get navigation path based on notification
+const getNavigationPath = (notification) => {
+  const { resourceType, resourceId, type } = notification
 
   // Don't navigate for deleted resources
-  if (activityType.includes('deleted')) {
+  if (type?.includes('deleted')) {
     return null
   }
 
@@ -59,138 +73,109 @@ const getNavigationPath = (activity) => {
   }
 }
 
-// Activity type configurations based on activityModel.js ACTIVITY_TYPES
-const activityTypeConfig = {
-  // Bill activities
-  bill_created: {
+// Notification type configurations based on new NOTIFICATION_TYPES
+const notificationTypeConfig = {
+  // Bill notifications
+  bill_added: {
     icon: ReceiptIcon,
-    label: 'đã tạo hóa đơn',
     color: '#EF9A9A',
   },
   bill_updated: {
     icon: EditIcon,
-    label: 'đã cập nhật hóa đơn',
     color: '#FF9800',
   },
   bill_deleted: {
     icon: DeleteIcon,
-    label: 'đã xóa hóa đơn',
     color: '#f44336',
   },
-  bill_paid: {
-    icon: CheckCircleIcon,
-    label: 'đã thanh toán hóa đơn',
-    color: '#4CAF50',
+  bill_reminder: {
+    icon: NotificationsIcon,
+    color: '#FF5722',
   },
   bill_settled: {
     icon: CheckCircleIcon,
-    label: 'đã quyết toán hóa đơn',
     color: '#4CAF50',
   },
-  bill_reminder_sent: {
-    icon: NotificationsIcon,
-    label: 'đã gửi nhắc nhở thanh toán',
-    color: '#FF5722',
-  },
-  bill_user_opted_out: {
-    icon: ExitToAppIcon,
-    label: 'đã rời khỏi hóa đơn',
-    color: '#9E9E9E',
-  },
 
-  // Payment activities
-  payment_initiated: {
+  // Payment notifications
+  payment_received: {
     icon: PaymentIcon,
-    label: 'đã khởi tạo thanh toán cho',
     color: '#2196F3',
   },
   payment_confirmed: {
     icon: CheckCircleIcon,
-    label: 'đã xác nhận thanh toán',
     color: '#4CAF50',
   },
   payment_rejected: {
     icon: CancelIcon,
-    label: 'đã từ chối thanh toán',
     color: '#f44336',
   },
-
-  // Debt activities
-  debt_balanced: {
-    icon: WalletIcon,
-    label: 'đã cân bằng nợ',
-    color: '#8BC34A',
+  payment_initiated: {
+    icon: PaymentIcon,
+    color: '#2196F3',
   },
 
-  // Group activities
-  group_created: {
+  // Group notifications
+  group_invited: {
     icon: GroupIcon,
-    label: 'đã tạo nhóm',
-    color: '#2196F3',
+    color: '#9C27B0',
   },
   group_updated: {
     icon: EditIcon,
-    label: 'đã cập nhật nhóm',
     color: '#9C27B0',
   },
   group_deleted: {
     icon: DeleteIcon,
-    label: 'đã xóa nhóm',
     color: '#f44336',
+  },
+  group_bill_added: {
+    icon: AddCircleIcon,
+    color: '#4CAF50',
   },
   group_member_added: {
     icon: PersonAddIcon,
-    label: 'đã thêm thành viên vào nhóm',
     color: '#00BCD4',
   },
   group_member_removed: {
     icon: PersonRemoveIcon,
-    label: 'đã xóa thành viên khỏi nhóm',
     color: '#FF5722',
-  },
-  group_bill_added: {
-    icon: AddCircleIcon,
-    label: 'đã thêm hóa đơn vào nhóm',
-    color: '#4CAF50',
   },
 }
 
-// Activity type checkbox options for filter dialog
-const activityTypeCheckboxOptions = [
-  // Bill activities
-  { value: 'bill_created', label: 'Tạo hóa đơn', category: 'bill' },
+// Notification type checkbox options for filter dialog
+const notificationTypeCheckboxOptions = [
+  // Bill notifications
+  { value: 'bill_added', label: 'Thêm hóa đơn', category: 'bill' },
   { value: 'bill_updated', label: 'Cập nhật hóa đơn', category: 'bill' },
   { value: 'bill_deleted', label: 'Xóa hóa đơn', category: 'bill' },
-  { value: 'bill_paid', label: 'Thanh toán hóa đơn', category: 'bill' },
+  { value: 'bill_reminder', label: 'Nhắc nhở hóa đơn', category: 'bill' },
   { value: 'bill_settled', label: 'Quyết toán hóa đơn', category: 'bill' },
-  { value: 'bill_reminder_sent', label: 'Gửi nhắc nhở', category: 'bill' },
-  { value: 'bill_user_opted_out', label: 'Rời hóa đơn', category: 'bill' },
-  // Payment activities
-  { value: 'payment_initiated', label: 'Khởi tạo thanh toán', category: 'payment' },
+  // Payment notifications
+  { value: 'payment_received', label: 'Nhận thanh toán', category: 'payment' },
   { value: 'payment_confirmed', label: 'Xác nhận thanh toán', category: 'payment' },
   { value: 'payment_rejected', label: 'Từ chối thanh toán', category: 'payment' },
-  { value: 'debt_balanced', label: 'Cân bằng nợ', category: 'payment' },
-  // Group activities
-  { value: 'group_created', label: 'Tạo nhóm', category: 'group' },
+  { value: 'payment_initiated', label: 'Khởi tạo thanh toán', category: 'payment' },
+  // Group notifications
+  { value: 'group_invited', label: 'Mời vào nhóm', category: 'group' },
   { value: 'group_updated', label: 'Cập nhật nhóm', category: 'group' },
   { value: 'group_deleted', label: 'Xóa nhóm', category: 'group' },
+  { value: 'group_bill_added', label: 'Thêm hóa đơn vào nhóm', category: 'group' },
   { value: 'group_member_added', label: 'Thêm thành viên', category: 'group' },
   { value: 'group_member_removed', label: 'Xóa thành viên', category: 'group' },
-  { value: 'group_bill_added', label: 'Thêm hóa đơn vào nhóm', category: 'group' },
 ]
 
-// All activity types array
-const allActivityTypes = activityTypeCheckboxOptions.map((opt) => opt.value)
+// All notification types array
+const allNotificationTypes = notificationTypeCheckboxOptions.map((opt) => opt.value)
 
-// Group activities by date
-const groupActivitiesByDate = (activities) => {
+// Group notifications by date
+const groupNotificationsByDate = (notifications) => {
   const grouped = {}
-  activities.forEach((activity) => {
-    const dateKey = formatDate(activity.createdAt)
+  notifications.forEach((notification) => {
+    const dateKey = formatDate(notification.createdAt)
     if (!grouped[dateKey]) {
       grouped[dateKey] = []
     }
-    grouped[dateKey].push(activity)
+    grouped[dateKey].push(notification)
   })
   // Sort by date descending
   const sortedKeys = Object.keys(grouped).sort((a, b) => {
@@ -200,40 +185,29 @@ const groupActivitiesByDate = (activities) => {
   })
   return sortedKeys.map((date) => ({
     date,
-    activities: grouped[date].sort((a, b) => b.createdAt - a.createdAt),
+    notifications: grouped[date].sort((a, b) => b.createdAt - a.createdAt),
   }))
 }
 
-// Activity Card Component
-const ActivityCard = ({ activity, currentUserId }) => {
+// Notification Card Component
+const NotificationCard = ({ notification, onMarkAsRead }) => {
   const navigate = useNavigate()
-  const config = activityTypeConfig[activity.activityType] || {
+  const config = notificationTypeConfig[notification.type] || {
     icon: ReceiptIcon,
-    label: activity.activityType,
     color: '#757575',
   }
   const IconComponent = config.icon
 
-  // Check if activity is by current user
-  const isCurrentUser = activity.user?._id === currentUserId || activity.userId === currentUserId
-
-  // Use user object from API response, fallback to details for backward compatibility
-  const actualName = activity.user?.name || activity.details?.userName || activity.details?.debtorName || 'Người dùng'
-  const userName = isCurrentUser ? 'Bạn' : actualName
-  const userAvatar = activity.user?.avatar
-  const initials = getInitials(actualName)
-
-  // Check if activity has details to show
-  const hasBillDetails = activity.resourceType === 'bill' && activity.details?.billName
-  const hasGroupDetails = activity.resourceType === 'group' && activity.details?.groupName
-  const hasPaymentDetails = activity.activityType === 'payment_initiated' && activity.details?.creditorName
-
   // Get navigation path
-  const navigationPath = getNavigationPath(activity)
+  const navigationPath = getNavigationPath(notification)
   const isClickable = navigationPath !== null
 
   // Handle card click
-  const handleCardClick = () => {
+  const handleCardClick = async () => {
+    // Mark as read if not already read
+    if (!notification.isRead && onMarkAsRead) {
+      onMarkAsRead(notification._id)
+    }
     if (isClickable) {
       navigate(navigationPath)
     }
@@ -261,15 +235,15 @@ const ActivityCard = ({ activity, currentUserId }) => {
         <IconComponent sx={{ fontSize: 20, color: config.color }} />
       </Box>
 
-      {/* Activity Card */}
+      {/* Notification Card */}
       <Card
         onClick={handleCardClick}
         sx={{
           borderRadius: '16px',
           border: '1px solid',
-          borderColor: 'divider',
+          borderColor: notification.isRead ? 'divider' : 'primary.main',
           p: 3,
-          backgroundColor: '#ffffff',
+          backgroundColor: notification.isRead ? '#ffffff' : 'rgba(206, 147, 216, 0.05)',
           cursor: isClickable ? 'pointer' : 'default',
           transition: 'all 0.2s ease-in-out',
           '&:hover': isClickable
@@ -281,166 +255,59 @@ const ActivityCard = ({ activity, currentUserId }) => {
         }}
       >
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {/* User Avatar */}
-          <Avatar
-            src={userAvatar}
-            sx={{
-              width: 40,
-              height: 40,
-              background: COLORS.gradientPrimary,
-              fontSize: '16px',
-            }}
-          >
-            {initials}
-          </Avatar>
-
           {/* Content */}
           <Box sx={{ flex: 1 }}>
-            {/* Header with username, action, and timestamp */}
+            {/* Header with title and timestamp */}
             <Box
               sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
-                mb: hasBillDetails || hasGroupDetails || hasPaymentDetails ? 1.5 : 0,
+                mb: notification.message ? 1 : 0,
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    color: 'text.primary',
-                  }}
-                >
-                  {userName}
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: '14px',
-                    color: 'text.secondary',
-                  }}
-                >
-                  {config.label}
-                  {hasGroupDetails && ` "${activity.details.groupName}"`}
-                  {hasPaymentDetails && (
-                    <>
-                      {' '}
-                      <Typography component="span" sx={{ fontWeight: 600, fontSize: '14px', color: 'text.primary' }}>
-                        {activity.details.creditorName}
-                      </Typography>
-                    </>
-                  )}
-                </Typography>
-              </Box>
               <Typography
                 sx={{
-                  fontSize: '12px',
-                  color: 'text.secondary',
-                  whiteSpace: 'nowrap',
-                  ml: 2,
+                  fontWeight: notification.isRead ? 500 : 600,
+                  fontSize: '14px',
+                  color: 'text.primary',
                 }}
               >
-                {formatDateTime(activity.createdAt)}
+                {notification.title}
               </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {!notification.isRead && (
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: COLORS.gradientPrimary,
+                    }}
+                  />
+                )}
+                <Typography
+                  sx={{
+                    fontSize: '12px',
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {formatDateTime(notification.createdAt)}
+                </Typography>
+              </Box>
             </Box>
 
-            {/* Bill Details Card */}
-            {hasBillDetails && (
-              <Box
+            {/* Message */}
+            {notification.message && (
+              <Typography
                 sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: '16px',
-                  p: 1.5,
+                  fontSize: '14px',
+                  color: 'text.secondary',
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '24px',
-                      background: COLORS.gradientPrimary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <ReceiptIcon sx={{ fontSize: 16, color: '#fff' }} />
-                  </Box>
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontWeight: 500,
-                        fontSize: '14px',
-                        color: 'text.primary',
-                      }}
-                    >
-                      {activity.details.billName}
-                    </Typography>
-                    {activity.details.amount && (
-                      <Typography
-                        sx={{
-                          fontSize: '12px',
-                          color: 'text.secondary',
-                        }}
-                      >
-                        {formatCurrency(activity.details.amount)}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-            )}
-
-            {/* Payment Details Card */}
-            {hasPaymentDetails && (
-              <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: '16px',
-                  p: 1.5,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '24px',
-                      background: COLORS.gradientPrimary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <PaymentIcon sx={{ fontSize: 16, color: '#fff' }} />
-                  </Box>
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontWeight: 500,
-                        fontSize: '14px',
-                        color: 'text.primary',
-                      }}
-                    >
-                      Thanh toán cho {activity.details.creditorName}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        fontSize: '12px',
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {formatCurrency(activity.details.amount)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
+                {notification.message}
+              </Typography>
             )}
           </Box>
         </Box>
@@ -450,7 +317,7 @@ const ActivityCard = ({ activity, currentUserId }) => {
 }
 
 // Date Group Component
-const DateGroup = ({ date, activities, isLast, currentUserId }) => {
+const DateGroup = ({ date, notifications, isLast, onMarkAsRead }) => {
   return (
     <Box sx={{ mb: 4 }}>
       {/* Date Badge with line */}
@@ -482,7 +349,7 @@ const DateGroup = ({ date, activities, isLast, currentUserId }) => {
         />
       </Box>
 
-      {/* Activities with timeline */}
+      {/* Notifications with timeline */}
       <Box sx={{ position: 'relative', ml: 2.25 }}>
         {/* Vertical timeline line */}
         <Box
@@ -496,10 +363,10 @@ const DateGroup = ({ date, activities, isLast, currentUserId }) => {
           }}
         />
 
-        {/* Activity cards */}
+        {/* Notification cards */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {activities.map((activity) => (
-            <ActivityCard key={activity._id} activity={activity} currentUserId={currentUserId} />
+          {notifications.map((notification) => (
+            <NotificationCard key={notification._id} notification={notification} onMarkAsRead={onMarkAsRead} />
           ))}
         </Box>
       </Box>
@@ -511,93 +378,130 @@ const DateGroup = ({ date, activities, isLast, currentUserId }) => {
 const ITEMS_PER_PAGE = 10
 
 const Activity = () => {
+  const dispatch = useDispatch()
   const currentUser = useSelector(selectCurrentUser)
 
-  // Data state
-  const [activities, setActivities] = useState([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  // Redux state
+  const notifications = useSelector(selectCurrentNotifications)
+  const total = useSelector(selectNotificationTotal)
+  const unreadCount = useSelector(selectUnreadCount)
+  const hasMore = useSelector(selectHasMore)
+  const loading = useSelector(selectNotificationLoading)
+  const loadingMore = useSelector(selectNotificationLoadingMore)
 
   // Filter dialog state
   const [filterDialogOpen, setFilterDialogOpen] = useState(false)
-  const [selectedActivityTypes, setSelectedActivityTypes] = useState(allActivityTypes)
-  const [tempSelectedTypes, setTempSelectedTypes] = useState(allActivityTypes)
+  const [selectedNotificationTypes, setSelectedNotificationTypes] = useState(allNotificationTypes)
+  const [tempSelectedTypes, setTempSelectedTypes] = useState(allNotificationTypes)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [tempDateFrom, setTempDateFrom] = useState('')
   const [tempDateTo, setTempDateTo] = useState('')
+  const [unreadOnly, setUnreadOnly] = useState(false)
+  const [tempUnreadOnly, setTempUnreadOnly] = useState(false)
 
   // Pagination state
   const [offset, setOffset] = useState(0)
 
-  // Fetch activities from API
-  const fetchActivities = useCallback(
-    async (isLoadMore = false) => {
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(
+    (isLoadMore = false) => {
       if (!currentUser?._id) return
 
-      try {
-        if (isLoadMore) {
-          setLoadingMore(true)
-        } else {
-          setLoading(true)
-        }
-
-        const params = {
-          limit: ITEMS_PER_PAGE,
-          offset: isLoadMore ? offset + ITEMS_PER_PAGE : 0,
-        }
-
-        // Add activity types filter (only if not all selected)
-        if (selectedActivityTypes.length !== allActivityTypes.length && selectedActivityTypes.length > 0) {
-          params.types = selectedActivityTypes.join(',')
-        }
-
-        // Add date filters
-        if (dateFrom) {
-          params.dateFrom = new Date(dateFrom).setHours(0, 0, 0, 0)
-        }
-        if (dateTo) {
-          params.dateTo = new Date(dateTo).setHours(23, 59, 59, 999)
-        }
-
-        const response = await getUserActivitiesAPI(currentUser._id, params)
-
-        if (isLoadMore) {
-          setActivities((prev) => [...prev, ...response.activities])
-          setOffset((prev) => prev + ITEMS_PER_PAGE)
-        } else {
-          setActivities(response.activities)
-          setOffset(0)
-        }
-        setTotal(response.total)
-      } catch (error) {
-        console.error('Error fetching activities:', error)
-      } finally {
-        setLoading(false)
-        setLoadingMore(false)
+      const newOffset = isLoadMore ? offset + ITEMS_PER_PAGE : 0
+      dispatch(fetchNotificationsAPI({ limit: ITEMS_PER_PAGE, offset: newOffset, unreadOnly }))
+      if (isLoadMore) {
+        setOffset(newOffset)
+      } else {
+        setOffset(0)
       }
     },
-    [currentUser?._id, selectedActivityTypes, dateFrom, dateTo, offset]
+    [currentUser?._id, dispatch, offset, unreadOnly]
   )
 
   // Initial fetch and refetch when filters change
   useEffect(() => {
-    fetchActivities(false)
+    fetchNotifications(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?._id, selectedActivityTypes, dateFrom, dateTo])
+  }, [currentUser?._id, unreadOnly])
 
-  // Calculate hasMore
-  const hasMore = activities.length < total
+  // Socket.io listeners for real-time updates
+  useEffect(() => {
+    if (!currentUser?._id) return
 
-  // Group activities by date
-  const groupedActivities = groupActivitiesByDate(activities)
+    // Join notification room
+    socketIoInstance.emit('FE_JOIN_NOTIFICATION_ROOM', currentUser._id)
+
+    // Listen for new notifications
+    const handleNewNotification = (notification) => {
+      // Only add if notification is for current user
+      if (notification?.recipientId === currentUser._id) {
+        dispatch(addNotification(notification))
+
+        // Show toast notification
+        toast.info(notification.title || 'Bạn có thông báo mới', { theme: 'colored' })
+      }
+    }
+
+    // Listen for notification read (from other devices)
+    const handleNotificationRead = ({ notificationId, userId }) => {
+      if (userId === currentUser._id) {
+        dispatch(setNotificationRead({ notificationId }))
+      }
+    }
+
+    // Listen for all notifications read (from other devices)
+    const handleAllNotificationsRead = ({ userId }) => {
+      if (userId === currentUser._id) {
+        dispatch(setAllNotificationsRead())
+      }
+    }
+
+    // Listen for unread count update
+    const handleUnreadCountUpdate = ({ userId, count }) => {
+      if (userId === currentUser._id) {
+        dispatch(setUnreadCount(count))
+      }
+    }
+
+    socketIoInstance.on('BE_NEW_NOTIFICATION', handleNewNotification)
+    socketIoInstance.on('BE_NOTIFICATION_READ', handleNotificationRead)
+    socketIoInstance.on('BE_ALL_NOTIFICATIONS_READ', handleAllNotificationsRead)
+    socketIoInstance.on('BE_UNREAD_COUNT_UPDATE', handleUnreadCountUpdate)
+
+    // Cleanup on unmount
+    return () => {
+      socketIoInstance.emit('FE_LEAVE_NOTIFICATION_ROOM', currentUser._id)
+      socketIoInstance.off('BE_NEW_NOTIFICATION', handleNewNotification)
+      socketIoInstance.off('BE_NOTIFICATION_READ', handleNotificationRead)
+      socketIoInstance.off('BE_ALL_NOTIFICATIONS_READ', handleAllNotificationsRead)
+      socketIoInstance.off('BE_UNREAD_COUNT_UPDATE', handleUnreadCountUpdate)
+    }
+  }, [currentUser?._id, dispatch])
+
+  // Group notifications by date
+  const groupedNotifications = groupNotificationsByDate(notifications)
+
+  // Handle mark notification as read
+  const handleMarkAsRead = async (notificationId) => {
+    dispatch(markNotificationReadAPI(notificationId))
+    // Emit socket event to sync across devices
+    socketIoInstance.emit('FE_MARK_NOTIFICATION_READ', { notificationId, userId: currentUser._id })
+  }
+
+  // Handle mark all notifications as read
+  const handleMarkAllAsRead = async () => {
+    dispatch(markAllNotificationsReadAPI())
+    // Emit socket event to sync across devices
+    socketIoInstance.emit('FE_MARK_ALL_NOTIFICATIONS_READ', currentUser._id)
+  }
 
   // Handle filter dialog open
   const handleFilterClick = () => {
-    setTempSelectedTypes(selectedActivityTypes)
+    setTempSelectedTypes(selectedNotificationTypes)
     setTempDateFrom(dateFrom)
     setTempDateTo(dateTo)
+    setTempUnreadOnly(unreadOnly)
     setFilterDialogOpen(true)
   }
 
@@ -606,46 +510,48 @@ const Activity = () => {
     setFilterDialogOpen(false)
   }
 
-  // Handle activity type checkbox change
-  const handleActivityTypeChange = (typeValue) => {
+  // Handle notification type checkbox change
+  const handleNotificationTypeChange = (typeValue) => {
     setTempSelectedTypes((prev) =>
       prev.includes(typeValue) ? prev.filter((t) => t !== typeValue) : [...prev, typeValue]
     )
   }
 
-  // Handle deselect all activity types
+  // Handle deselect all notification types
   const handleDeselectAll = () => {
     setTempSelectedTypes([])
   }
 
-  // Handle select all activity types
+  // Handle select all notification types
   const handleSelectAll = () => {
-    setTempSelectedTypes(allActivityTypes)
+    setTempSelectedTypes(allNotificationTypes)
   }
 
   // Handle apply filters
   const handleApplyFilters = () => {
-    setSelectedActivityTypes(tempSelectedTypes.length > 0 ? tempSelectedTypes : allActivityTypes)
+    setSelectedNotificationTypes(tempSelectedTypes.length > 0 ? tempSelectedTypes : allNotificationTypes)
     setDateFrom(tempDateFrom)
     setDateTo(tempDateTo)
+    setUnreadOnly(tempUnreadOnly)
     setOffset(0) // Reset pagination on filter change
     setFilterDialogOpen(false)
   }
 
   // Handle clear filters
   const handleClearFilters = () => {
-    setTempSelectedTypes(allActivityTypes)
+    setTempSelectedTypes(allNotificationTypes)
     setTempDateFrom('')
     setTempDateTo('')
+    setTempUnreadOnly(false)
   }
 
   // Handle load more
   const handleLoadMore = () => {
-    fetchActivities(true)
+    fetchNotifications(true)
   }
 
   // Check if any filters are active
-  const hasActiveFilters = selectedActivityTypes.length !== allActivityTypes.length || dateFrom !== '' || dateTo !== ''
+  const hasActiveFilters = selectedNotificationTypes.length !== allNotificationTypes.length || dateFrom !== '' || dateTo !== '' || unreadOnly
 
   return (
     <Layout>
@@ -675,7 +581,7 @@ const Activity = () => {
                 mb: 1,
               }}
             >
-              Hoạt động
+              Thông báo
             </Typography>
             <Typography
               sx={{
@@ -683,7 +589,7 @@ const Activity = () => {
                 color: 'text.secondary',
               }}
             >
-              Theo dõi tất cả hoạt động và thay đổi
+              Theo dõi tất cả thông báo và cập nhật
             </Typography>
           </Box>
 
@@ -707,7 +613,7 @@ const Activity = () => {
               },
             }}
           >
-            Lọc hoạt động
+            Lọc thông báo
             {hasActiveFilters && (
               <Box
                 component="span"
@@ -756,7 +662,7 @@ const Activity = () => {
                 color: 'text.primary',
               }}
             >
-              Lọc hoạt động
+              Lọc thông báo
             </Typography>
             <IconButton onClick={handleFilterClose} size="small">
               <CloseIcon />
@@ -842,7 +748,34 @@ const Activity = () => {
               </Box>
             </Box>
 
-            {/* Activity Types Section */}
+            {/* Unread Only Filter */}
+            <Box sx={{ mb: 3 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tempUnreadOnly}
+                    onChange={(e) => setTempUnreadOnly(e.target.checked)}
+                    size="small"
+                    sx={{
+                      color: 'text.secondary',
+                      '&.Mui-checked': {
+                        color: 'primary.main',
+                      },
+                    }}
+                  />
+                }
+                label="Chỉ hiển thị chưa đọc"
+                sx={{
+                  m: 0,
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: '14px',
+                    color: 'text.primary',
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Notification Types Section */}
             <Box sx={{ mb: 3 }}>
               <Box
                 sx={{
@@ -859,10 +792,10 @@ const Activity = () => {
                     color: 'text.primary',
                   }}
                 >
-                  Loại hoạt động
+                  Loại thông báo
                 </Typography>
                 <Button
-                  onClick={tempSelectedTypes.length === allActivityTypes.length ? handleDeselectAll : handleSelectAll}
+                  onClick={tempSelectedTypes.length === allNotificationTypes.length ? handleDeselectAll : handleSelectAll}
                   sx={{
                     textTransform: 'none',
                     fontSize: '12px',
@@ -875,11 +808,11 @@ const Activity = () => {
                     },
                   }}
                 >
-                  {tempSelectedTypes.length === allActivityTypes.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  {tempSelectedTypes.length === allNotificationTypes.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                 </Button>
               </Box>
 
-              {/* Activity Type Checkboxes Grid */}
+              {/* Notification Type Checkboxes Grid */}
               <Box
                 sx={{
                   display: 'grid',
@@ -887,13 +820,13 @@ const Activity = () => {
                   gap: 0.5,
                 }}
               >
-                {activityTypeCheckboxOptions.map((option) => (
+                {notificationTypeCheckboxOptions.map((option) => (
                   <FormControlLabel
                     key={option.value}
                     control={
                       <Checkbox
                         checked={tempSelectedTypes.includes(option.value)}
-                        onChange={() => handleActivityTypeChange(option.value)}
+                        onChange={() => handleNotificationTypeChange(option.value)}
                         size="small"
                         sx={{
                           color: 'text.secondary',
@@ -971,8 +904,29 @@ const Activity = () => {
           </Box>
         </Dialog>
 
-        {/* Activity List */}
+        {/* Notification List */}
         <Box sx={{ maxWidth: 960, mx: 'auto' }}>
+          {/* Mark All as Read Button */}
+          {unreadCount > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button
+                onClick={handleMarkAllAsRead}
+                startIcon={<DoneAllIcon />}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  color: 'primary.main',
+                  fontWeight: 500,
+                  '&:hover': {
+                    background: 'rgba(206, 147, 216, 0.1)',
+                  },
+                }}
+              >
+                Đánh dấu tất cả đã đọc ({unreadCount})
+              </Button>
+            </Box>
+          )}
+
           {loading ? (
             <Box
               sx={{
@@ -984,15 +938,15 @@ const Activity = () => {
             >
               <CircularProgress sx={{ color: '#CE93D8' }} />
             </Box>
-          ) : groupedActivities.length > 0 ? (
+          ) : groupedNotifications.length > 0 ? (
             <>
-              {groupedActivities.map((group, index) => (
+              {groupedNotifications.map((group, index) => (
                 <DateGroup
                   key={group.date}
                   date={group.date}
-                  activities={group.activities}
-                  isLast={index === groupedActivities.length - 1 && !hasMore}
-                  currentUserId={currentUser?._id}
+                  notifications={group.notifications}
+                  isLast={index === groupedNotifications.length - 1 && !hasMore}
+                  onMarkAsRead={handleMarkAsRead}
                 />
               ))}
 
@@ -1019,7 +973,7 @@ const Activity = () => {
                     }}
                   >
                     {loadingMore ? <CircularProgress size={20} sx={{ color: '#CE93D8', mr: 1 }} /> : null}
-                    Tải thêm ({total - activities.length} hoạt động còn lại)
+                    Tải thêm ({total - notifications.length} thông báo còn lại)
                   </Button>
                 </Box>
               )}
@@ -1037,7 +991,7 @@ const Activity = () => {
                   color: 'text.secondary',
                 }}
               >
-                Không có hoạt động nào
+                Không có thông báo nào
               </Typography>
             </Box>
           )}

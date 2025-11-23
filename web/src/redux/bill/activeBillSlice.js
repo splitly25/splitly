@@ -286,8 +286,8 @@ export const activeBillSlice = createSlice({
             }
           })
 
-          // Payer gets the remainder
-          const payerAmount = total - sumRounded
+          // Payer gets the remainder (ensure non-negative)
+          const payerAmount = Math.max(0, total - sumRounded)
           roundedAmounts[payerIdx] = payerAmount
 
           state.participants.forEach((p, index) => {
@@ -352,8 +352,8 @@ export const activeBillSlice = createSlice({
             }
           })
 
-          // Payer gets the remainder
-          const payerAmount = total - sumRounded
+          // Payer gets the remainder (ensure non-negative)
+          const payerAmount = Math.max(0, total - sumRounded)
           roundedAmounts[payerIdx] = payerAmount
 
           // Assign rounded amounts to participants
