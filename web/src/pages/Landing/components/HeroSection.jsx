@@ -41,13 +41,13 @@ export function HeroSection() {
 
         {/* Main Heading */}
         <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-balance mb-6 animate-fade-in-heading">
-          <span className="text-slate-800">Split expenses</span>
+          <span className="text-slate-800">Chia sẻ chi phí</span>
           <br />
           <span className="inline-flex items-center justify-center flex-wrap gap-2 mt-4 sm:mt-6 md:mt-8">
-            <span className="text-slate-800">with</span>
+            <span className="text-slate-800">cùng</span>
             <RotatingText
-              texts={['Friends', 'Family', 'Roommates', 'Groups', 'Anyone']}
-              mainClassName="px-2 sm:px-2 md:px-3 bg-gradient-to-r from-[#EF9A9A] to-[#E57373] text-white overflow-hidden py-1 sm:py-1 md:py-2 justify-center rounded-lg shadow-lg"
+              texts={['Bạn bè', 'Gia đình', 'Roommates', 'Nhóm bạn', 'Ai cũng được']}
+              mainClassName="px-2 sm:px-2 md:px-3 bg-gradient-to-r from-[#EF9A9A] to-[#E57373] text-white overflow-hidden py-1 sm:py-1 md:py-2 justify-center rounded-lg shadow-lg min-w-[140px] sm:min-w-[160px] md:min-w-[180px]"
               staggerFrom={'last'}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -62,8 +62,8 @@ export function HeroSection() {
 
         {/* Subheading */}
         <p className="text-base sm:text-xl md:text-2xl text-slate-600 text-balance max-w-sm sm:max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed px-4 sm:px-0 animate-fade-in-subheading font-light">
-          Tạm biệt những cuộc trò chuyện khó xử về tiền bạc. Splitly giúp bạn dễ dàng theo dõi chi phí chung, chia hóa đơn
-          công bằng và thanh toán với bạn bè.
+          Tạm biệt những cuộc trò chuyện khó xử về tiền bạc. Splitly giúp bạn dễ dàng theo dõi chi phí chung, chia hóa
+          đơn công bằng và thanh toán với bạn bè.
         </p>
 
         {/* CTA Buttons */}
@@ -120,15 +120,15 @@ export function HeroSection() {
             <div className="absolute right-0 top-0 w-8 h-full bg-gradient-to-l from-[#FFF5F5] to-transparent z-10 pointer-events-none"></div>
             <div className="flex items-center gap-6 opacity-70 animate-slide-left-mobile">
               <div className="flex items-center gap-6 whitespace-nowrap">
-                <div className="text-sm font-semibold text-slate-700">50K+ Users</div>
-                <div className="text-sm font-semibold text-slate-700">$2M+ Split</div>
-                <div className="text-sm font-semibold text-slate-700">10K+ Groups</div>
+                <div className="text-sm font-semibold text-slate-700">50K+ Người dùng</div>
+                <div className="text-sm font-semibold text-slate-700">$2M+ Đã chia</div>
+                <div className="text-sm font-semibold text-slate-700">10K+ Nhóm</div>
                 <div className="text-sm font-semibold text-slate-700">4.9★</div>
               </div>
               <div className="flex items-center gap-6 whitespace-nowrap">
-                <div className="text-sm font-semibold text-slate-700">50K+ Users</div>
-                <div className="text-sm font-semibold text-slate-700">$2M+ Split</div>
-                <div className="text-sm font-semibold text-slate-700">10K+ Groups</div>
+                <div className="text-sm font-semibold text-slate-700">50K+ Người dùng</div>
+                <div className="text-sm font-semibold text-slate-700">$2M+ Đã chia</div>
+                <div className="text-sm font-semibold text-slate-700">10K+ Nhóm</div>
                 <div className="text-sm font-semibold text-slate-700">4.9★</div>
               </div>
             </div>

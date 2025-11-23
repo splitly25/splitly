@@ -50,6 +50,7 @@ import {
 import { formatDate, formatDateTime } from '~/utils/formatters'
 import { socketIoInstance } from '~/main'
 import { toast } from 'react-toastify'
+import Container from '@mui/material/Container'
 
 // Helper function to get navigation path based on notification
 const getNavigationPath = (notification) => {
@@ -551,452 +552,457 @@ const Activity = () => {
   }
 
   // Check if any filters are active
-  const hasActiveFilters = selectedNotificationTypes.length !== allNotificationTypes.length || dateFrom !== '' || dateTo !== '' || unreadOnly
+  const hasActiveFilters =
+    selectedNotificationTypes.length !== allNotificationTypes.length || dateFrom !== '' || dateTo !== '' || unreadOnly
 
   return (
     <Layout>
-      <Box
-        sx={{
-          p: { xs: 3, md: 4 },
-          minHeight: '100vh',
-        }}
-      >
-        {/* Header */}
+      <Container maxWidth="lg">
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            mb: 3,
+            p: { xs: 3, md: 4 },
+            minHeight: '100vh',
           }}
         >
-          <Box>
-            <Typography
-              variant="h4"
-              sx={{
-                fontFamily: "'Nunito Sans', sans-serif",
-                fontWeight: 700,
-                fontSize: { xs: '24px', md: '30px' },
-                color: 'text.primary',
-                mb: 1,
-              }}
-            >
-              Thông báo
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '16px',
-                color: 'text.secondary',
-              }}
-            >
-              Theo dõi tất cả thông báo và cập nhật
-            </Typography>
-          </Box>
-
-          {/* Filter Button */}
-          <Button
-            variant="outlined"
-            startIcon={<FilterListIcon />}
-            onClick={handleFilterClick}
-            sx={{
-              borderRadius: '16px',
-              borderColor: hasActiveFilters ? 'primary.main' : 'divider',
-              color: hasActiveFilters ? 'primary.main' : 'text.primary',
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '14px',
-              px: 2,
-              py: 1,
-              '&:hover': {
-                borderColor: 'primary.main',
-                backgroundColor: 'transparent',
-              },
-            }}
-          >
-            Lọc thông báo
-            {hasActiveFilters && (
-              <Box
-                component="span"
-                sx={{
-                  ml: 1,
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: COLORS.gradientPrimary,
-                }}
-              />
-            )}
-          </Button>
-        </Box>
-
-        {/* Filter Dialog */}
-        <Dialog
-          open={filterDialogOpen}
-          onClose={handleFilterClose}
-          maxWidth="sm"
-          fullWidth
-          slotProps={{
-            paper: {
-              sx: {
-                borderRadius: '24px',
-                p: 0,
-                maxWidth: 480,
-              },
-            },
-          }}
-        >
-          {/* Dialog Header */}
+          {/* Header */}
           <Box
             sx={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 3,
-              pb: 2,
+              alignItems: 'flex-start',
+              mb: 3,
             }}
           >
-            <Typography
-              sx={{
-                fontWeight: 700,
-                fontSize: '20px',
-                color: 'text.primary',
-              }}
-            >
-              Lọc thông báo
-            </Typography>
-            <IconButton onClick={handleFilterClose} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-
-          <DialogContent sx={{ px: 3, py: 0 }}>
-            {/* Date Range Section */}
-            <Box sx={{ mb: 3 }}>
+            <Box>
               <Typography
+                variant="h4"
                 sx={{
-                  fontWeight: 600,
-                  fontSize: '14px',
+                  fontFamily: "'Nunito Sans', sans-serif",
+                  fontWeight: 700,
+                  fontSize: { xs: '24px', md: '30px' },
                   color: 'text.primary',
-                  mb: 1.5,
+                  mb: 1,
                 }}
               >
-                Khoảng thời gian
+                Thông báo
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '12px',
-                      color: 'text.secondary',
-                      mb: 0.5,
-                    }}
-                  >
-                    Từ ngày
-                  </Typography>
-                  <Box
-                    component="input"
-                    type="date"
-                    value={tempDateFrom}
-                    onChange={(e) => setTempDateFrom(e.target.value)}
-                    sx={{
-                      width: '100%',
-                      px: 1.5,
-                      py: 1,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: '12px',
-                      fontSize: '14px',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      '&:focus': {
-                        borderColor: 'primary.main',
-                      },
-                    }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '12px',
-                      color: 'text.secondary',
-                      mb: 0.5,
-                    }}
-                  >
-                    Đến ngày
-                  </Typography>
-                  <Box
-                    component="input"
-                    type="date"
-                    value={tempDateTo}
-                    onChange={(e) => setTempDateTo(e.target.value)}
-                    sx={{
-                      width: '100%',
-                      px: 1.5,
-                      py: 1,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: '12px',
-                      fontSize: '14px',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      '&:focus': {
-                        borderColor: 'primary.main',
-                      },
-                    }}
-                  />
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Unread Only Filter */}
-            <Box sx={{ mb: 3 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={tempUnreadOnly}
-                    onChange={(e) => setTempUnreadOnly(e.target.checked)}
-                    size="small"
-                    sx={{
-                      color: 'text.secondary',
-                      '&.Mui-checked': {
-                        color: 'primary.main',
-                      },
-                    }}
-                  />
-                }
-                label="Chỉ hiển thị chưa đọc"
-                sx={{
-                  m: 0,
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '14px',
-                    color: 'text.primary',
-                  },
-                }}
-              />
-            </Box>
-
-            {/* Notification Types Section */}
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 1.5,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    color: 'text.primary',
-                  }}
-                >
-                  Loại thông báo
-                </Typography>
-                <Button
-                  onClick={tempSelectedTypes.length === allNotificationTypes.length ? handleDeselectAll : handleSelectAll}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '12px',
-                    color: 'primary.main',
-                    fontWeight: 500,
-                    minWidth: 'auto',
-                    p: 0,
-                    '&:hover': {
-                      background: 'transparent',
-                    },
-                  }}
-                >
-                  {tempSelectedTypes.length === allNotificationTypes.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                </Button>
-              </Box>
-
-              {/* Notification Type Checkboxes Grid */}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: 0.5,
-                }}
-              >
-                {notificationTypeCheckboxOptions.map((option) => (
-                  <FormControlLabel
-                    key={option.value}
-                    control={
-                      <Checkbox
-                        checked={tempSelectedTypes.includes(option.value)}
-                        onChange={() => handleNotificationTypeChange(option.value)}
-                        size="small"
-                        sx={{
-                          color: 'text.secondary',
-                          '&.Mui-checked': {
-                            color: 'primary.main',
-                          },
-                        }}
-                      />
-                    }
-                    label={option.label}
-                    sx={{
-                      m: 0,
-                      '& .MuiFormControlLabel-label': {
-                        fontSize: '13px',
-                        color: 'text.primary',
-                      },
-                    }}
-                  />
-                ))}
-              </Box>
-            </Box>
-          </DialogContent>
-
-          {/* Dialog Footer */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              p: 3,
-              pt: 2,
-            }}
-          >
-            <Button
-              onClick={handleClearFilters}
-              variant="outlined"
-              fullWidth
-              sx={{
-                borderRadius: '16px',
-                py: 1.5,
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '14px',
-                borderColor: 'divider',
-                color: 'text.primary',
-                '&:hover': {
-                  borderColor: 'text.secondary',
-                  backgroundColor: 'transparent',
-                },
-              }}
-            >
-              Xóa bộ lọc
-            </Button>
-            <Button
-              onClick={handleApplyFilters}
-              variant="contained"
-              fullWidth
-              sx={{
-                borderRadius: '16px',
-                py: 1.5,
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '14px',
-                background: COLORS.gradientPrimary,
-                color: '#fff',
-                boxShadow: 'none',
-                '&:hover': {
-                  background: COLORS.gradientPrimary,
-                  opacity: 0.9,
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              Áp dụng
-            </Button>
-          </Box>
-        </Dialog>
-
-        {/* Notification List */}
-        <Box sx={{ maxWidth: 960, mx: 'auto' }}>
-          {/* Mark All as Read Button */}
-          {unreadCount > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button
-                onClick={handleMarkAllAsRead}
-                startIcon={<DoneAllIcon />}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '14px',
-                  color: 'primary.main',
-                  fontWeight: 500,
-                  '&:hover': {
-                    background: 'rgba(206, 147, 216, 0.1)',
-                  },
-                }}
-              >
-                Đánh dấu tất cả đã đọc ({unreadCount})
-              </Button>
-            </Box>
-          )}
-
-          {loading ? (
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                py: 8,
-              }}
-            >
-              <CircularProgress sx={{ color: '#CE93D8' }} />
-            </Box>
-          ) : groupedNotifications.length > 0 ? (
-            <>
-              {groupedNotifications.map((group, index) => (
-                <DateGroup
-                  key={group.date}
-                  date={group.date}
-                  notifications={group.notifications}
-                  isLast={index === groupedNotifications.length - 1 && !hasMore}
-                  onMarkAsRead={handleMarkAsRead}
-                />
-              ))}
-
-              {/* Load More Button */}
-              {hasMore && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
-                  <Button
-                    onClick={handleLoadMore}
-                    variant="outlined"
-                    disabled={loadingMore}
-                    sx={{
-                      borderRadius: '16px',
-                      px: 4,
-                      py: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      borderColor: 'divider',
-                      color: 'text.primary',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        backgroundColor: 'transparent',
-                      },
-                    }}
-                  >
-                    {loadingMore ? <CircularProgress size={20} sx={{ color: '#CE93D8', mr: 1 }} /> : null}
-                    Tải thêm ({total - notifications.length} thông báo còn lại)
-                  </Button>
-                </Box>
-              )}
-            </>
-          ) : (
-            <Box
-              sx={{
-                textAlign: 'center',
-                py: 8,
-              }}
-            >
               <Typography
                 sx={{
                   fontSize: '16px',
                   color: 'text.secondary',
                 }}
               >
-                Không có thông báo nào
+                Theo dõi tất cả thông báo và cập nhật
               </Typography>
             </Box>
-          )}
+
+            {/* Filter Button */}
+            <Button
+              variant="outlined"
+              startIcon={<FilterListIcon />}
+              onClick={handleFilterClick}
+              sx={{
+                borderRadius: '16px',
+                borderColor: hasActiveFilters ? 'primary.main' : 'divider',
+                color: hasActiveFilters ? 'primary.main' : 'text.primary',
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '14px',
+                px: 2,
+                py: 1,
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'transparent',
+                },
+              }}
+            >
+              Lọc thông báo
+              {hasActiveFilters && (
+                <Box
+                  component="span"
+                  sx={{
+                    ml: 1,
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: COLORS.gradientPrimary,
+                  }}
+                />
+              )}
+            </Button>
+          </Box>
+
+          {/* Filter Dialog */}
+          <Dialog
+            open={filterDialogOpen}
+            onClose={handleFilterClose}
+            maxWidth="sm"
+            fullWidth
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: '24px',
+                  p: 0,
+                  maxWidth: 480,
+                },
+              },
+            }}
+          >
+            {/* Dialog Header */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                p: 3,
+                pb: 2,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '20px',
+                  color: 'text.primary',
+                }}
+              >
+                Lọc thông báo
+              </Typography>
+              <IconButton onClick={handleFilterClose} size="small">
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <DialogContent sx={{ px: 3, py: 0 }}>
+              {/* Date Range Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    color: 'text.primary',
+                    mb: 1.5,
+                  }}
+                >
+                  Khoảng thời gian
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        color: 'text.secondary',
+                        mb: 0.5,
+                      }}
+                    >
+                      Từ ngày
+                    </Typography>
+                    <Box
+                      component="input"
+                      type="date"
+                      value={tempDateFrom}
+                      onChange={(e) => setTempDateFrom(e.target.value)}
+                      sx={{
+                        width: '100%',
+                        px: 1.5,
+                        py: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        '&:focus': {
+                          borderColor: 'primary.main',
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        color: 'text.secondary',
+                        mb: 0.5,
+                      }}
+                    >
+                      Đến ngày
+                    </Typography>
+                    <Box
+                      component="input"
+                      type="date"
+                      value={tempDateTo}
+                      onChange={(e) => setTempDateTo(e.target.value)}
+                      sx={{
+                        width: '100%',
+                        px: 1.5,
+                        py: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        '&:focus': {
+                          borderColor: 'primary.main',
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Unread Only Filter */}
+              <Box sx={{ mb: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={tempUnreadOnly}
+                      onChange={(e) => setTempUnreadOnly(e.target.checked)}
+                      size="small"
+                      sx={{
+                        color: 'text.secondary',
+                        '&.Mui-checked': {
+                          color: 'primary.main',
+                        },
+                      }}
+                    />
+                  }
+                  label="Chỉ hiển thị chưa đọc"
+                  sx={{
+                    m: 0,
+                    '& .MuiFormControlLabel-label': {
+                      fontSize: '14px',
+                      color: 'text.primary',
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* Notification Types Section */}
+              <Box sx={{ mb: 3 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1.5,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      color: 'text.primary',
+                    }}
+                  >
+                    Loại thông báo
+                  </Typography>
+                  <Button
+                    onClick={
+                      tempSelectedTypes.length === allNotificationTypes.length ? handleDeselectAll : handleSelectAll
+                    }
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      color: 'primary.main',
+                      fontWeight: 500,
+                      minWidth: 'auto',
+                      p: 0,
+                      '&:hover': {
+                        background: 'transparent',
+                      },
+                    }}
+                  >
+                    {tempSelectedTypes.length === allNotificationTypes.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  </Button>
+                </Box>
+
+                {/* Notification Type Checkboxes Grid */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 0.5,
+                  }}
+                >
+                  {notificationTypeCheckboxOptions.map((option) => (
+                    <FormControlLabel
+                      key={option.value}
+                      control={
+                        <Checkbox
+                          checked={tempSelectedTypes.includes(option.value)}
+                          onChange={() => handleNotificationTypeChange(option.value)}
+                          size="small"
+                          sx={{
+                            color: 'text.secondary',
+                            '&.Mui-checked': {
+                              color: 'primary.main',
+                            },
+                          }}
+                        />
+                      }
+                      label={option.label}
+                      sx={{
+                        m: 0,
+                        '& .MuiFormControlLabel-label': {
+                          fontSize: '13px',
+                          color: 'text.primary',
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </DialogContent>
+
+            {/* Dialog Footer */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                p: 3,
+                pt: 2,
+              }}
+            >
+              <Button
+                onClick={handleClearFilters}
+                variant="outlined"
+                fullWidth
+                sx={{
+                  borderRadius: '16px',
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: 'text.secondary',
+                    backgroundColor: 'transparent',
+                  },
+                }}
+              >
+                Xóa bộ lọc
+              </Button>
+              <Button
+                onClick={handleApplyFilters}
+                variant="contained"
+                fullWidth
+                sx={{
+                  borderRadius: '16px',
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  background: COLORS.gradientPrimary,
+                  color: '#fff',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    background: COLORS.gradientPrimary,
+                    opacity: 0.9,
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                Áp dụng
+              </Button>
+            </Box>
+          </Dialog>
+
+          {/* Notification List */}
+          <Box sx={{ maxWidth: 960, mx: 'auto' }}>
+            {/* Mark All as Read Button */}
+            {unreadCount > 0 && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button
+                  onClick={handleMarkAllAsRead}
+                  startIcon={<DoneAllIcon />}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    color: 'primary.main',
+                    fontWeight: 500,
+                    '&:hover': {
+                      background: 'rgba(206, 147, 216, 0.1)',
+                    },
+                  }}
+                >
+                  Đánh dấu tất cả đã đọc ({unreadCount})
+                </Button>
+              </Box>
+            )}
+
+            {loading ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  py: 8,
+                }}
+              >
+                <CircularProgress sx={{ color: '#CE93D8' }} />
+              </Box>
+            ) : groupedNotifications.length > 0 ? (
+              <>
+                {groupedNotifications.map((group, index) => (
+                  <DateGroup
+                    key={group.date}
+                    date={group.date}
+                    notifications={group.notifications}
+                    isLast={index === groupedNotifications.length - 1 && !hasMore}
+                    onMarkAsRead={handleMarkAsRead}
+                  />
+                ))}
+
+                {/* Load More Button */}
+                {hasMore && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                    <Button
+                      onClick={handleLoadMore}
+                      variant="outlined"
+                      disabled={loadingMore}
+                      sx={{
+                        borderRadius: '16px',
+                        px: 4,
+                        py: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '14px',
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          backgroundColor: 'transparent',
+                        },
+                      }}
+                    >
+                      {loadingMore ? <CircularProgress size={20} sx={{ color: '#CE93D8', mr: 1 }} /> : null}
+                      Tải thêm ({total - notifications.length} thông báo còn lại)
+                    </Button>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box
+                sx={{
+                  textAlign: 'center',
+                  py: 8,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '16px',
+                    color: 'text.secondary',
+                  }}
+                >
+                  Không có thông báo nào
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
-      </Box>
+      </Container>
     </Layout>
   )
 }
