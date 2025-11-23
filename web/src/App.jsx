@@ -1,26 +1,31 @@
-import Board from './pages/Boards/_id'
 import { Route, Routes, Navigate } from 'react-router-dom'
-import NotFound from './pages/404/NotFound'
-import Auth from './pages/Auth/Auth'
-import Dashboard from './pages/Dashboard'
-import History from './pages/History'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from './redux/user/userSlice'
 import { Outlet } from 'react-router-dom'
-import Debt from './pages/Debt'
-import AccountVerification from './pages/Auth/AccountVerification'
-import PaymentConfirmation from './pages/PaymentConfirmation/PaymentConfirmation'
-import { Ocr, Bills } from './pages/Bills'
-import BillDetail from './pages/Bills/BillDetail'
-import Profile from './pages/Auth/Profile'
-import Group from './pages/Groups/Group'
-import Payment from './pages/Payment/Payment'
-import PaymentSuccess from './pages/Payment/PaymentSuccess'
-import GroupDetails from './pages/Groups/GroupDetails'
-import OptOut from './pages/Bills/OptOut'
-import Activity from './pages/Activity/Activity'
-import Landing from './pages/Landing/Landing'
-import Report from './pages/Report/Report'
+
+// Lazy-loaded components for better performance
+import {
+  Auth,
+  AccountVerification,
+  Profile,
+  Dashboard,
+  Landing,
+  Bills,
+  Ocr,
+  BillDetail,
+  OptOut,
+  Group,
+  GroupDetails,
+  Board,
+  Debt,
+  Payment,
+  PaymentSuccess,
+  PaymentConfirmation,
+  History,
+  Activity,
+  Report,
+  NotFound,
+} from './utils/LazyComponents'
 
 const ProtectedRoute = ({ user }) => {
   if (!user) return <Navigate to="/login" replace={true} />
