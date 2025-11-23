@@ -33,6 +33,8 @@ import {
   CameraAlt as CameraAltIcon,
   Chat as ChatIcon,
   Notifications as NotificationsIcon,
+  Person as PersonIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -655,6 +657,32 @@ const Layout = ({ children }) => {
         },
       }}
     >
+      {/* Profile and Settings */}
+      <MenuItem
+        onClick={() => {
+          handleNavigate('/profile')
+          handleProfileMenuClose()
+        }}
+      >
+        <ListItemIcon>
+          <PersonIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Profile</ListItemText>
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          handleNavigate('/settings')
+          handleProfileMenuClose()
+        }}
+      >
+        <ListItemIcon>
+          <SettingsIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Settings</ListItemText>
+      </MenuItem>
+
+      {/* Divider */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', my: 1 }} />
       {/* Theme Mode Options */}
       <MenuItem onClick={() => handleModeChange('light')}>
         <ListItemIcon>
