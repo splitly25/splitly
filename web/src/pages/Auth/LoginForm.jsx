@@ -209,7 +209,7 @@ function LoginForm() {
               </Typography>
             </Divider>
 
-            <Button
+            {/* <Button
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
@@ -232,7 +232,7 @@ function LoginForm() {
               }}
             >
               Continue with Google
-            </Button>
+            </Button> */}
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2" color="text.primary">
