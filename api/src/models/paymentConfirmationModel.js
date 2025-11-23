@@ -17,7 +17,7 @@ const PAYMENT_CONFIRMATION_SCHEMA = Joi.object({
   amount: Joi.number().required(),
   isConfirmed: Joi.boolean().required(), // true = confirmed, false = rejected
   confirmedAt: Joi.date().timestamp('javascript').default(Date.now),
-  priorityBill: Joi.string().optional(),
+  priorityBill: Joi.string().optional().allow(null),
   _destroy: Joi.boolean().default(false)
 })
 
