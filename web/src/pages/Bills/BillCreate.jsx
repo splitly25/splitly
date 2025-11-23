@@ -511,7 +511,7 @@ function BillCreate() {
           justifyContent: 'center',
           position: 'fixed',
           bottom: '0',
-          left: { xs: '0', md: '256px' },
+          left: { xs: '0', md: 'var(--sidebar-width, 256px)' },
           right: '0',
           backgroundColor: theme.palette.mode === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(10px)',

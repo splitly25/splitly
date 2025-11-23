@@ -168,6 +168,15 @@ const Layout = ({ children }) => {
   // Dynamic sidebar width
   const sidebarWidth = isExpanded ? SIDEBAR_WIDTH_EXPANDED : SIDEBAR_WIDTH_COLLAPSED
 
+  // Set CSS variable for sidebar width so child components can use it
+  useEffect(() => {
+    if (!isMobile) {
+      document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`)
+    } else {
+      document.documentElement.style.setProperty('--sidebar-width', '0px')
+    }
+  }, [sidebarWidth, isMobile])
+
   const menuItems = [
     { icon: <HomeIcon />, path: '/dashboard', label: 'Trang chủ' },
     { icon: <DescriptionIcon />, path: '/history', label: 'Hóa đơn của tôi' },
