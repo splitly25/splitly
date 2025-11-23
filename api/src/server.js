@@ -11,6 +11,9 @@ import { initializeDatabase } from '~/config/initDB'
 import cookieParser from 'cookie-parser'
 import { BrevoEmailProvider } from '~/providers/BrevoEmailProvider'
 import { NodemailerProvider } from '~/providers/NodemailerProvider'
+import socketIo from 'socket.io'
+import http from 'http'
+import { notificationSocket, setIoInstance } from '~/sockets/notificationSocket'
 
 const START_SERVER = () => {
   const app = express()
@@ -28,7 +31,17 @@ const START_SERVER = () => {
   app.use('/v1', APIs_V1)
   app.use(errorHandlingMiddleware)
 
-  app.listen(PORT, hostname, () => {
+  const server = http.createServer(app)
+  const io = socketIo(server, { cors: corsOptions })
+
+  // Set io instance for notification service
+  setIoInstance(io)
+
+  io.on('connection', (socket) => {
+    notificationSocket(socket)
+  })
+
+  server.listen(PORT, hostname, () => {
     console.log(`7.Server is running on http://${hostname}:${PORT}`)
   })
 

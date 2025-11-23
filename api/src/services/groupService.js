@@ -1,6 +1,8 @@
 /* eslint-disable no-useless-catch */
 import { groupModel } from '~/models/groupModel.js'
 import { activityModel } from '~/models/activityModel.js'
+import { notificationService } from '~/services/notificationService.js'
+import { userModel } from '~/models/userModel.js'
 import ApiError from '~/utils/APIError'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
@@ -43,6 +45,24 @@ const createNew = async (creatorId, reqBody) => {
       })
     } catch (activityError) {
       console.warn('Failed to log group creation activity:', activityError.message)
+    }
+
+    // Send notifications to members (except creator)
+    try {
+      const creator = await userModel.findOneById(creatorId)
+      const creatorName = creator?.name || 'Someone'
+      const otherMembers = members.filter(id => id !== creatorId)
+      if (otherMembers.length > 0) {
+        await notificationService.notifyGroupInvited(
+          creatorId,
+          creatorName,
+          otherMembers,
+          groupIdString,
+          reqBody.groupName
+        )
+      }
+    } catch (notifError) {
+      console.warn('Failed to send group creation notifications:', notifError.message)
     }
 
     return newGroup
@@ -149,6 +169,15 @@ const addMember = async (groupId, memberId, addedBy, memberEmail) => {
       } catch (activityError) {
         console.warn('Failed to log group member addition activity:', activityError.message)
       }
+
+      // Send notification to new member
+      try {
+        const actor = await userModel.findOneById(addedBy)
+        const actorName = actor?.name || 'Someone'
+        await notificationService.notifyGroupInvited(addedBy, actorName, memberId, groupId, group.groupName)
+      } catch (notifError) {
+        console.warn('Failed to send group invite notification:', notifError.message)
+      }
     }
 
     return result
@@ -182,6 +211,15 @@ const removeMember = async (groupId, memberId, removedBy, memberEmail) => {
         })
       } catch (activityError) {
         console.warn('Failed to log group member removal activity:', activityError.message)
+      }
+
+      // Send notification to removed member
+      try {
+        const actor = await userModel.findOneById(removedBy)
+        const actorName = actor?.name || 'Someone'
+        await notificationService.notifyGroupMemberRemoved(removedBy, actorName, memberId, groupId, group.groupName)
+      } catch (notifError) {
+        console.warn('Failed to send group removal notification:', notifError.message)
       }
     }
 
@@ -363,6 +401,20 @@ const deleteGroup = async (groupId, deletedBy) => {
         })
       } catch (activityError) {
         console.warn('Failed to log group deletion activity:', activityError.message)
+      }
+
+      // Send notifications to all members (except deleter)
+      try {
+        const actor = await userModel.findOneById(deletedBy)
+        const actorName = actor?.name || 'Someone'
+        const otherMembers = group.members
+          ?.filter(m => m.toString() !== deletedBy)
+          ?.map(m => m.toString()) || []
+        if (otherMembers.length > 0) {
+          await notificationService.notifyGroupDeleted(deletedBy, actorName, otherMembers, groupId, group.groupName)
+        }
+      } catch (notifError) {
+        console.warn('Failed to send group deletion notifications:', notifError.message)
       }
     }
   } catch (error) {
