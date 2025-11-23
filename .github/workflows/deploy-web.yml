@@ -19,6 +19,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           timeout: 300s
+          command_timeout: 30m
           script: |
             # Navigate to project directory
             cd ~/splitly
