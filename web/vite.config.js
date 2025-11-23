@@ -6,11 +6,17 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), svgr()],
   // base: './',
   resolve: {
-    alias: [{
-      find: '~', replacement: '/src'
-    }]
+    alias: [
+      {
+        find: '~',
+        replacement: '/src',
+      },
+    ],
   },
   define: {
-    'process.env.BUILD_MODE': JSON.stringify(mode === 'development' ? 'dev' : 'production')
-  }
+    'process.env.BUILD_MODE': JSON.stringify(mode === 'development' ? 'dev' : 'production'),
+  },
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
 }))
