@@ -12,6 +12,7 @@ import {
   ListItemIcon,
   ListItemText,
   Tooltip,
+  Badge,
 } from '@mui/material'
 import {
   Home as HomeIcon,
@@ -31,6 +32,7 @@ import {
   Edit as EditIcon,
   CameraAlt as CameraAltIcon,
   Chat as ChatIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -38,18 +40,29 @@ import ChatbotButton from '~/components/Chatbot/ChatbotButton'
 import ChatbotWindow from '../Chatbot/ChatbotWindow'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAPI, selectCurrentUser } from '~/redux/user/userSlice'
+import {
+  fetchNotificationsAPI,
+  addNotification,
+  setNotificationRead,
+  setAllNotificationsRead,
+  setUnreadCount,
+  selectUnreadCount,
+} from '~/redux/notification/notificationSlice'
 import { useColorScheme } from '@mui/material/styles'
 import { COLORS } from '~/theme'
 import { useChatbot } from '~/context/ChatbotContext'
 import { getInitials } from '~/utils/formatters'
 import LogoRounded from '~/assets/Splitly-Rounded.png'
 import LogoFull from '~/assets/Splitly-Full.png'
+import { socketIoInstance } from '~/main'
+import { toast } from 'react-toastify'
 
 const SIDEBAR_WIDTH_EXPANDED = 256
 const SIDEBAR_WIDTH_COLLAPSED = 88
 
 const Layout = ({ children }) => {
   const currentUser = useSelector(selectCurrentUser)
+  const unreadNotificationCount = useSelector(selectUnreadCount)
   const navigate = useNavigate()
   const location = useLocation()
   const theme = useTheme()
@@ -70,6 +83,61 @@ const Layout = ({ children }) => {
 
   // Use Chatbot Context
   const { chatbotWindowOpen, setChatbotWindowOpen, numberOfNotifications, newMessage, setNewMessage } = useChatbot()
+
+  // Fetch initial notifications and setup socket listeners
+  useEffect(() => {
+    if (!currentUser?._id) return
+
+    // Fetch initial notifications
+    dispatch(fetchNotificationsAPI({ limit: 10, offset: 0 }))
+
+    // Join notification room
+    socketIoInstance.emit('FE_JOIN_NOTIFICATION_ROOM', currentUser._id)
+
+    // Listen for new notifications
+    const handleNewNotification = (notification) => {
+      if (notification?.recipientId === currentUser._id) {
+        dispatch(addNotification(notification))
+        // Show toast notification
+        toast.info(notification.title || 'Bạn có thông báo mới', { theme: 'colored' })
+      }
+    }
+
+    // Listen for notification read (from other devices)
+    const handleNotificationRead = ({ notificationId, userId }) => {
+      if (userId === currentUser._id) {
+        dispatch(setNotificationRead({ notificationId }))
+      }
+    }
+
+    // Listen for all notifications read (from other devices)
+    const handleAllNotificationsRead = ({ userId }) => {
+      if (userId === currentUser._id) {
+        dispatch(setAllNotificationsRead())
+      }
+    }
+
+    // Listen for unread count update
+    const handleUnreadCountUpdate = ({ userId, count }) => {
+      if (userId === currentUser._id) {
+        dispatch(setUnreadCount(count))
+      }
+    }
+
+    socketIoInstance.on('BE_NEW_NOTIFICATION', handleNewNotification)
+    socketIoInstance.on('BE_NOTIFICATION_READ', handleNotificationRead)
+    socketIoInstance.on('BE_ALL_NOTIFICATIONS_READ', handleAllNotificationsRead)
+    socketIoInstance.on('BE_UNREAD_COUNT_UPDATE', handleUnreadCountUpdate)
+
+    // Cleanup on unmount
+    return () => {
+      socketIoInstance.emit('FE_LEAVE_NOTIFICATION_ROOM', currentUser._id)
+      socketIoInstance.off('BE_NEW_NOTIFICATION', handleNewNotification)
+      socketIoInstance.off('BE_NOTIFICATION_READ', handleNotificationRead)
+      socketIoInstance.off('BE_ALL_NOTIFICATIONS_READ', handleAllNotificationsRead)
+      socketIoInstance.off('BE_UNREAD_COUNT_UPDATE', handleUnreadCountUpdate)
+    }
+  }, [currentUser?._id, dispatch])
 
   // Check for chatbot payload from navigation state or URL params
   useEffect(() => {
@@ -215,7 +283,7 @@ const Layout = ({ children }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: (isMobile || isExpanded) ? '8px' : 0,
+            gap: isMobile || isExpanded ? '8px' : 0,
             px: 2.5,
             minWidth: 0,
             transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -229,12 +297,12 @@ const Layout = ({ children }) => {
           <Box
             component="span"
             sx={{
-              opacity: (isMobile || isExpanded) ? 1 : 0,
-              width: (isMobile || isExpanded) ? 'auto' : 0,
+              opacity: isMobile || isExpanded ? 1 : 0,
+              width: isMobile || isExpanded ? 'auto' : 0,
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              transitionDelay: (isMobile || isExpanded) ? '0.1s' : '0s',
+              transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
             }}
           >
             Tạo hóa đơn mới
@@ -254,7 +322,7 @@ const Layout = ({ children }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-start',
-                  gap: (isMobile || isExpanded) ? '12px' : 0,
+                  gap: isMobile || isExpanded ? '12px' : 0,
                   borderRadius: '16px',
                   height: '48px',
                   px: 2,
@@ -294,12 +362,12 @@ const Layout = ({ children }) => {
                 <Box
                   component="span"
                   sx={{
-                    opacity: (isMobile || isExpanded) ? 1 : 0,
-                    width: (isMobile || isExpanded) ? 'auto' : 0,
+                    opacity: isMobile || isExpanded ? 1 : 0,
+                    width: isMobile || isExpanded ? 'auto' : 0,
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
                     transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transitionDelay: (isMobile || isExpanded) ? '0.1s' : '0s',
+                    transitionDelay: isMobile || isExpanded ? '0.1s' : '0s',
                   }}
                 >
                   {item.label}
@@ -317,8 +385,8 @@ const Layout = ({ children }) => {
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          gap: (isMobile || isExpanded) ? 2 : 0,
-          justifyContent: (isMobile || isExpanded) ? 'flex-start' : 'center',
+          gap: isMobile || isExpanded ? 2 : 0,
+          justifyContent: isMobile || isExpanded ? 'flex-start' : 'center',
           cursor: 'pointer',
           borderRadius: '16px',
           mx: 2,
@@ -732,11 +800,12 @@ const Layout = ({ children }) => {
       </IconButton> */}
 
       {/* Notifications Button - Top Right */}
-      {/* <IconButton
+      <IconButton
+        onClick={() => navigate('/activity')}
         sx={{
           position: 'fixed',
           top: 16,
-          right: chatbotWindowOpen && !isMobile ? `calc(${chatbotWidth} + 72px)` : 72,
+          right: chatbotWindowOpen && !isMobile ? `calc(${chatbotWidth} + 16px)` : 20,
           zIndex: 1200,
           width: 40,
           height: 40,
@@ -751,8 +820,22 @@ const Layout = ({ children }) => {
           },
         }}
       >
-        <NotificationsIcon fontSize="small" sx={{ color: 'text.primary' }} />
-      </IconButton> */}
+        <Badge
+          badgeContent={unreadNotificationCount}
+          color="error"
+          max={99}
+          sx={{
+            '& .MuiBadge-badge': {
+              fontSize: '10px',
+              minWidth: '18px',
+              height: '18px',
+              background: COLORS.gradientPrimary,
+            },
+          }}
+        >
+          <NotificationsIcon fontSize="small" sx={{ color: 'text.primary' }} />
+        </Badge>
+      </IconButton>
 
       {/* Chatbot Button */}
       <ChatbotButton
