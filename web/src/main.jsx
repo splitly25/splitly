@@ -1,7 +1,7 @@
 // import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import CssBaseline from '@mui/material/CssBaseline'
-import { ThemeProvider } from '@mui/material/styles'
+import { Experimental_CssVarsProvider as CssVarsProvider } from '@mui/material/styles'
 import theme from '~/theme.js'
 import { ToastContainer } from 'react-toastify'
 import { ConfirmProvider } from 'material-ui-confirm'
@@ -27,7 +27,7 @@ createRoot(document.getElementById('root')).render(
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <ChatbotProvider>
-          <ThemeProvider theme={theme}>
+          <CssVarsProvider theme={theme} defaultMode="light">
             <ConfirmProvider
               defaultOptions={{
                 dialogActionsProps: { maxWidth: 'xs' },
@@ -40,7 +40,7 @@ createRoot(document.getElementById('root')).render(
               <App />
               <ToastContainer />
             </ConfirmProvider>
-          </ThemeProvider>
+          </CssVarsProvider>
         </ChatbotProvider>
       </PersistGate>
     </Provider>

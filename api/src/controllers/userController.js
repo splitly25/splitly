@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/userService.js'
 import ms from 'ms'
-import { chain } from 'lodash'
+import { env } from '~/config/environment'
 
 const createNew = async (req, res, next) => {
   try {
@@ -28,7 +28,7 @@ const login = async (req, res, next) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: ms('7d'),
+      maxAge: ms(env.ACCESS_JWT_EXPIRES_IN),
     })
     res.status(StatusCodes.OK).json(result)
   } catch (error) {
@@ -38,7 +38,11 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    res.clearCookie('accessToken')
+    res.clearCookie('accessToken', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    })
     res.status(StatusCodes.OK).json({ loggedOut: true })
   } catch (error) {
     next(error)
