@@ -4,24 +4,21 @@ export const options = [
   { value: 'by-item', label: 'Theo món' },
 ]
 
-/* eslint-disable no-undef */
-let apiRoot = ''
+export const categoryOptions = [
+  { value: 'food', label: 'Ăn uống' },
+  { value: 'entertainment', label: 'Giải trí' },
+  { value: 'transportation', label: 'Di chuyển' },
+  { value: 'shopping', label: 'Mua sắm' },
+  { value: 'utilities', label: 'Tiện ích' },
+  { value: 'other', label: 'Khác' },
+]
 
-// Check if we're in development or production
-const isDevelopment = import.meta.env.DEV || process.env.BUILD_MODE === 'dev'
-const isProduction = import.meta.env.PROD || process.env.BUILD_MODE === 'production'
+// Vite exposes only variables prefixed with VITE_. Configure VITE_API_ROOT in
+// deployments; local development keeps the local API fallback.
+const apiRoot = import.meta.env.VITE_API_ROOT ||
+  (import.meta.env.DEV ? 'http://localhost:8017' : 'https://splitly.be.khangdev.me')
 
-if (isDevelopment) {
-  apiRoot = 'http://localhost:8017'
-} else if (isProduction) {
-  apiRoot = 'https://splitly.be.khangdev.me'
-} else {
-  // Fallback to production API
-  apiRoot = 'https://splitly.be.khangdev.me'
-}
 export const FIELD_REQUIRED_MESSAGE = 'This field is required.'
-
 export const DEFAULT_PAGE = 1
 export const DEFAULT_ITEMS_PER_PAGE = 12
-
 export const API_ROOT = apiRoot

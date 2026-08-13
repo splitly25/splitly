@@ -4,7 +4,7 @@ import { activityModel } from '~/models/activityModel.js'
 import { userModel } from '~/models/userModel.js'
 import { paymentModel } from '~/models/paymentModel.js'
 import { notificationService } from '~/services/notificationService.js'
-import { ClovaXClient } from '~/providers/ClovaStudioProvider'
+import { GeminiProvider } from '~/providers/GeminiProvider.js'
 import { JwtProvider } from '~/providers/JwtProvider.js'
 import { env } from '~/config/environment.js'
 import { GET_DB } from '~/config/mongodb'
@@ -12,6 +12,10 @@ import { ObjectId } from 'mongodb'
 import { sendBillCreationEmail } from '~/utils/emailService.js'
 
 const { BILL_COLLECTION_NAME } = billModel
+
+const getAudienceUserIds = (userIds = [], actorId) => [...new Set(
+  userIds.filter(Boolean).map((userId) => userId.toString()).filter((userId) => userId !== actorId?.toString())
+)]
 
 const createNew = async (reqBody) => {
   try {
@@ -102,6 +106,7 @@ const createNew = async (reqBody) => {
           {
             billName: reqBody.billName,
             amount: reqBody.totalAmount,
+            audienceUserIds: getAudienceUserIds(reqBody.participants, reqBody.creatorId),
             description: `Created new bill: ${reqBody.billName}`,
           }
         )
@@ -399,6 +404,7 @@ const update = async (billId, updateData, updatedBy) => {
             description: originalBill.description,
           },
           newValue: updateData,
+          audienceUserIds: getAudienceUserIds(originalBill.participants, updatedBy),
           description: `Updated bill: ${originalBill.billName}`,
         })
       } catch (activityError) {
@@ -432,6 +438,115 @@ const update = async (billId, updateData, updatedBy) => {
   }
 }
 
+const updateBill = async (billId, reqBody) => {
+  try {
+    const originalBill = await billModel.findOneById(billId)
+    if (!originalBill) {
+      throw new Error('Bill not found')
+    }
+
+    if (reqBody.payerId && reqBody.payerId.toString() !== originalBill.payerId.toString()) {
+      throw new Error('Changing the payer (người ứng tiền) is not allowed during update.')
+    }
+
+    const currentPayerId = originalBill.payerId.toString()
+
+    let paymentStatus = []
+
+    const getPaidAmount = (userId, amountOwed, isPayer) => {
+      if (isPayer) return amountOwed
+
+      const existing = originalBill.paymentStatus?.find((ps) => ps.userId.toString() === userId.toString())
+      return existing ? existing.amountPaid : 0
+    }
+
+    if (reqBody.splittingMethod === 'equal') {
+      const amountPerPerson = reqBody.totalAmount / reqBody.participants.length
+      // const remainder = reqBody.totalAmount - (amountPerPerson * reqBody.participants.length)
+
+      paymentStatus = reqBody.participants.map((userId, index) => {
+        // const finalAmount = index === reqBody.participants.length - 1
+        //   ? amountPerPerson + remainder
+        //   : amountPerPerson;
+        const isPayer = userId.toString() === currentPayerId
+        return {
+          userId: userId,
+          amountOwed: amountPerPerson,
+          amountPaid: isPayer ? amountPerPerson : 0,
+          paidDate:
+            originalBill.paymentStatus?.find((ps) => ps.userId.toString() === userId.toString())?.paidDate || null,
+        }
+      })
+    } else if (reqBody.splittingMethod === 'item-based') {
+      const sumOfItemAmounts = reqBody.items.reduce((sum, item) => sum + item.amount, 0)
+      const adjustmentRatio = reqBody.totalAmount / sumOfItemAmounts
+
+      const userAmounts = {}
+
+      reqBody.participants.forEach((pId) => (userAmounts[pId.toString()] = 0))
+
+      reqBody.items.forEach((item) => {
+        if (item.allocatedTo.length > 0) {
+          const adjustedItemAmount = item.amount * adjustmentRatio
+          const amountPerPerson = adjustedItemAmount / item.allocatedTo.length
+
+          item.allocatedTo.forEach((userId) => {
+            const userKey = userId.toString() // Use string key for object
+            userAmounts[userKey] = (userAmounts[userKey] || 0) + amountPerPerson
+          })
+        }
+      })
+
+      paymentStatus = Object.entries(userAmounts).map(([userIdStr, amount]) => {
+        // Use .equals() for proper ObjectId comparison (convert key back to ObjectId for comparison)
+        const isPayer = reqBody.payerId.toString() === userIdStr
+        return {
+          userId: userIdStr,
+          amountOwed: Math.round(amount),
+          amountPaid: isPayer ? Math.round(amount) : 0,
+          paidDate: originalBill.paymentStatus?.find((ps) => ps.userId.toString() === userIdStr)?.paidDate || null,
+        }
+      })
+    } else if (reqBody.splittingMethod === 'people-based') {
+      paymentStatus = reqBody.paymentStatus.map((ps) => {
+        const isPayer = ps.userId.toString() === currentPayerId
+        return {
+          userId: ps.userId,
+          amountOwed: ps.amountOwed,
+          amountPaid: getPaidAmount(ps.userId, ps.amountOwed, isPayer),
+          paidDate:
+            originalBill.paymentStatus?.find((s) => s.userId.toString() === ps.userId.toString())?.paidDate || null,
+        }
+      })
+    }
+    const updateData = {
+      ...reqBody,
+      payerId: originalBill.payerId,
+      paymentStatus,
+      updatedAt: Date.now(),
+    }
+
+    const result = await billModel.update(billId, updateData)
+
+    try {
+      await activityModel.logBillActivity(
+        activityModel.ACTIVITY_TYPES.BILL_UPDATED,
+        currentPayerId,
+        billId._id.toString(),
+        {
+          description: `Cập nhật hóa đơn ${result.billName}`,
+        }
+      )
+    } catch (activityError) {
+      console.warn('Failed to log bill upgrade activity:', activityError.message)
+    }
+
+    return await billModel.findOneById(billId)
+  } catch (error) {
+    throw error
+  }
+}
+
 /**
  * Mark bill as paid for a user (full or partial payment)
  * @param {string} billId - Bill ID
@@ -452,6 +567,7 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy, skipNotification =
           billName: bill.billName,
           amountPaid: amountPaid,
           paymentStatus: 'paid',
+          audienceUserIds: getAudienceUserIds(bill.participants, paidBy),
           description: `Payment of ${amountPaid} for bill: ${bill.billName}`,
         })
       } catch (activityError) {
@@ -474,6 +590,7 @@ const markAsPaid = async (billId, userId, amountPaid, paidBy, skipNotification =
         try {
           await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_SETTLED, paidBy, billId, {
             billName: bill.billName,
+            audienceUserIds: getAudienceUserIds(bill.participants, paidBy),
             description: `Bill fully settled: ${bill.billName}`,
           })
         } catch (activityError) {
@@ -526,9 +643,10 @@ const optOutUser = async (billId, userId, optedOutBy) => {
     // Log opt-out activity
     if (optedOutBy) {
       try {
-        await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_USER_OPTED_OUT, optedOutBy, billId, {
+        await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_PARTICIPATION_DECLINED, optedOutBy, billId, {
           billName: bill.billName,
-          description: `User opted out from bill: ${bill.billName}`,
+          audienceUserIds: getAudienceUserIds(bill.participants, optedOutBy),
+          description: `Declined participation in bill: ${bill.billName}`,
         })
       } catch (activityError) {
         console.warn('Failed to log bill opt-out activity:', activityError.message)
@@ -559,6 +677,7 @@ const deleteOneById = async (billId, deletedBy) => {
         await activityModel.logBillActivity(activityModel.ACTIVITY_TYPES.BILL_DELETED, deletedBy, billId, {
           billName: bill.billName,
           amount: bill.totalAmount,
+          audienceUserIds: getAudienceUserIds(bill.participants, deletedBy),
           description: `Deleted bill: ${bill.billName}`,
         })
       } catch (activityError) {
@@ -615,6 +734,7 @@ const sendReminder = async (billId, reminderType, recipientUserId, sentByUserId)
           billName: bill.billName,
           reminderType: reminderType,
           recipientId: recipientUserId,
+          audienceUserIds: getAudienceUserIds([recipientUserId], sentByUserId),
           description: `Sent ${reminderType} reminder for bill: ${bill.billName}`,
         })
       } catch (activityError) {
@@ -927,71 +1047,22 @@ const getMutualBills = async (userId1, userId2) => {
   }
 }
 
-const scanBill = async ({ userId, imageData }) => {
-  const client = new ClovaXClient()
+const scanBill = async ({ imageData }) => {
+  const gemini = new GeminiProvider()
+  const result = await gemini.extractReceipt(imageData)
 
-  const dataUriString = imageData
-
-  const messages = [
-    {
-      role: 'system',
-      content: [
-        {
-          type: 'text',
-          text: `
-You are an advanced OCR model specialized in extracting structured information from images of receipts and bills. 
-Your goal is to accurately read the text in the image and return a clean, structured JSON object representing the bill details. 
-Extract as much information as possible, including:
-
-- billName: The title or store name of the bill
-- paymentDate: The date "dd/mm/yyyy" of the transaction (if visible).
-- description: Any additional notes or remarks written on the bill
-- category: The category of the bill. It must be one of the following: "food", "utilities", "entertainment", "transportation", "shopping", "others".
-- items: A list of purchased products, each with:
-  - name: Product or service name
-  - quantity: Quantity of each item
-  - unitPrice: Price per unit
-  - amount: Total price per item
-- subtotal: The total amount before taxes or discounts
-- tax: Tax amount (if applicable)
-- discount: Discount amount (if applicable)
-- totalAmount: Final total to be paid
-- paymentMethod: How the payment was made (cash, card, etc.)
-
-Return only valid JSON. Do not include explanations or extra text.
-      `,
+  // Keep the existing response envelope so current OCR clients continue to work.
+  return {
+    response: {
+      provider: 'gemini',
+      model: result.model,
+      result: {
+        message: {
+          content: result.content,
         },
-      ],
+      },
     },
-    {
-      role: 'user',
-      content: [
-        {
-          type: 'image_url',
-          imageUrl: null,
-          dataUri: { data: dataUriString },
-        },
-        {
-          type: 'text',
-          text: 'Please extract all relevant information from this bill image and return it in JSON format.',
-        },
-      ],
-    },
-  ]
-
-  const request = {
-    messages,
-    topP: 0.8,
-    topK: 0,
-    maxTokens: 1000,
-    temperature: 0.5,
-    repetitionPenalty: 1.1,
-    stop: [],
   }
-
-  const response = await client.createChatCompletion(request)
-
-  return { response }
 }
 
 export const billService = {
@@ -1004,12 +1075,11 @@ export const billService = {
   findOneById,
   getBillById,
   update,
+  updateBill,
   markAsPaid,
   optOutUser,
   deleteOneById,
   sendReminder,
-  // searchBillsByUserWithPagination,
-  // filterBillsByUser,
   getMutualBills,
   scanBill,
   getBillsWithConditions,

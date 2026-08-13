@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview",
     "host": "vite --host",
     "production": "vite preview --port 4173 --host"
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react-swc": "^4.1.0",
     "autoprefixer": "^10.4.21",
+    "baseline-browser-mapping": "^2.10.43",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
@@ -54,5 +56,6 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "vite": "^7.1.7"
-  }
+  },
+  "allowScripts": {}
 }
