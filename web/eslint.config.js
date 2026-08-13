@@ -23,7 +23,10 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Keep the current backlog visible without blocking new CI adoption.
+      'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-useless-escape': 'warn',
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

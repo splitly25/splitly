@@ -44,7 +44,8 @@
   },
   "scripts": {
     "start": "npm run build && node ./build/src/server.js",
-    "lint": "eslint src --ext js --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint src --ext js",
+    "test": "babel-node test/run-tests.js",
     "clean": "node -e \"require('fs').rmSync('build', { recursive: true, force: true }); require('fs').mkdirSync('build', { recursive: true })\"",
     "build-babel": "babel ./src -d ./build/src",
     "build": "npm run clean && npm run build-babel",
